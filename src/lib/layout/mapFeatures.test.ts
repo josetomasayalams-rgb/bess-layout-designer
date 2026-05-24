@@ -8,8 +8,10 @@ import {
   gridLineFeatures,
   measurementLabelFeatures,
   polygonToLineFeature,
+  regulatoryBufferFeatures,
   warningMarkerFeatures,
 } from "@/lib/layout/mapFeatures";
+import { getRegulatoryProfile } from "@/rules/bessRegulatoryProfiles";
 import type { Feature, LineString } from "geojson";
 
 const anchor: ProjectAnchor = { lng0: -70, lat0: -33 };
@@ -158,5 +160,24 @@ describe("auxiliary map layers", () => {
       "outOfBounds",
       "collision",
     ]);
+  });
+});
+
+describe("regulatoryBufferFeatures", () => {
+  it("generates buffers for battery containers and PCS stations using profile rules", () => {
+    const profile = getRegulatoryProfile("ifc-2024-nfpa-855-conservative");
+    const result = regulatoryBufferFeatures(placed, anchor, profile!);
+
+    expect(result.features.length).toBeGreaterThan(0);
+
+    const batteryBuffers = result.features.filter((f) => f.properties?.equipmentId === "battery-1");
+    expect(batteryBuffers).toHaveLength(2);
+    expect(batteryBuffers.map(b => b.properties?.bufferType)).toContain("normative_separation");
+    expect(batteryBuffers.map(b => b.properties?.bufferType)).toContain("maintenance_aisle");
+
+    const pcsBuffers = result.features.filter((f) => f.properties?.equipmentId === "pcs-1");
+    expect(pcsBuffers).toHaveLength(1);
+    expect(pcsBuffers[0].properties?.bufferType).toBe("normative_separation");
+    expect(pcsBuffers[0].properties?.value_m).toBe(profile!.rules.electricalFrontWorkingClearance_m);
   });
 });

@@ -602,23 +602,27 @@ export function regulatoryBufferFeatures(
   const features: Feature<Polygon>[] = [];
   for (const p of placed) {
     const spec = equipmentCatalog.find((e) => e.id === p.equipmentSpecId);
-    // TODO(pcs-buffer): PCS / Power Conversion System currently has no
-    // restriction/buffer visualised, while battery_container does. Before
-    // enabling a PCS buffer here, validate the proper distance with normative
-    // criteria (UL 9540, NFPA 855, AHJ, manufacturer guidance). Do not invent
-    // a value — keep this filter narrowed to battery_container until then.
-    if (!spec || spec.type !== "battery_container") continue;
+    if (!spec || (spec.type !== "battery_container" && spec.type !== "pcs_mv_station")) continue;
     const center = toLocal(p.anchor, anchor);
-    const buffers = [
-      {
+    const buffers = [];
+
+    if (spec.type === "battery_container") {
+      buffers.push(
+        {
+          type: "normative_separation",
+          value_m: profile.rules.bessToBess_m,
+        },
+        {
+          type: "maintenance_aisle",
+          value_m: profile.rules.maintenanceAisle_m,
+        }
+      );
+    } else if (spec.type === "pcs_mv_station") {
+      buffers.push({
         type: "normative_separation",
-        value_m: profile.rules.bessToBess_m,
-      },
-      {
-        type: "maintenance_aisle",
-        value_m: profile.rules.maintenanceAisle_m,
-      },
-    ];
+        value_m: profile.rules.electricalFrontWorkingClearance_m,
+      });
+    }
 
     for (const buffer of buffers) {
       const corners = rectCorners({
