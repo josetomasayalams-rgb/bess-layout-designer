@@ -7,6 +7,8 @@ import { useUiStore } from "@/store/uiStore";
 import { generateConceptualPhysicalInfrastructure } from "@/lib/layout/physicalInfrastructure";
 import { formatLength } from "@/lib/units/formatUnits";
 
+import { SingleLineDiagram } from "@/components/electrical/SingleLineDiagram";
+
 export function MVArchitecturePanel() {
   const placed = useProjectStore((state) => state.placedEquipment);
   const polygon = useProjectStore((state) => state.polygon);
@@ -46,6 +48,8 @@ export function MVArchitecturePanel() {
           <Metric label={isEs ? "Caminos" : "Roads"} value={accessRoads.length} />
           <Metric label={isEs ? "Barras" : "Buses"} value={mvBuses.length || generated.layoutZones.filter((zone) => zone.type === "mv_yard").length} />
         </div>
+
+        <SingleLineDiagram />
 
         {generated.layoutZones.length > 0 ? (
           <div className="space-y-1.5">
