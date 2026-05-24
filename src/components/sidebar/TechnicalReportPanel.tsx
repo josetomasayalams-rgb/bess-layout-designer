@@ -1,15 +1,17 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Download, FileText, Loader2, MapPinned } from "lucide-react";
+import { Download, FileText, Loader2, MapPinned, Eye } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { downloadTechnicalReportPdf } from "@/lib/report/downloadTechnicalReport";
+import { ReportPreview } from "@/components/report/ReportPreview";
 import { useProjectStore } from "@/store/projectStore";
 import { useUiStore } from "@/store/uiStore";
 
 export function TechnicalReportPanel() {
   const [includeGeocoding, setIncludeGeocoding] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -110,25 +112,37 @@ export function TechnicalReportPanel() {
         </span>
       </label>
 
-      <Button
-        variant="primary"
-        onClick={handleGenerate}
-        disabled={!canGenerate || isGenerating}
-        className="w-full"
-      >
-        {isGenerating ? (
-          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-        ) : (
-          <Download className="h-3.5 w-3.5" aria-hidden="true" />
-        )}
-        {isGenerating
-          ? isEs
-            ? "Generando..."
-            : "Generating..."
-          : isEs
-            ? "Descargar reporte PDF"
-            : "Download PDF report"}
-      </Button>
+      <div className="space-y-2">
+        <Button
+          variant="secondary"
+          onClick={() => setIsPreviewOpen(true)}
+          disabled={!canGenerate}
+          className="w-full cursor-pointer"
+        >
+          <Eye className="h-3.5 w-3.5" aria-hidden="true" />
+          {isEs ? "Ver vista previa del reporte" : "View report preview"}
+        </Button>
+
+        <Button
+          variant="primary"
+          onClick={handleGenerate}
+          disabled={!canGenerate || isGenerating}
+          className="w-full cursor-pointer"
+        >
+          {isGenerating ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+          ) : (
+            <Download className="h-3.5 w-3.5" aria-hidden="true" />
+          )}
+          {isGenerating
+            ? isEs
+              ? "Generando..."
+              : "Generating..."
+            : isEs
+              ? "Descargar reporte PDF"
+              : "Download PDF report"}
+        </Button>
+      </div>
 
       {!canGenerate ? (
         <p className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1.5 text-[11px] text-amber-100">
@@ -143,6 +157,12 @@ export function TechnicalReportPanel() {
           {error}
         </p>
       ) : null}
+
+      <ReportPreview
+        isOpen={isPreviewOpen}
+        onClose={() => setIsPreviewOpen(false)}
+        includeGeocoding={includeGeocoding}
+      />
     </div>
   );
 }
