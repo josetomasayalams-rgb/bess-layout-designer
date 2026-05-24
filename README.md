@@ -16,6 +16,25 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## Map Layers
+
+The map uses MapLibre through `react-map-gl/maplibre`. The standard layer works
+without credentials using CARTO/OpenStreetMap raster tiles. Satellite and hybrid
+layers prefer Google Map Tiles API and can fall back to MapTiler.
+
+```bash
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_google_maps_key
+NEXT_PUBLIC_MAPTILER_API_KEY=your_maptiler_key
+```
+
+Create `.env.local` from `.env.example`, set one provider key, and restart the
+dev server. See `docs/map-providers.md` for provider details and limitations.
+
+## Units
+
+The app defaults to `metric_si` for Chilean BESS predesign: `m`, `m²`, `ha`,
+`MW`, `MWh`, `kV`, `Hz`, `kg`, `t`, `°C` and `%`. See `docs/unit-system.md`.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.

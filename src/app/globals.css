@@ -1,26 +1,84 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #020617;
+  --foreground: #e2e8f0;
+  /* Data classification — inconfundibles entre sí */
+  --color-data-certified: #3b82f6;
+  --color-data-preliminary: #f59e0b;
+  --color-data-pending: #f43f5e;
+  /* Status semántico */
+  --color-compliant: #10b981;
+  --color-warning-status: #f59e0b;
+  --color-critical: #f43f5e;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: var(--font-inter, Inter, system-ui, sans-serif);
+  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter, Inter, system-ui, sans-serif);
+  margin: 0;
+  overflow-x: hidden;
+  text-rendering: geometricPrecision;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html,
+body {
+  max-width: 100%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+header,
+main,
+aside,
+section,
+article,
+div {
+  min-width: 0;
+}
+
+p,
+dd,
+dt,
+button,
+input,
+select {
+  max-width: 100%;
+}
+
+p,
+dd,
+dt {
+  overflow-wrap: break-word;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #020617;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border: 2px solid #020617;
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
 }

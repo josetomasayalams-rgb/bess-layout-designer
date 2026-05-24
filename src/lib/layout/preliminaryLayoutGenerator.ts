@@ -1,0 +1,484 @@
+import { nanoid } from "nanoid";
+import { equipmentCatalog } from "@/data/equipmentCatalog";
+import { allCornersInsidePolygon } from "@/lib/geometry/collision";
+import {
+  distanceBetweenRectangles,
+  distanceRectToPolygonBoundary,
+} from "@/lib/geometry/distance";
+import { toLocal, toLngLat } from "@/lib/geometry/projection";
+import { rectCorners } from "@/lib/geometry/rectangles";
+import type { RegulatoryRuleSet } from "@/types/bessLayoutTypes";
+import type { PlacedEquipment } from "@/types/equipment";
+import type {
+  LngLat,
+  LocalPoint,
+  ProjectAnchor,
+  RotatedRectLocal,
+} from "@/types/geometry";
+
+export const PRELIMINARY_TOOL_GROUP_PREFIX = "preliminary-tools:";
+
+export type GridShapeOption = {
+  columns: number;
+  rows: number;
+  cells: number;
+  emptyCells: number;
+  shape: "square" | "rectangle";
+};
+
+export type PreliminaryLayoutRequest = {
+  batteryContainerSpecId: string;
+  pcsSpecId: string;
+  batteryContainerCount: number;
+  pcsCount: number;
+  containersPerPcs: number;
+  blockColumns?: number;
+  anchor: ProjectAnchor;
+  startPoint: LngLat;
+  polygon?: LngLat[];
+  rules: Pick<
+    RegulatoryRuleSet,
+    | "bessToBess_m"
+    | "bessToPropertyLine_m"
+    | "electricalFrontWorkingClearance_m"
+    | "transformerToBessRecommended_m"
+  >;
+  fitInsidePolygon: boolean;
+};
+
+export type PreliminaryLayoutResult = {
+  status: "success" | "error";
+  message: string;
+  placed: PlacedEquipment[];
+  diagnostics: {
+    batteryContainerCount: number;
+    pcsCount: number;
+    blockCount: number;
+    containersPerPcs: number;
+    spacingM: number;
+    boundarySetbackM: number;
+    layoutAreaM2: number | null;
+    candidateCount: number;
+  };
+};
+
+type RelativeItem = {
+  equipmentSpecId: string;
+  type: "battery_container" | "pcs";
+  center: LocalPoint;
+  rect: RotatedRectLocal;
+  groupId: string;
+};
+
+type RelativeLayout = {
+  items: RelativeItem[];
+  blockCount: number;
+  areaM2: number;
+};
+
+function clampCount(value: number, fallback: number): number {
+  if (!Number.isFinite(value)) return fallback;
+  return Math.max(0, Math.floor(value));
+}
+
+/**
+ * Candidate rectangular/square grids for arranging `blockCount` PCS blocks.
+ * One option per distinct row count: the minimum number of columns that still
+ * fits every block (redundant wider grids are skipped). Sorted from tall (few
+ * columns) to wide (many columns), so callers can offer the full set of shapes.
+ */
+export function gridShapeOptions(blockCount: number): GridShapeOption[] {
+  const count = Math.max(0, Math.floor(blockCount));
+  if (count <= 0) return [];
+  const options: GridShapeOption[] = [];
+  for (let columns = 1; columns <= count; columns++) {
+    const rows = Math.ceil(count / columns);
+    // Skip columns that do not reduce the row count (redundant grid shape).
+    if (columns > 1 && (columns - 1) * rows >= count) continue;
+    options.push({
+      columns,
+      rows,
+      cells: columns * rows,
+      emptyCells: columns * rows - count,
+      shape: columns === rows ? "square" : "rectangle",
+    });
+  }
+  return options;
+}
+
+/** Squarest grid: the default block-column count when none is chosen. */
+export function defaultBlockColumns(blockCount: number): number {
+  if (blockCount <= 1) return 1;
+  return Math.max(1, Math.round(Math.sqrt(blockCount)));
+}
+
+function bboxOfRects(rects: RotatedRectLocal[]) {
+  const corners = rects.flatMap(rectCorners);
+  return {
+    minX: Math.min(...corners.map((corner) => corner.x_m)),
+    maxX: Math.max(...corners.map((corner) => corner.x_m)),
+    minY: Math.min(...corners.map((corner) => corner.y_m)),
+    maxY: Math.max(...corners.map((corner) => corner.y_m)),
+  };
+}
+
+function bboxOfPolygon(polygon: LocalPoint[]) {
+  return {
+    minX: Math.min(...polygon.map((point) => point.x_m)),
+    maxX: Math.max(...polygon.map((point) => point.x_m)),
+    minY: Math.min(...polygon.map((point) => point.y_m)),
+    maxY: Math.max(...polygon.map((point) => point.y_m)),
+  };
+}
+
+function translatePoint(point: LocalPoint, dx: number, dy: number): LocalPoint {
+  return { x_m: point.x_m + dx, y_m: point.y_m + dy };
+}
+
+function translateRect(rect: RotatedRectLocal, dx: number, dy: number): RotatedRectLocal {
+  return {
+    ...rect,
+    center: translatePoint(rect.center, dx, dy),
+  };
+}
+
+function rotatePoint(xM: number, yM: number, orientationDeg: number): LocalPoint {
+  const radians = (orientationDeg * Math.PI) / 180;
+  return {
+    x_m: xM * Math.cos(radians) - yM * Math.sin(radians),
+    y_m: xM * Math.sin(radians) + yM * Math.cos(radians),
+  };
+}
+
+function sampleBetween(min: number, max: number): number[] {
+  if (min > max) return [];
+  if (Math.abs(max - min) < 1e-6) return [min];
+  return [0, 0.25, 0.5, 0.75, 1].map((fraction) => min + (max - min) * fraction);
+}
+
+function validateCandidate(args: {
+  items: RelativeItem[];
+  polygon: LocalPoint[];
+  rules: PreliminaryLayoutRequest["rules"];
+}): boolean {
+  const { items, polygon, rules } = args;
+
+  for (const item of items) {
+    if (!allCornersInsidePolygon(item.rect, polygon)) return false;
+    if (distanceRectToPolygonBoundary(item.rect, polygon) < rules.bessToPropertyLine_m) {
+      return false;
+    }
+  }
+
+  for (let i = 0; i < items.length; i++) {
+    for (let j = i + 1; j < items.length; j++) {
+      const distance = distanceBetweenRectangles(items[i].rect, items[j].rect);
+      if (distance <= 0) return false;
+      if (
+        items[i].type === "battery_container" &&
+        items[j].type === "battery_container" &&
+        distance + 1e-6 < rules.bessToBess_m
+      ) {
+        return false;
+      }
+      if (
+        (items[i].type === "pcs" || items[j].type === "pcs") &&
+        distance + 1e-6 < rules.electricalFrontWorkingClearance_m
+      ) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+function buildRelativeLayout(args: {
+  batteryContainerSpecId: string;
+  pcsSpecId: string;
+  batteryContainerCount: number;
+  pcsCount: number;
+  containersPerPcs: number;
+  blockColumns: number;
+  orientationDeg: number;
+  rules: PreliminaryLayoutRequest["rules"];
+}): RelativeLayout | null {
+  const bessSpec = equipmentCatalog.find((spec) => spec.id === args.batteryContainerSpecId);
+  const pcsSpec = equipmentCatalog.find((spec) => spec.id === args.pcsSpecId);
+  if (!bessSpec || !pcsSpec) return null;
+
+  const batteryContainerCount = clampCount(args.batteryContainerCount, 0);
+  const pcsCount = clampCount(args.pcsCount, 0);
+  const containersPerPcs = Math.max(1, clampCount(args.containersPerPcs, 1));
+  const blockCount = Math.max(pcsCount, Math.ceil(batteryContainerCount / containersPerPcs));
+  if (blockCount === 0) return null;
+
+  const bessColumns = Math.min(4, containersPerPcs);
+  const bessRows = Math.max(1, Math.ceil(containersPerPcs / bessColumns));
+  const bessSpacingM = args.rules.bessToBess_m;
+  const stationGapM = Math.max(
+    6,
+    args.rules.electricalFrontWorkingClearance_m,
+    args.rules.transformerToBessRecommended_m
+  );
+  const blockGapXM = Math.max(8, bessSpacingM * 2);
+  const blockGapYM = Math.max(8, bessSpacingM * 2);
+  const matrixLengthM =
+    bessColumns * bessSpec.footprint.length_m + (bessColumns - 1) * bessSpacingM;
+  const matrixWidthM =
+    bessRows * bessSpec.footprint.width_m + (bessRows - 1) * bessSpacingM;
+  const stationCenterXM =
+    matrixLengthM - bessSpec.footprint.length_m / 2 + stationGapM + pcsSpec.footprint.length_m / 2;
+  const stationCenterYM = matrixWidthM / 2 - bessSpec.footprint.width_m / 2;
+  const blockPitchXM =
+    stationCenterXM + pcsSpec.footprint.length_m / 2 + bessSpec.footprint.length_m / 2 + blockGapXM;
+  const blockPitchYM = Math.max(matrixWidthM, pcsSpec.footprint.width_m) + blockGapYM;
+  const blockColumns = Math.max(1, Math.min(args.blockColumns, blockCount));
+  const items: RelativeItem[] = [];
+  let remainingBess = batteryContainerCount;
+
+  for (let blockIndex = 0; blockIndex < blockCount; blockIndex++) {
+    const blockColumn = blockIndex % blockColumns;
+    const blockRow = Math.floor(blockIndex / blockColumns);
+    const blockOriginXM = blockColumn * blockPitchXM;
+    const blockOriginYM = blockRow * blockPitchYM;
+    const blockBessCount = Math.min(containersPerPcs, remainingBess);
+    const groupId = `${PRELIMINARY_TOOL_GROUP_PREFIX}block-${String(blockIndex + 1).padStart(2, "0")}`;
+
+    for (let index = 0; index < blockBessCount; index++) {
+      const row = Math.floor(index / bessColumns);
+      const column = index % bessColumns;
+      const rotated = rotatePoint(
+        blockOriginXM + column * (bessSpec.footprint.length_m + bessSpacingM),
+        blockOriginYM + row * (bessSpec.footprint.width_m + bessSpacingM),
+        args.orientationDeg
+      );
+      const rect = {
+        center: rotated,
+        length_m: bessSpec.footprint.length_m,
+        width_m: bessSpec.footprint.width_m,
+        rotation_deg: args.orientationDeg,
+      };
+      items.push({
+        equipmentSpecId: bessSpec.id,
+        type: "battery_container",
+        center: rotated,
+        rect,
+        groupId,
+      });
+    }
+
+    remainingBess -= blockBessCount;
+
+    if (blockIndex < pcsCount) {
+      const rotated = rotatePoint(
+        blockOriginXM + stationCenterXM,
+        blockOriginYM + stationCenterYM,
+        args.orientationDeg
+      );
+      const rect = {
+        center: rotated,
+        length_m: pcsSpec.footprint.length_m,
+        width_m: pcsSpec.footprint.width_m,
+        rotation_deg: args.orientationDeg,
+      };
+      items.push({
+        equipmentSpecId: pcsSpec.id,
+        type: "pcs",
+        center: rotated,
+        rect,
+        groupId,
+      });
+    }
+  }
+
+  const bbox = bboxOfRects(items.map((item) => item.rect));
+
+  return {
+    items,
+    blockCount,
+    areaM2: (bbox.maxX - bbox.minX) * (bbox.maxY - bbox.minY),
+  };
+}
+
+function toPlacedEquipment(
+  items: RelativeItem[],
+  anchor: ProjectAnchor,
+  dx: number,
+  dy: number
+): PlacedEquipment[] {
+  return items.map((item) => {
+    const spec = equipmentCatalog.find((entry) => entry.id === item.equipmentSpecId);
+    const center = translatePoint(item.center, dx, dy);
+    return {
+      id: nanoid(8),
+      equipmentSpecId: item.equipmentSpecId,
+      anchor: toLngLat(center, anchor),
+      rotation_deg: item.rect.rotation_deg,
+      groupId: item.groupId,
+      sourceReliability: spec?.source.reliability ?? "pending_validation",
+    };
+  });
+}
+
+export function generatePreliminaryLayout(
+  request: PreliminaryLayoutRequest
+): PreliminaryLayoutResult {
+  const batteryContainerCount = clampCount(request.batteryContainerCount, 0);
+  const pcsCount = clampCount(request.pcsCount, 0);
+  const containersPerPcs = Math.max(1, clampCount(request.containersPerPcs, 1));
+  const blockCount = Math.max(pcsCount, Math.ceil(batteryContainerCount / containersPerPcs));
+  let candidateCount = 0;
+
+  const baseDiagnostics = {
+    batteryContainerCount,
+    pcsCount,
+    blockCount,
+    containersPerPcs,
+    spacingM: request.rules.bessToBess_m,
+    boundarySetbackM: request.rules.bessToPropertyLine_m,
+    layoutAreaM2: null,
+    candidateCount,
+  };
+
+  if (batteryContainerCount === 0 && pcsCount === 0) {
+    return {
+      status: "error",
+      message: "Enter at least one BESS container or PCS/MV center.",
+      placed: [],
+      diagnostics: baseDiagnostics,
+    };
+  }
+
+  const startLocal = toLocal(request.startPoint, request.anchor);
+  const candidateColumns = Array.from({ length: blockCount }, (_, index) => index + 1);
+  const orientations = [0, 90];
+  const preferredColumns =
+    request.blockColumns != null && Number.isFinite(request.blockColumns)
+      ? Math.min(
+          Math.max(1, Math.floor(request.blockColumns)),
+          Math.max(1, blockCount)
+        )
+      : defaultBlockColumns(blockCount);
+
+  if (!request.fitInsidePolygon || !request.polygon || request.polygon.length < 3) {
+    const freeLayout = buildRelativeLayout({
+      ...request,
+      batteryContainerCount,
+      pcsCount,
+      containersPerPcs,
+      blockColumns: preferredColumns,
+      orientationDeg: 0,
+    });
+
+    if (!freeLayout) {
+      return {
+        status: "error",
+        message: "Could not generate a conceptual layout with the selected equipment.",
+        placed: [],
+        diagnostics: baseDiagnostics,
+      };
+    }
+
+    const bbox = bboxOfRects(freeLayout.items.map((item) => item.rect));
+    const dx = startLocal.x_m - bbox.minX - request.rules.bessToPropertyLine_m;
+    const dy = startLocal.y_m - bbox.minY - request.rules.bessToPropertyLine_m;
+    return {
+      status: "success",
+      message:
+        "Conceptual layout inserted without polygon fitting. Draw a site and use regularization to enforce boundary setbacks.",
+      placed: toPlacedEquipment(freeLayout.items, request.anchor, dx, dy),
+      diagnostics: {
+        ...baseDiagnostics,
+        candidateCount: 1,
+        layoutAreaM2: freeLayout.areaM2,
+      },
+    };
+  }
+
+  const localPolygon = request.polygon.map((point) => toLocal(point, request.anchor));
+  const polygonBBox = bboxOfPolygon(localPolygon);
+  const setbackM = request.rules.bessToPropertyLine_m;
+
+  const searchPlacement = (
+    columnsList: number[],
+    orientationDegList: number[]
+  ): RelativeLayout | null => {
+    let found: RelativeLayout | null = null;
+    for (const orientationDeg of orientationDegList) {
+      for (const blockColumns of columnsList) {
+        const layout = buildRelativeLayout({
+          ...request,
+          batteryContainerCount,
+          pcsCount,
+          containersPerPcs,
+          blockColumns,
+          orientationDeg,
+        });
+        if (!layout) continue;
+        candidateCount += 1;
+        const layoutBBox = bboxOfRects(layout.items.map((item) => item.rect));
+        const minDx = polygonBBox.minX + setbackM - layoutBBox.minX;
+        const maxDx = polygonBBox.maxX - setbackM - layoutBBox.maxX;
+        const minDy = polygonBBox.minY + setbackM - layoutBBox.minY;
+        const maxDy = polygonBBox.maxY - setbackM - layoutBBox.maxY;
+
+        for (const dx of sampleBetween(minDx, maxDx)) {
+          for (const dy of sampleBetween(minDy, maxDy)) {
+            const shifted = layout.items.map((item) => ({
+              ...item,
+              center: translatePoint(item.center, dx, dy),
+              rect: translateRect(item.rect, dx, dy),
+            }));
+            if (
+              validateCandidate({
+                items: shifted,
+                polygon: localPolygon,
+                rules: request.rules,
+              }) &&
+              (!found || layout.areaM2 < found.areaM2)
+            ) {
+              found = { ...layout, items: shifted };
+            }
+          }
+        }
+      }
+    }
+    return found;
+  };
+
+  // Honour the requested arrangement first; only fall back to a free search
+  // over every grid shape if the requested one does not fit the terrain.
+  let arrangementAdjusted = false;
+  let best = searchPlacement([preferredColumns], [0]);
+  if (!best) {
+    best = searchPlacement(candidateColumns, orientations);
+    arrangementAdjusted = best !== null;
+  }
+
+  if (!best) {
+    return {
+      status: "error",
+      message:
+        "No feasible arrangement was found inside the selected terrain with the active setbacks and spacing. Reduce quantities, change the arrangement or orientation, use a larger polygon, or review spacing assumptions.",
+      placed: [],
+      diagnostics: {
+        ...baseDiagnostics,
+        candidateCount,
+      },
+    };
+  }
+
+  return {
+    status: "success",
+    message: arrangementAdjusted
+      ? "Layout regularized inside the site polygon. The requested arrangement did not fit, so a feasible arrangement was used instead."
+      : "Layout regularized inside the site polygon using the requested arrangement and the active preliminary spacing and setback rules.",
+    placed: toPlacedEquipment(best.items, request.anchor, 0, 0),
+    diagnostics: {
+      ...baseDiagnostics,
+      candidateCount,
+      layoutAreaM2: best.areaM2,
+    },
+  };
+}
