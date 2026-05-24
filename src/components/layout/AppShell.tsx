@@ -13,6 +13,7 @@ import { MetricBar } from "./MetricBar";
 import { ConfigurationSidebar } from "@/components/sidebar/ConfigurationSidebar";
 import { BessParkSummaryPanel } from "@/components/sidebar/BessParkSummaryPanel";
 import { RegulatoryCompliancePanel } from "@/components/sidebar/RegulatoryCompliancePanel";
+import { TechnicalReportPanel } from "@/components/sidebar/TechnicalReportPanel";
 import { WarningsPanel } from "@/components/sidebar/WarningsPanel";
 import { useUiStore } from "@/store/uiStore";
 
@@ -108,6 +109,9 @@ export function AppShell() {
         <aside className="min-w-0 overflow-x-hidden bg-slate-950 lg:min-h-0 lg:overflow-y-auto lg:border-l lg:border-slate-800">
           <BessParkSummaryPanel />
           <RegulatoryCompliancePanel />
+          <section className="border-b border-slate-800 p-4">
+            <TechnicalReportPanel />
+          </section>
           <WarningsPanel />
         </aside>
       </div>
