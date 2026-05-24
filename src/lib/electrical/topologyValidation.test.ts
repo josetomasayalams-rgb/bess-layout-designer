@@ -119,6 +119,19 @@ describe("validateElectricalTopology", () => {
     expect(hasIssue(result, "rule-elec-005-feeder-collector-voltage")).toBe(true);
     expect(hasIssue(result, "rule-elec-006-poi-voltage-mismatch")).toBe(true);
   });
+
+  it("flags feeder power overload when aggregate MVA exceeds feeder rating", () => {
+    const input = presetInput();
+    input.mvFeeders[0] = {
+      ...input.mvFeeders[0],
+      ratedPowerMVA: 2,
+    };
+
+    const result = validateElectricalTopology(input);
+
+    expect(result.criticalCount).toBeGreaterThan(0);
+    expect(hasIssue(result, "rule-elec-006-feeder-power-overload")).toBe(true);
+  });
 });
 
 describe("documentInconsistenciesToElectricalIssues", () => {

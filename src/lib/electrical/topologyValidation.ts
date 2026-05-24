@@ -304,7 +304,7 @@ export function validateElectricalTopology(
       if (aggregateMva > feeder.ratedPowerMVA + 0.001) {
         issues.push(
           issue({
-            id: `rule-elec-002-feeder-power-overload-${feeder.id}`,
+            id: `rule-elec-006-feeder-power-overload-${feeder.id}`,
             severity: "critical",
             message: `MV feeder ${feeder.id} aggregates ${aggregateMva} MVA, above its preliminary rating of ${feeder.ratedPowerMVA} MVA.`,
             recommendation: "Reduce stations per feeder or document a higher feeder rating.",

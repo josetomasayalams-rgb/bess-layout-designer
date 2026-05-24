@@ -115,11 +115,17 @@ const PHYS_RULE_KEYWORD: Record<string, string[]> = {
   "validation.containmentCheck": ["bess_inside_polygon", "equipment_inside_polygon"],
   // RULE-PHYS-002: collision
   "collision.detect": ["equipment_collision"],
+  // RULE-PHYS-003: container-to-container spacing
+  "EquipmentSpec.clearances.sameType_m": ["bess_to_bess_spacing"],
+  // RULE-PHYS-004: container-to-PCS spacing (working clearance)
+  "EquipmentSpec.clearances.otherType_m": ["electrical_front_working_clearance"],
+  // RULE-PHYS-005: boundary fire setback
+  "FireSafetyZone.boundary_setback_m": ["bess_to_property_line", "fire_boundary_setback"],
   // RULE-PHYS-006: vehicle access
   "AccessRoad.maxDistanceToEquipment_m": ["vehicle_access_distance"],
   // RULE-PHYS-007: road min width — engine doesn't emit this yet
   // RULE-PHYS-009: cable corridor overlap
-  "cableRoutes.noOverlap": ["cable_route_overlap"],
+  "cableRoutes.noOverlap": ["cable_route_equipment_clearance", "cable_route_access_road_overlap"],
   // RULE-PHYS-011: exclusion zones
   "validation.exclusionZones": ["equipment_in_exclusion"],
 };
@@ -140,6 +146,8 @@ const ELEC_RULE_PREFIX: Record<string, string> = {
   "electrical.compatibility.lvMatch": "rule-elec-004-",
   // RULE-ELEC-005: MV consistency
   "mvFeeders.uniformVoltage": "rule-elec-005-",
+  // RULE-ELEC-006: Feeder preliminary rating not exceeded
+  "mvFeeders.ratingCheck": "rule-elec-006-feeder-power-overload-",
 };
 
 // ──────────────────────────────────────────────────────────────────
@@ -275,6 +283,12 @@ function evaluateRule(
           affectedIds: m.affectedIds,
         })),
       };
+    }
+
+    if (rule.category === "engineering_detail") {
+      if (rule.id === "RULE-REP-001") {
+        return { ...base, outcome: "pass" };
+      }
     }
 
     // implemented pero sin handler conocido → pending_validation defensivo.

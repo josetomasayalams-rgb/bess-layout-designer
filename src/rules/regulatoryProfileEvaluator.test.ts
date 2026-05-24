@@ -168,3 +168,167 @@ describe("evaluateRegulatoryProfile — outcome distribution", () => {
     expect(typeof sample!.appParameter).toBe("string");
   });
 });
+
+describe("evaluateRegulatoryProfile — newly automated physical rules", () => {
+  it("evaluates RULE-PHYS-003, RULE-PHYS-004, and RULE-PHYS-005 when physical issues are provided", () => {
+    const result = evaluateRegulatoryProfile({
+      profileId: "chile-utility-predesign",
+      physicalIssues: [
+        {
+          id: "issue-bess-bess",
+          severity: "critical",
+          ruleId: "bess_to_bess_spacing",
+          ruleLabel: "BESS to BESS separation",
+          objectAId: "bess-1",
+          objectBId: "bess-2",
+          measured_m: 1.5,
+          required_m: 3.0,
+          source: "test source",
+          message: "BESS 1 is 1.5m from BESS 2.",
+          recommendation: "Increase spacing",
+          basis: "conservative_criterion",
+        },
+        {
+          id: "issue-pcs-clearance",
+          severity: "critical",
+          ruleId: "electrical_front_working_clearance",
+          ruleLabel: "Electrical equipment working clearance",
+          objectAId: "pcs-1",
+          objectBId: "bess-1",
+          measured_m: 0.5,
+          required_m: 0.9,
+          source: "test source",
+          message: "PCS 1 is 0.5m from BESS 1.",
+          recommendation: "Increase clearance",
+          basis: "conservative_criterion",
+        },
+        {
+          id: "issue-bess-property",
+          severity: "critical",
+          ruleId: "bess_to_property_line",
+          ruleLabel: "BESS to property line",
+          objectAId: "bess-1",
+          measured_m: 2.0,
+          required_m: 3.0,
+          source: "test source",
+          message: "BESS 1 is 2.0m from property line.",
+          recommendation: "Move BESS farther",
+          basis: "conservative_criterion",
+        },
+      ],
+    });
+
+    const rule3 = result.rules.find((r) => r.ruleId === "RULE-PHYS-003");
+    expect(rule3).toBeDefined();
+    expect(rule3!.outcome).toBe("violation");
+    expect(rule3!.violations.length).toBe(1);
+    expect(rule3!.violations[0].measured_m).toBe(1.5);
+
+    const rule4 = result.rules.find((r) => r.ruleId === "RULE-PHYS-004");
+    expect(rule4).toBeDefined();
+    expect(rule4!.outcome).toBe("violation");
+    expect(rule4!.violations.length).toBe(1);
+
+    const rule5 = result.rules.find((r) => r.ruleId === "RULE-PHYS-005");
+    expect(rule5).toBeDefined();
+    expect(rule5!.outcome).toBe("violation");
+    expect(rule5!.violations.length).toBe(1);
+    expect(rule5!.violations[0].measured_m).toBe(2.0);
+  });
+});
+
+describe("evaluateRegulatoryProfile — newly automated electrical & detail rules", () => {
+  it("evaluates RULE-ELEC-006, RULE-PHYS-009, and RULE-REP-001 correctly", () => {
+    const result = evaluateRegulatoryProfile({
+      profileId: "chile-utility-predesign",
+      blocks: [
+        {
+          id: "b-1",
+          conversionStationId: "cs-1",
+          containerIds: ["c-1"],
+        },
+      ],
+      conversionStations: [
+        {
+          id: "cs-1",
+          manufacturer: "Sungrow",
+          model: "SC5000UD-MV",
+          ratedPowerMVA: { value: 5, unit: "MVA", evidence: [] },
+          associatedContainerIds: ["c-1"],
+          blockTransformer: {
+            id: "t-1",
+            ratedPowerMVA: { value: 5, unit: "MVA", evidence: [] },
+            lvVoltageKv: { value: 0.9, unit: "kV", evidence: [] },
+            hvVoltageKv: { value: 33, unit: "kV", evidence: [] },
+            vectorGroup: "Dy11",
+            cooling: "ONAN",
+          },
+          pcsModules: [],
+        },
+      ],
+      mvFeeders: [
+        {
+          id: "f-1",
+          nominalVoltageKv: 33,
+          conversionStationIds: ["cs-1"],
+          cableRouteIds: [],
+          mvBusId: "bus-1",
+        },
+      ],
+      physicalIssues: [
+        {
+          id: "issue-cable-equip",
+          severity: "warning",
+          ruleId: "cable_route_equipment_clearance",
+          ruleLabel: "Cable corridor clear of equipment",
+          objectAId: "route-1",
+          objectBId: "bess-1",
+          source: "test source",
+          message: "Cable Route 1 overlaps BESS 1.",
+          recommendation: "Re-route corridor",
+          basis: "conservative_criterion",
+        },
+        {
+          id: "issue-fire-setback-missing-poly",
+          severity: "warning",
+          ruleId: "fire_boundary_setback",
+          ruleLabel: "Fire setback to site boundary",
+          objectAId: "project",
+          source: "test source",
+          message: "Fire setback cannot be evaluated without polygon.",
+          recommendation: "Define polygon",
+          basis: "requires_validation",
+        },
+      ],
+      electricalIssues: [
+        {
+          id: "rule-elec-006-feeder-power-overload-f-1",
+          severity: "critical",
+          message: "MV feeder f-1 is overloaded.",
+          recommendation: "Reduce load",
+          basis: "calculated",
+          affectedIds: ["f-1"],
+        },
+      ],
+    });
+
+    const rule6 = result.rules.find((r) => r.ruleId === "RULE-ELEC-006");
+    expect(rule6).toBeDefined();
+    expect(rule6!.outcome).toBe("violation");
+    expect(rule6!.violations.length).toBe(1);
+
+    const rule9 = result.rules.find((r) => r.ruleId === "RULE-PHYS-009");
+    expect(rule9).toBeDefined();
+    expect(rule9!.outcome).toBe("violation");
+    expect(rule9!.violations.length).toBe(1);
+
+    const rule5 = result.rules.find((r) => r.ruleId === "RULE-PHYS-005");
+    expect(rule5).toBeDefined();
+    expect(rule5!.outcome).toBe("violation");
+    expect(rule5!.violations.length).toBe(1);
+
+    const ruleRep1 = result.rules.find((r) => r.ruleId === "RULE-REP-001");
+    expect(ruleRep1).toBeDefined();
+    expect(ruleRep1!.outcome).toBe("pass");
+  });
+});

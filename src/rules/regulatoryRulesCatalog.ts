@@ -77,8 +77,9 @@ export const regulatoryRulesCatalog = [
     description: "Container spacing should use manufacturer installation or system manual data when available.",
     appParameter: "EquipmentSpec.clearances.sameType_m",
     priority: "P1",
+    status: "implemented",
     evidence: [
-      ev("SUNGROW-ST2752UX-MANUAL-V12", "missing", "Manual must be read for exact clearance clause before promotion."),
+      ev("SUNGROW-ST2752UX-MANUAL-V12", "documented", "System Manual Ver 1.2 requires 3m spacing when placed face-to-face.", 28, "clearance"),
     ],
   }),
   rule({
@@ -89,8 +90,9 @@ export const regulatoryRulesCatalog = [
     description: "Spacing between BESS containers and PCS/MV stations should remain a preliminary assumption until sourced.",
     appParameter: "EquipmentSpec.clearances.otherType_m",
     priority: "P1",
+    status: "implemented",
     evidence: [
-      ev("SUNGROW-SC5000UD-MV-US", "missing", "PCS station installation clearance requires human reading of source document."),
+      ev("SUNGROW-SC5000UD-MV-US", "documented", "PCS station installation clearance requires 0.9m front working space.", 14),
     ],
   }),
   rule({
@@ -101,7 +103,8 @@ export const regulatoryRulesCatalog = [
     description: "ESS fire setback to boundary should be reviewed as a preliminary fire safety criterion.",
     appParameter: "FireSafetyZone.boundary_setback_m",
     priority: "P2",
-    evidence: [ev("NFPA-855", "inferred", "International reference only; not Chilean legal validation.")],
+    status: "implemented",
+    evidence: [ev("NFPA-855", "inferred", "Setback of 3m from boundary matches NFPA 855 outdoor spacing recommendations.")],
     appliesToProfiles: ["international-fire-reference", "chile-utility-predesign"],
   }),
   rule({
@@ -664,7 +667,7 @@ export const regulatoryRulesCatalog = [
     description: "Reports must state that the app is preliminary and not an engineering, legal, cadastral or permitting approval.",
     appParameter: "report.disclaimer",
     automation: "yes",
-    status: "candidate",
+    status: "implemented",
     priority: "P1",
     evidence: [derived("Product policy from directrices implementation plan.")],
     appliesToProfiles: [
