@@ -313,6 +313,20 @@ export const bessDelDesiertoMVBuses: MVBus[] = [
       manufacturer: "Siemens (referencial)",
       model: "8DA 40,5 kV GIS",
       ratedVoltageKv: 36,
+      // Fase 8 T1: referencial — extraído del catálogo de switchgear
+      // (Siemens 8DA 2500 A típico). Sin documento de proyecto, queda
+      // como `inferred` para que severityCeiling baje a warning.
+      busbarCurrentA: {
+        value: 2500,
+        unit: "A",
+        evidence: [
+          {
+            documentId: "__none__",
+            confidence: "inferred",
+            note: "Reference value from Siemens 8DA family; project does not specify exact rating.",
+          },
+        ],
+      },
       hasBusCoupler: true,
       evidence: [
         ref(D, 13, "Centro de seccionamiento con BP5/BP6 y acoplador visibles"),
@@ -329,6 +343,20 @@ export const bessDelDesiertoMVBuses: MVBus[] = [
       manufacturer: "Siemens (referencial)",
       model: "8DA 40,5 kV GIS",
       ratedVoltageKv: 36,
+      // Fase 8 T1: referencial — extraído del catálogo de switchgear
+      // (Siemens 8DA 2500 A típico). Sin documento de proyecto, queda
+      // como `inferred` para que severityCeiling baje a warning.
+      busbarCurrentA: {
+        value: 2500,
+        unit: "A",
+        evidence: [
+          {
+            documentId: "__none__",
+            confidence: "inferred",
+            note: "Reference value from Siemens 8DA family; project does not specify exact rating.",
+          },
+        ],
+      },
       hasBusCoupler: true,
       evidence: [
         ref(D, 13, "Centro de seccionamiento con BP5/BP6 y acoplador visibles"),
@@ -347,6 +375,14 @@ export const bessDelDesiertoPOI: POI = {
   voltageKv: BESS_DESIERTO_CONSTANTS.COLLECTOR_VOLTAGE_KV,
   busName: "BP5/BP6 33 kV",
   boundary: "mv_33kv",
+  // Fase 8 T3: la app no tiene el estudio de conexión CEN/CNE del
+  // proyecto, así que RULE-ELEC-013 caerá a `checklist` por evidencia
+  // faltante (severityCeiling). El fallback 220 MVA viene del plan
+  // 200 MW + holgura — editable.
+  declaredCapacityMVA: asMissingV(
+    220,
+    "POI declared capacity not available in project documents; placeholder for screening only."
+  ),
   meteringPoints: [
     {
       id: "metering-ct",

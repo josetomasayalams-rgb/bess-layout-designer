@@ -115,7 +115,12 @@ export type SwitchgearSummary = {
   manufacturer?: string;
   model?: string;
   ratedVoltageKv?: number;
-  busbarCurrentA?: number;
+  /**
+   * Fase 8 (T1): trazabilidad explícita del rating de barra MT.
+   * Cuando no se conoce con datasheet, debe envolverse en `asMissing(0)`
+   * para que `severityCeiling` baje el techo a `checklist`.
+   */
+  busbarCurrentA?: EvidencedValue<number>;
   cellCount?: number;
   hasBusCoupler?: boolean;
   dimensions_m?: {
@@ -139,6 +144,12 @@ export type POI = {
   /** Frontera de medición y reporte. */
   boundary: "mv_33kv" | "hv_220kv" | "external";
   meteringPoints?: MeteringPoint[];
+  /**
+   * Fase 8 (T3): capacidad declarada del POI (MVA) según informe de
+   * conexión o estudio CEN/CNE. Si está ausente, RULE-ELEC-013
+   * baja a `checklist` por evidencia faltante.
+   */
+  declaredCapacityMVA?: EvidencedValue<number>;
   evidence?: EvidenceRef[];
 };
 
