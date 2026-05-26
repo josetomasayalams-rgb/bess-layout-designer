@@ -50,19 +50,19 @@ export const REGULATORY_PROFILES: RegulatoryProfile[] = [
       "This profile is a conservative engineering screening baseline, not a universal legal distance for every BESS.",
   },
   {
-    id: "chile-sec-rgr-06-2021",
-    name: "Chile - SEC RGR No. 06/2021",
+    id: "chile-sec-rgr-06-2024",
+    name: "Chile - SEC RGR 06/2024 (BESS)",
     jurisdiction: "chile",
-    baseStandards: ["SEC RGR No. 06/2021"],
+    baseStandards: ["SEC RGR 06/2024"],
     rules: {
       ...CONSERVATIVE_RULES,
       maintenanceAisle_m: 1,
     },
     basis: "normative",
     source:
-      "Chile SEC RGR No. 06/2021 local reference. International separation criteria remain conservative references when outdoor utility-scale details are not explicitly defined.",
+      "Chile SEC RGR 06/2024 local reference (bound to documentRegistry entry SEC-RGR-06-2024). International separation criteria remain conservative references when outdoor utility-scale details are not explicitly defined in the local pliego.",
     notes:
-      "For Chile, SEC RGR No. 06/2021 is treated as the local reference. Manufacturer manuals, fire design and authority review remain required.",
+      "For Chile, SEC RGR 06/2024 is the local reference. Manufacturer manuals, fire design and AHJ/insurer review remain required before promoting any clearance to a hard rule. Numeric thresholds in this profile are still conservative criteria, not pliego-extracted values.",
   },
   {
     id: "custom",

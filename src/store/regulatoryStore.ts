@@ -31,7 +31,7 @@ export const useRegulatoryStore = create<RegulatoryState>((set) => ({
       context: {
         ...state.context,
         jurisdiction:
-          profileId === "chile-sec-rgr-06-2021"
+          profileId === "chile-sec-rgr-06-2024"
             ? "chile"
             : profileId === "custom"
               ? "custom"

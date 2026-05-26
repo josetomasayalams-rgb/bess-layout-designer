@@ -74,12 +74,19 @@ export const regulatoryRulesCatalog = [
     category: "physical_layout",
     severity: "warning",
     title: "Container-to-container clearance from manufacturer source",
-    description: "Container spacing should use manufacturer installation or system manual data when available.",
+    description:
+      "Container spacing should use the manufacturer installation/system manual values. For ST2752UX-US the manual gives 150 mm between facing adjacent units and 2500 mm on the service/ventilation side; fire separation remains pending UL 9540A.",
     appParameter: "EquipmentSpec.clearances.sameType_m",
     priority: "P1",
     status: "implemented",
     evidence: [
-      ev("SUNGROW-ST2752UX-MANUAL-V12", "documented", "System Manual Ver 1.2 requires 3m spacing when placed face-to-face.", 28, "clearance"),
+      ev(
+        "SUNGROW-ST2752UX-MANUAL-V12",
+        "documented",
+        "System Manual Ver12 figs 4-1/4-2: 150 mm between facing adjacent ST2752UX units and 2500 mm on the service/ventilation side. Manufacturer rule for ST2752UX-US, not a code-level requirement.",
+        undefined,
+        "Section 4 — Installation"
+      ),
     ],
   }),
   rule({
@@ -87,12 +94,17 @@ export const regulatoryRulesCatalog = [
     category: "physical_layout",
     severity: "warning",
     title: "Container-to-PCS station clearance from manufacturer source",
-    description: "Spacing between BESS containers and PCS/MV stations should remain a preliminary assumption until sourced.",
+    description:
+      "Spacing between BESS containers and PCS/MV stations is evaluated geometrically, but the underlying clearance value remains a preliminary assumption: the SC5000UD-MV installation manual is pending (PEND-SC5000-MANUAL). The 0.9 m front working space applied by the validator is a conservative electrical working clearance, not a vendor-cited value.",
     appParameter: "EquipmentSpec.clearances.otherType_m",
     priority: "P1",
     status: "implemented",
     evidence: [
-      ev("SUNGROW-SC5000UD-MV-US", "documented", "PCS station installation clearance requires 0.9m front working space.", 14),
+      ev(
+        "SUNGROW-SC5000UD-MV-US",
+        "inferred",
+        "PCS datasheet does not document a project-specific clearance. 0.9 m working space is a conservative electrical screening criterion until the official SC5000UD-MV installation manual is obtained."
+      ),
     ],
   }),
   rule({
@@ -195,7 +207,7 @@ export const regulatoryRulesCatalog = [
     status: "implemented",
     priority: "P2",
     evidence: [ev("PROJ-BESS-DESIERTO-1129", "documented", "Case-study architecture basis.", 6)],
-    appliesToProfiles: ["bess-del-desierto-reference", "chile-utility-predesign"],
+    appliesToProfiles: ["bess-del-desierto-reference"],
   }),
   rule({
     id: "RULE-ELEC-002",
@@ -208,7 +220,7 @@ export const regulatoryRulesCatalog = [
     status: "implemented",
     priority: "P2",
     evidence: [ev("PROJ-BESS-DESIERTO-1129", "inferred", "Pattern inferred from single-line diagram.", 13)],
-    appliesToProfiles: ["bess-del-desierto-reference", "chile-utility-predesign"],
+    appliesToProfiles: ["bess-del-desierto-reference"],
   }),
   rule({
     id: "RULE-ELEC-003",
@@ -634,7 +646,11 @@ export const regulatoryRulesCatalog = [
     automation: "no",
     status: "manual_check",
     evidence: [
-      ev("SUNGROW-PT2-WP-2024", "documented", "Manufacturer whitepaper references thermal propagation testing context."),
+      ev(
+        "SUNGROW-PT2-WP-2024",
+        "inferred",
+        "Manufacturer whitepaper references thermal propagation testing context. Whitepapers are level-5 commercial references in the matrix; the UL 9540A test report by equipment is still pending (PEND-ST2752-UL9540A-REPORT)."
+      ),
     ],
   }),
   rule({

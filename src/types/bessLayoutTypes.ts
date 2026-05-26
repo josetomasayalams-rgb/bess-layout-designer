@@ -3,7 +3,7 @@ import type { PlacedEquipment } from "@/types/equipment";
 
 export type RegulatoryProfileId =
   | "ifc-2024-nfpa-855-conservative"
-  | "chile-sec-rgr-06-2021"
+  | "chile-sec-rgr-06-2024"
   | "custom";
 
 export type RegulatoryBasis =
