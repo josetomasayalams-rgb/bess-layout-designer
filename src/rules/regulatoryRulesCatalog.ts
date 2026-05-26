@@ -847,6 +847,31 @@ export const regulatoryRulesCatalog = [
   }),
 ] satisfies readonly RegulatoryRuleDefinition[];
 
+/**
+ * Phase 8 preliminary electrical rule ids — the 8 checks added in
+ * `docs/phase8-electrical-scope.md`. Exported so UI and the report can render
+ * them as a single "preliminary electrical" group without re-listing IDs in
+ * multiple call sites. This is an identifier list, not an engineering
+ * constant, so it stays here next to the catalog rather than in
+ * `defaultConstraints.ts`.
+ */
+export const PHASE_8_ELECTRICAL_RULE_IDS = [
+  "RULE-ELEC-007",
+  "RULE-ELEC-008",
+  "RULE-ELEC-009",
+  "RULE-ELEC-013",
+  "RULE-ELEC-014",
+  "RULE-ELEC-015",
+  "RULE-ELEC-016",
+  "RULE-ELEC-017",
+] as const;
+
+export type Phase8ElectricalRuleId = (typeof PHASE_8_ELECTRICAL_RULE_IDS)[number];
+
+export function isPhase8ElectricalRuleId(id: string): id is Phase8ElectricalRuleId {
+  return (PHASE_8_ELECTRICAL_RULE_IDS as readonly string[]).includes(id);
+}
+
 export function getRegulatoryRule(id: string): RegulatoryRuleDefinition | undefined {
   return regulatoryRulesCatalog.find((ruleItem) => ruleItem.id === id);
 }
