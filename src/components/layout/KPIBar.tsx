@@ -4,7 +4,7 @@
  * KPIBar — Fase 11A.1
  *
  * Replaces the visual slot currently occupied by `MetricBar` with an
- * expanded permanent strip of 9 chips grouped in 3 visual clusters:
+ * expanded permanent strip of 10 chips grouped in 3 visual clusters:
  *
  *   Dimensioning  : Power · Energy · Duration
  *   Layout        : Area · Containers · PCS/MV

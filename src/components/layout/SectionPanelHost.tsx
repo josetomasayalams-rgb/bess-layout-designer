@@ -91,6 +91,7 @@ export function SectionPanelHost({
   const locale = useUiStore((s) => s.locale);
   const copy = SECTION_COPY[activeSection][locale];
   const isPrimary = region === "primary";
+  const sectionCue = useSectionCue(activeSection, region);
 
   return (
     <aside
@@ -108,11 +109,82 @@ export function SectionPanelHost({
         <p className="mt-1 text-[11px] leading-snug text-slate-500">
           {copy.description}
         </p>
+        {sectionCue ? <SectionCue {...sectionCue} /> : null}
       </div>
       <div className={isPrimary ? "flex-1 lg:min-h-0 lg:overflow-y-auto" : ""}>
         {renderSectionPanels(activeSection, region)}
       </div>
     </aside>
+  );
+}
+
+function useSectionCue(
+  activeSection: AppSectionId,
+  region: "primary" | "secondary"
+): { label: string; text: string } | null {
+  const locale = useUiStore((s) => s.locale);
+  const polygon = useProjectStore((s) => s.polygon);
+  const placed = useProjectStore((s) => s.placedEquipment);
+  const isEs = locale === "es";
+  const hasTerrain = polygon.length >= 3;
+  const hasLayout = placed.length > 0;
+
+  if (activeSection === "site" && region === "primary" && !hasTerrain) {
+    return {
+      label: isEs ? "Estado inicial" : "Initial state",
+      text: isEs
+        ? "Dibuja o carga un poligono para habilitar area, coordenadas y layout."
+        : "Draw or load a polygon to enable area, coordinates and layout.",
+    };
+  }
+
+  if (activeSection === "equipment" && region === "primary" && !hasLayout) {
+    return {
+      label: isEs ? "Sin equipos colocados" : "No placed equipment",
+      text: isEs
+        ? "Selecciona un modelo o usa sizing preliminar; esta seccion no coloca equipos por si sola."
+        : "Select a model or use preliminary sizing; this section does not place equipment by itself.",
+    };
+  }
+
+  if (activeSection === "layout" && region === "primary" && !hasLayout) {
+    return {
+      label: isEs ? "Layout pendiente" : "Layout pending",
+      text: isEs
+        ? "Genera o coloca equipos para revisar disposicion fisica y arquitectura MT."
+        : "Generate or place equipment to review physical layout and MV architecture.",
+    };
+  }
+
+  if (activeSection === "compliance" && region === "primary" && !hasLayout) {
+    return {
+      label: isEs ? "Revision preliminar" : "Preliminary review",
+      text: isEs
+        ? "Los avisos se muestran sin bloquear navegacion; no hay layout evaluable todavia."
+        : "Warnings remain visible without blocking navigation; no evaluable layout exists yet.",
+    };
+  }
+
+  if (activeSection === "report" && region === "primary" && !hasLayout) {
+    return {
+      label: isEs ? "Reporte pendiente" : "Report pending",
+      text: isEs
+        ? "El reporte preliminar puede abrirse, pero la salida tecnica requiere datos de sitio y layout."
+        : "The preliminary report can be opened, but the technical output needs site and layout data.",
+    };
+  }
+
+  return null;
+}
+
+function SectionCue({ label, text }: { label: string; text: string }) {
+  return (
+    <div className="mt-2 rounded-md border border-slate-800 bg-slate-900/60 px-2.5 py-2">
+      <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+        {label}
+      </div>
+      <p className="mt-1 text-[11px] leading-snug text-slate-300">{text}</p>
+    </div>
   );
 }
 
@@ -228,6 +300,7 @@ function SiteTerrainPanel() {
 function SpacingRulesPanel() {
   const locale = useUiStore((s) => s.locale);
   const t = copyFor(locale);
+  const isEs = locale === "es";
 
   return (
     <CollapsibleSection
@@ -235,6 +308,14 @@ function SpacingRulesPanel() {
       title={t.spacing.title}
       description={t.spacing.description}
     >
+      <ScopeNote
+        label={isEs ? "Vista informativa" : "Informational view"}
+        text={
+          isEs
+            ? "Supuestos preliminares existentes desde defaultConstraints. No son una validacion normativa independiente ni reemplazan fabricante, AHJ o ingenieria de detalle."
+            : "Existing preliminary assumptions from defaultConstraints. This is not an independent code validation and does not replace manufacturer, AHJ or detail engineering criteria."
+        }
+      />
       <div className="space-y-2">
         {defaultConstraints.map((constraint) => {
           const translated = constraintCopy(constraint.id, locale);
@@ -268,6 +349,7 @@ function SpacingRulesPanel() {
 function AdvancedChecksPanel() {
   const locale = useUiStore((s) => s.locale);
   const t = copyFor(locale);
+  const isEs = locale === "es";
 
   return (
     <CollapsibleSection
@@ -275,6 +357,14 @@ function AdvancedChecksPanel() {
       title={t.advanced.title}
       description={t.advanced.description}
     >
+      <ScopeNote
+        label={isEs ? "Checklist orientativo" : "Guidance checklist"}
+        text={
+          isEs
+            ? "No ejecuta estudios electricos, civiles ni de seguridad. No cambia severidades, reglas ni exclusiones."
+            : "Does not run electrical, civil or safety studies. It does not change severities, rules or exclusions."
+        }
+      />
       <div className="space-y-2 text-[11px] text-slate-400">
         {t.advanced.checks.map((item) => (
           <div
@@ -287,5 +377,16 @@ function AdvancedChecksPanel() {
         ))}
       </div>
     </CollapsibleSection>
+  );
+}
+
+function ScopeNote({ label, text }: { label: string; text: string }) {
+  return (
+    <div className="mb-3 rounded-md border border-cyan-500/20 bg-cyan-500/10 px-2.5 py-2">
+      <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-cyan-200">
+        {label}
+      </div>
+      <p className="mt-1 text-[11px] leading-snug text-cyan-50/85">{text}</p>
+    </div>
   );
 }

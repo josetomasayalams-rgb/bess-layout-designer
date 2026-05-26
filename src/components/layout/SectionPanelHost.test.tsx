@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useProjectStore } from "@/store/projectStore";
 import { useUiStore } from "@/store/uiStore";
@@ -85,6 +85,24 @@ describe("SectionPanelHost", () => {
     expect(screen.getByTestId("equipment-catalog-panel")).toBeDefined();
   });
 
+  it("renders each section shell without remapping ids", () => {
+    const sections = ["site", "equipment", "layout", "compliance", "report"] as const;
+
+    for (const section of sections) {
+      const { unmount } = render(
+        <SectionPanelHost activeSection={section} region="primary" />
+      );
+
+      expect(
+        screen.getByRole("complementary", {
+          name: new RegExp(`${section === "site" ? "Site" : section === "equipment" ? "Equipment" : section === "layout" ? "Layout" : section === "compliance" ? "Compliance" : "Report"} primary panel`),
+        })
+      ).toBeDefined();
+
+      unmount();
+    }
+  });
+
   it("keeps compliance findings and warnings in the compliance section", () => {
     render(
       <>
@@ -96,6 +114,28 @@ describe("SectionPanelHost", () => {
     expect(screen.getByTestId("regulatory-config-panel")).toBeDefined();
     expect(screen.getByTestId("warnings-panel")).toBeDefined();
     expect(screen.getByTestId("compliance-panel")).toBeDefined();
+  });
+
+  it("labels spacing assumptions as an informational view", () => {
+    render(<SectionPanelHost activeSection="compliance" region="secondary" />);
+
+    fireEvent.click(screen.getByText("Spacing assumptions"));
+
+    expect(screen.getByText("Informational view")).toBeDefined();
+    expect(
+      screen.getByText(/not an independent code validation/i)
+    ).toBeDefined();
+  });
+
+  it("labels advanced checks as a guidance checklist", () => {
+    render(<SectionPanelHost activeSection="compliance" region="secondary" />);
+
+    fireEvent.click(screen.getByText("Advanced checks"));
+
+    expect(screen.getByText("Guidance checklist")).toBeDefined();
+    expect(
+      screen.getByText(/does not run electrical, civil or safety studies/i)
+    ).toBeDefined();
   });
 
   it("maps report output panels to the report section", () => {
