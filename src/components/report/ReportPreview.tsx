@@ -36,16 +36,17 @@ type ReportPreviewProps = {
   includeGeocoding: boolean;
 };
 
-type SectionId = 
-  | "cover" 
-  | "executive" 
-  | "location" 
-  | "design" 
-  | "layout" 
-  | "electrical" 
-  | "regulatory" 
-  | "traceability" 
-  | "scope" 
+type SectionId =
+  | "cover"
+  | "executive"
+  | "location"
+  | "design"
+  | "layout"
+  | "electrical"
+  | "electricalPrelim"
+  | "regulatory"
+  | "traceability"
+  | "scope"
   | "annex";
 
 function centroidOf(polygon: LngLat[]): LngLat | null {
@@ -215,6 +216,7 @@ export function ReportPreview({ isOpen, onClose, includeGeocoding }: ReportPrevi
     { id: "design", label: isEs ? "3. Parámetros BESS" : "3. BESS Parameters", icon: Compass },
     { id: "layout", label: isEs ? "4. Layout Físico" : "4. Physical Layout", icon: FileText },
     { id: "electrical", label: isEs ? "5. Arquitectura Eléctrica" : "5. Electrical Architecture", icon: Activity },
+    { id: "electricalPrelim", label: isEs ? "5b. Validaciones Eléctricas Preliminares" : "5b. Preliminary Electrical Checks", icon: Activity },
     { id: "regulatory", label: isEs ? "6. Validación Normativa" : "6. Regulatory Validation", icon: ListChecks },
     { id: "traceability", label: isEs ? "7. Alertas y Pendientes" : "7. Alerts & Pending Data", icon: ShieldAlert },
     { id: "scope", label: isEs ? "8. Alcance y Exclusiones" : "8. Scope & Exclusions", icon: BookOpen },
@@ -761,6 +763,125 @@ export function ReportPreview({ isOpen, onClose, includeGeocoding }: ReportPrevi
                       )}
                     </div>
                   </div>
+                )}
+              </div>
+
+              {/* SECTION 5b: PRELIMINARY ELECTRICAL CHECKS (Fase 9) */}
+              <div id="preview-sec-electricalPrelim" className="w-full bg-white text-slate-900 border border-slate-200 shadow-2xl p-10 md:p-14 rounded-md font-serif">
+                <h2 className="text-xl font-bold border-b border-slate-200 pb-2 mb-4 font-sans tracking-wide text-slate-800">
+                  <span className="text-slate-400 mr-2">5b.</span>
+                  {isEs ? "Validaciones Eléctricas Preliminares" : "Preliminary Electrical Checks"}
+                </h2>
+
+                <div className="mb-4 rounded border border-amber-300/60 bg-amber-50 p-3 text-[12px] leading-relaxed text-amber-900 font-sans">
+                  {isEs
+                    ? "Estimaciones preliminares de referencia. No reemplazan estudios eléctricos de detalle: flujo de potencia, cortocircuito, coordinación de protecciones, armónicos, estabilidad RMS/EMT, arc-flash, calidad de potencia en el PCC ni coordinación de aislamiento. Esos estudios quedan listados como exclusiones en §8."
+                    : "Reference-only preliminary estimates. They do not replace detailed electrical studies: load flow, short circuit, protection coordination, harmonics, RMS/EMT stability, arc flash, power quality at the PCC, or insulation coordination. Those studies are listed as exclusions in §8."}
+                </div>
+
+                {reportData.preliminaryElectricalChecks.checks.length === 0 ? (
+                  <p className="text-xs text-slate-500 italic bg-slate-50 border border-slate-200 rounded p-3 font-sans">
+                    {isEs
+                      ? "No hay reglas eléctricas preliminares evaluadas. Cargue la arquitectura v1.2 (preset BESS del Desierto o equivalente) y un perfil regulatorio activo."
+                      : "No preliminary electrical rules evaluated. Load the v1.2 architecture (BESS del Desierto preset or equivalent) and activate a regulatory profile."}
+                  </p>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-5 font-sans text-center text-xs">
+                      {[
+                        { label: isEs ? "REGLAS" : "RULES", value: reportData.preliminaryElectricalChecks.checks.length, color: "text-slate-700 bg-slate-50 border-slate-200" },
+                        { label: "PASS", value: reportData.preliminaryElectricalChecks.totals.pass, color: "text-emerald-700 bg-emerald-50 border-emerald-200" },
+                        { label: "VIOLATION", value: reportData.preliminaryElectricalChecks.totals.violation, color: "text-rose-700 bg-rose-50 border-rose-200" },
+                        { label: "N/A", value: reportData.preliminaryElectricalChecks.totals.notEvaluable, color: "text-slate-700 bg-slate-50 border-slate-200" },
+                        { label: "PENDING", value: reportData.preliminaryElectricalChecks.totals.pendingValidation, color: "text-indigo-700 bg-indigo-50 border-indigo-200" },
+                        { label: isEs ? "ACOTADAS" : "CAPPED", value: reportData.preliminaryElectricalChecks.checks.filter((c) => c.severityCappedBy !== null).length, color: "text-violet-700 bg-violet-50 border-violet-200" },
+                      ].map((item, idx) => (
+                        <div key={idx} className={`border rounded p-2.5 ${item.color}`}>
+                          <span className="text-[9px] font-bold block opacity-75">{item.label}</span>
+                          <span className="text-base font-extrabold block mt-0.5 font-mono">{item.value}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full font-sans text-[11px] text-left border-collapse">
+                        <thead>
+                          <tr className="border-b border-slate-300 text-slate-400 uppercase tracking-wider text-[8.5px] font-bold">
+                            <th className="py-2 pr-2">ID</th>
+                            <th className="py-2 pr-2">{isEs ? "Check" : "Check"}</th>
+                            <th className="py-2 pr-2">{isEs ? "Sev. efectiva" : "Effective sev."}</th>
+                            <th className="py-2 pr-2">{isEs ? "Nivel" : "Level"}</th>
+                            <th className="py-2 pr-2">Outcome</th>
+                            <th className="py-2">{isEs ? "Fuente / nota" : "Source / note"}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {reportData.preliminaryElectricalChecks.checks.map((c) => {
+                            const sevColor =
+                              c.effectiveSeverity === "blocking"
+                                ? "bg-rose-100 text-rose-800"
+                                : c.effectiveSeverity === "warning"
+                                  ? "bg-amber-100 text-amber-800"
+                                  : c.effectiveSeverity === "info"
+                                    ? "bg-sky-100 text-sky-800"
+                                    : c.effectiveSeverity === "checklist"
+                                      ? "bg-violet-100 text-violet-800"
+                                      : "bg-slate-100 text-slate-600";
+                            const outcomeColor =
+                              c.outcome === "pass"
+                                ? "bg-emerald-100 text-emerald-800"
+                                : c.outcome === "violation"
+                                  ? "bg-rose-100 text-rose-800"
+                                  : c.outcome === "not_evaluable"
+                                    ? "bg-slate-100 text-slate-600"
+                                    : "bg-indigo-100 text-indigo-800";
+                            return (
+                              <tr key={c.ruleId} className="border-b border-slate-100 last:border-0 align-top">
+                                <td className="py-2 pr-2 font-mono text-[9.5px] text-slate-700 font-bold whitespace-nowrap">{c.ruleId}</td>
+                                <td className="py-2 pr-2 text-slate-800 leading-snug">
+                                  <div className="font-medium">{c.title}</div>
+                                  {c.violations.length > 0 ? (
+                                    <ul className="mt-1 text-[10px] text-rose-700">
+                                      {c.violations.slice(0, 2).map((v, i) => (
+                                        <li key={i}>· {v.message}</li>
+                                      ))}
+                                    </ul>
+                                  ) : null}
+                                  {c.severityCappedBy ? (
+                                    <div className="mt-1 text-[10px] text-violet-700">
+                                      {isEs ? "Severidad acotada" : "Severity capped"}: {c.severityCappedBy.from} → {c.effectiveSeverity} ({c.severityCappedBy.by === "document_level" ? (isEs ? "nivel" : "level") : (isEs ? "confianza" : "confidence")})
+                                    </div>
+                                  ) : null}
+                                </td>
+                                <td className="py-2 pr-2">
+                                  <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${sevColor}`}>
+                                    {c.effectiveSeverity}
+                                  </span>
+                                </td>
+                                <td className="py-2 pr-2 font-mono text-[9.5px] text-slate-600">
+                                  {c.documentLevel ? c.documentLevel.split("_")[0] : "—"}
+                                </td>
+                                <td className="py-2 pr-2">
+                                  <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${outcomeColor}`}>
+                                    {c.outcome === "not_evaluable" ? "N/A" : c.outcome === "pending_validation" ? "PEND" : c.outcome.toUpperCase()}
+                                  </span>
+                                </td>
+                                <td className="py-2 text-[10px] text-slate-500 italic leading-normal">
+                                  {c.citation ?? "—"}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <p className="mt-4 text-[10.5px] text-slate-500 italic leading-snug font-sans">
+                      {isEs
+                        ? "Severidad efectiva = severidad declarada acotada por nivel documental L1–L7 y confianza de evidencia. Una regla nunca puede ser más estricta que su mejor evidencia."
+                        : "Effective severity = declared severity bounded by document level L1–L7 and evidence confidence. A rule cannot be stricter than its strongest evidence."}
+                    </p>
+                  </>
                 )}
               </div>
 

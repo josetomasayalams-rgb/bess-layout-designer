@@ -879,6 +879,145 @@ function ElectricalSection({ data }: Props) {
 }
 
 // ──────────────────────────────────────────────────────────────────
+// Section: Preliminary electrical checks (Fase 9)
+// ──────────────────────────────────────────────────────────────────
+
+const SEVERITY_PILL: Record<string, keyof typeof s> = {
+  blocking: "pillViolation",
+  warning: "pillManual",
+  info: "pillPending",
+  checklist: "pillManual",
+  out_of_scope: "pillOut",
+};
+
+function PreliminaryElectricalChecksSection({ data }: Props) {
+  const block = data.preliminaryElectricalChecks;
+  const checks = block.checks;
+  return (
+    <SectionPage
+      data={data}
+      number="5b"
+      title="Validaciones eléctricas preliminares"
+    >
+      <Text style={s.paragraph}>
+        Estimaciones preliminares de referencia, ejecutadas por el motor de
+        validaciones del MVP. No reemplazan estudios eléctricos de detalle:
+        flujo de potencia, cortocircuito, coordinación de protecciones,
+        armónicos, estabilidad RMS/EMT, arc-flash, calidad de potencia en el
+        PCC ni coordinación de aislamiento — todos quedan listados como
+        exclusiones en §8.
+      </Text>
+
+      {checks.length === 0 ? (
+        <Text style={s.note}>
+          No hay reglas eléctricas preliminares evaluadas. Cargue la
+          arquitectura v1.2 (o el preset BESS del Desierto) y un perfil
+          regulatorio activo para poblar esta sección.
+        </Text>
+      ) : (
+        <>
+          <DefGrid
+            items={[
+              { label: "Reglas", value: fmtInt(checks.length) },
+              { label: "Pass", value: fmtInt(block.totals.pass) },
+              { label: "Violation", value: fmtInt(block.totals.violation) },
+              { label: "N/A", value: fmtInt(block.totals.notEvaluable) },
+              { label: "Pending", value: fmtInt(block.totals.pendingValidation) },
+              {
+                label: "Severity caps",
+                value: block.hasSeverityCaps ? "sí" : "no",
+              },
+            ]}
+          />
+
+          <View style={s.table} wrap>
+            <View style={[s.tableRow, s.tableHeaderRow]}>
+              <Text style={[s.tableHeaderCell, { width: "14%" }]}>ID</Text>
+              <Text style={[s.tableHeaderCell, { width: "32%" }]}>Check</Text>
+              <Text style={[s.tableHeaderCell, { width: "10%" }]}>Sev.</Text>
+              <Text style={[s.tableHeaderCell, { width: "10%" }]}>Nivel</Text>
+              <Text style={[s.tableHeaderCell, { width: "10%" }]}>Outcome</Text>
+              <Text style={[s.tableHeaderCell, { width: "24%" }]}>Fuente</Text>
+            </View>
+            {checks.map((entry, i) => {
+              const outcomeMeta =
+                OUTCOME_LABEL[entry.outcome] ?? OUTCOME_LABEL.out_of_scope;
+              const sevPill =
+                SEVERITY_PILL[entry.effectiveSeverity] ?? "pillOut";
+              return (
+                <View
+                  key={entry.ruleId}
+                  style={[s.tableRow, i % 2 === 1 ? s.tableRowAlt : {}]}
+                >
+                  <Text
+                    style={[s.tableCell, s.tableCellMono, { width: "14%" }]}
+                  >
+                    {entry.ruleId}
+                  </Text>
+                  <Text style={[s.tableCell, { width: "32%" }]}>
+                    {entry.title}
+                  </Text>
+                  <View style={[s.tableCell, { width: "10%" }]}>
+                    <Text style={[s.pill, outcomePillStyle(sevPill)]}>
+                      {entry.effectiveSeverity.toUpperCase()}
+                    </Text>
+                  </View>
+                  <Text
+                    style={[s.tableCell, s.tableCellMono, { width: "10%", fontSize: 7.5 }]}
+                  >
+                    {entry.documentLevel
+                      ? entry.documentLevel.split("_")[0]
+                      : "—"}
+                  </Text>
+                  <View style={[s.tableCell, { width: "10%" }]}>
+                    <Text style={[s.pill, outcomePillStyle(outcomeMeta.style)]}>
+                      {outcomeMeta.label}
+                    </Text>
+                  </View>
+                  <Text style={[s.tableCell, { width: "24%", fontSize: 7.5 }]}>
+                    {entry.citation ?? "—"}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+
+          {block.hasSeverityCaps ? (
+            <>
+              <Text style={s.subTitle}>Severidades limitadas por la matriz</Text>
+              {checks
+                .filter((c) => c.severityCappedBy !== null)
+                .map((c) => (
+                  <Text key={`cap-${c.ruleId}`} style={s.note}>
+                    {c.ruleId}: declarada{" "}
+                    <Text style={{ fontFamily: REPORT_FONTS.bodyBold }}>
+                      {c.severityCappedBy?.from}
+                    </Text>{" "}
+                    → efectiva{" "}
+                    <Text style={{ fontFamily: REPORT_FONTS.bodyBold }}>
+                      {c.effectiveSeverity}
+                    </Text>{" "}
+                    ({c.severityCappedBy?.by === "document_level"
+                      ? "nivel documental"
+                      : "confianza de evidencia"}
+                    ). {c.severityCappedBy?.detail}
+                  </Text>
+                ))}
+            </>
+          ) : null}
+
+          <Text style={s.note}>
+            Severidad efectiva = severidad declarada acotada por nivel
+            documental L1–L7 y confianza de evidencia (`severityCeiling.ts`).
+            Una regla nunca puede ser más estricta que su mejor evidencia.
+          </Text>
+        </>
+      )}
+    </SectionPage>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────
 // Section: Regulatory
 // ──────────────────────────────────────────────────────────────────
 
@@ -1327,6 +1466,7 @@ export function ReportDocument({ data }: Props) {
       <DesignSection data={data} />
       <LayoutSection data={data} />
       <ElectricalSection data={data} />
+      <PreliminaryElectricalChecksSection data={data} />
       <RegulatorySection data={data} />
       <TraceabilitySection data={data} />
       <ScopeSection data={data} />

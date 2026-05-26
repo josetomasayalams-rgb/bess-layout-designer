@@ -37,7 +37,15 @@ import type {
   POI,
   PPC,
 } from "@/types/electrical";
-import type { RegulatoryEvaluationResult } from "@/rules/regulatoryProfileEvaluator";
+import type {
+  EvaluatedRuleEntry,
+  RegulatoryEvaluationResult,
+  RuleOutcome,
+} from "@/rules/regulatoryProfileEvaluator";
+import { isPhase8ElectricalRuleId } from "@/rules/regulatoryRulesCatalog";
+import type { RuleSeverity } from "@/rules/types";
+import { strongestCitedLevel } from "@/rules/severityCeiling";
+import type { DocumentLevel } from "@/data/documentRegistry";
 import type { PlacedEquipment } from "@/types/equipment";
 import type { LngLat, ProjectAnchor } from "@/types/geometry";
 import type {
@@ -125,6 +133,48 @@ export type ReportSiteMetrics = {
   bbox: SiteSvgModel["bboxLocalM"] | null;
 };
 
+/**
+ * One row of the "Preliminary electrical checks" report block (Fase 9).
+ *
+ * This block is the report-side view of the 8 Fase 8 electrical screening
+ * rules already evaluated by the engine. It is intentionally narrower than
+ * `EvaluatedRuleEntry`: only the data the PDF needs to render the table.
+ */
+export type ReportPreliminaryElectricalCheck = {
+  ruleId: string;
+  title: string;
+  description: string;
+  /** Severity after applying the `severityCeiling` matrix. */
+  effectiveSeverity: RuleSeverity;
+  /** Severity declared in the catalog, before the ceiling. */
+  declaredSeverity: RuleSeverity;
+  /** Strongest cited document level, when any. */
+  documentLevel: DocumentLevel | null;
+  /** Engine outcome (pass / violation / not_evaluable / …). */
+  outcome: RuleOutcome;
+  /** If severity was lowered by the matrix, the reason; otherwise null. */
+  severityCappedBy: EvaluatedRuleEntry["severityCappedBy"];
+  /** Short citation label like "Doc title · p.X · §Y" or null. */
+  citation: string | null;
+  /** Engine messages tied to this rule (empty when the rule passes). */
+  violations: { message: string; affectedIds?: string[] }[];
+};
+
+export type ReportPreliminaryElectricalBlock = {
+  /** All 8 Fase 8 checks visible in the active profile (may be empty). */
+  checks: ReportPreliminaryElectricalCheck[];
+  /** Outcome counts for the block (subset of the regulatory totals). */
+  totals: {
+    pass: number;
+    violation: number;
+    notEvaluable: number;
+    pendingValidation: number;
+    other: number;
+  };
+  /** True when at least one rule was capped by the severity matrix. */
+  hasSeverityCaps: boolean;
+};
+
 export type ReportEngineeringChecklist = {
   topic: string;
   required: boolean;
@@ -171,6 +221,12 @@ export type TechnicalReportData = {
   };
 
   regulatoryEvaluation: RegulatoryEvaluationResult | null;
+  /**
+   * Fase 9 — preliminary electrical checks block. Always present (even when
+   * the architecture is not yet loaded) so the report layout is stable; in
+   * that case `checks` is empty and the totals are zeroed.
+   */
+  preliminaryElectricalChecks: ReportPreliminaryElectricalBlock;
 
   assumptions: ProjectAssumption[];
   inconsistencies: DocumentInconsistency[];
@@ -689,6 +745,79 @@ function collectDocReferences(args: {
   return documentRegistry.filter((d) => refs.has(d.id));
 }
 
+function buildPreliminaryElectricalBlock(
+  evaluation: RegulatoryEvaluationResult | null
+): ReportPreliminaryElectricalBlock {
+  const empty: ReportPreliminaryElectricalBlock = {
+    checks: [],
+    totals: { pass: 0, violation: 0, notEvaluable: 0, pendingValidation: 0, other: 0 },
+    hasSeverityCaps: false,
+  };
+  if (!evaluation) return empty;
+
+  const fase8 = evaluation.byCategory.electrical
+    .filter((e) => isPhase8ElectricalRuleId(e.ruleId))
+    .sort((a, b) => a.ruleId.localeCompare(b.ruleId));
+
+  const checks: ReportPreliminaryElectricalCheck[] = fase8.map((entry) => {
+    const cite = entry.evidence.find(
+      (e) => e.documentId && e.documentId !== "__none__"
+    );
+    let citation: string | null = null;
+    if (cite) {
+      const doc = findDocument(cite.documentId);
+      const title = doc?.title ?? cite.documentId;
+      const page = cite.page ? ` · p.${cite.page}` : "";
+      const section = cite.section ? ` · §${cite.section}` : "";
+      citation = `${title}${page}${section}`;
+    }
+    return {
+      ruleId: entry.ruleId,
+      title: entry.title,
+      description: entry.description,
+      effectiveSeverity: entry.severity,
+      declaredSeverity: entry.declaredSeverity,
+      documentLevel: strongestCitedLevel(entry.evidence),
+      outcome: entry.outcome,
+      severityCappedBy: entry.severityCappedBy,
+      citation,
+      violations: entry.violations.map((v) => ({
+        message: v.message,
+        affectedIds: v.affectedIds,
+      })),
+    };
+  });
+
+  const totals = checks.reduce(
+    (acc, c) => {
+      switch (c.outcome) {
+        case "pass":
+          acc.pass++;
+          break;
+        case "violation":
+          acc.violation++;
+          break;
+        case "not_evaluable":
+          acc.notEvaluable++;
+          break;
+        case "pending_validation":
+          acc.pendingValidation++;
+          break;
+        default:
+          acc.other++;
+      }
+      return acc;
+    },
+    { pass: 0, violation: 0, notEvaluable: 0, pendingValidation: 0, other: 0 }
+  );
+
+  return {
+    checks,
+    totals,
+    hasSeverityCaps: checks.some((c) => c.severityCappedBy !== null),
+  };
+}
+
 // ──────────────────────────────────────────────────────────────────
 // API pública
 // ──────────────────────────────────────────────────────────────────
@@ -918,6 +1047,9 @@ export function buildReportData(args: BuildReportDataArgs): TechnicalReportData 
     },
 
     regulatoryEvaluation: args.regulatoryEvaluation,
+    preliminaryElectricalChecks: buildPreliminaryElectricalBlock(
+      args.regulatoryEvaluation
+    ),
 
     assumptions: args.assumptions,
     inconsistencies: args.inconsistencies,
