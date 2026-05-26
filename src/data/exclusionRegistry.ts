@@ -101,4 +101,30 @@ export const exclusionRegistry: readonly MvpExclusion[] = [
     reportText: "Ingenieria AT y estudios CEN",
     classification: "engineering_detail_exclusion",
   },
+  // Fase 8 — exclusiones eléctricas adicionales explícitamente fuera del
+  // alcance del predimensionamiento (ver docs/phase8-electrical-scope.md §2).
+  {
+    id: "ex-arc-flash",
+    label: "Estudio de arco eléctrico (arc flash)",
+    category: "electrical",
+    reason: "La app no calcula incidencia ni distancias de aproximacion segura",
+    reportText: "Estudio de arc flash IEEE 1584",
+    classification: "engineering_detail_exclusion",
+  },
+  {
+    id: "ex-insulation-coordination",
+    label: "Coordinación de aislamiento (BIL)",
+    category: "electrical",
+    reason: "La app no modela sobretensiones de maniobra ni atmosfericas",
+    reportText: "Estudio de coordinacion de aislamiento",
+    classification: "engineering_detail_exclusion",
+  },
+  {
+    id: "ex-power-quality-pcc",
+    label: "Calidad de suministro en PCC",
+    category: "electrical",
+    reason: "THD, desbalance y flicker requieren mediciones y modelo de red",
+    reportText: "Estudio de calidad de suministro en PCC",
+    classification: "engineering_detail_exclusion",
+  },
 ];

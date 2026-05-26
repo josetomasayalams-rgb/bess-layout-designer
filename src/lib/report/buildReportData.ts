@@ -257,6 +257,21 @@ const EXCLUSION_TRANSLATIONS_EN: Record<string, { scope: string; reason: string;
     reason: "No detailed substation/interconnection engineering",
     reportText: "High voltage engineering and CEN studies",
   },
+  "ex-arc-flash": {
+    scope: "Arc flash hazard study",
+    reason: "The app does not compute incident energy or safe approach distances",
+    reportText: "IEEE 1584 arc flash study",
+  },
+  "ex-insulation-coordination": {
+    scope: "Insulation coordination (BIL)",
+    reason: "The app does not model switching or lightning overvoltages",
+    reportText: "Insulation coordination study",
+  },
+  "ex-power-quality-pcc": {
+    scope: "Power quality at PCC",
+    reason: "THD, unbalance and flicker require measurements and a network model",
+    reportText: "Power quality study at the PCC",
+  },
 };
 
 const DISCLAIMERS_EN: Record<string, { title: string; text: string }> = {

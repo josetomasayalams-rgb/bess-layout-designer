@@ -65,3 +65,16 @@ export const STATION_GAP_M = 6;
 export const BLOCK_GAP_X_M = 8;
 export const BLOCK_GAP_Y_M = 8;
 export const MARGIN_M = 24;
+
+/**
+ * Fase 8 — umbrales editables para validaciones eléctricas preliminares.
+ *
+ * Todos son `preliminary_assumption`. Se usan para comparar estimaciones
+ * conceptuales del motor eléctrico contra un "presupuesto" o utilización
+ * objetivo. Ningún umbral aquí es una norma; pueden ajustarse por
+ * proyecto. Ver docs/phase8-electrical-scope.md §1 para el origen.
+ */
+export const LOSS_BUDGET_PCT = 0.03;
+export const SSAA_BUDGET_PCT = 0.02;
+export const BUSBAR_UTILIZATION_THRESHOLD_PCT = 0.8;
+export const CABLE_AMPACITY_UTILIZATION_THRESHOLD_PCT = 0.9;

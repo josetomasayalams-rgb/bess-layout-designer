@@ -8,6 +8,10 @@ import {
   BLOCK_GAP_X_M,
   BLOCK_GAP_Y_M,
   MARGIN_M,
+  LOSS_BUDGET_PCT,
+  SSAA_BUDGET_PCT,
+  BUSBAR_UTILIZATION_THRESHOLD_PCT,
+  CABLE_AMPACITY_UTILIZATION_THRESHOLD_PCT,
 } from "./defaultConstraints";
 import { buildReportData } from "../lib/report/buildReportData";
 
@@ -37,8 +41,8 @@ describe("Phase 3 - Warnings, Exclusions, and Spacing Constants", () => {
   });
 
   describe("exclusionRegistry", () => {
-    it("should contain exactly the 11 mandatory exclusions", () => {
-      const expectedIds = [
+    it("should contain the mandatory exclusions (11 baseline + Phase 8 additions)", () => {
+      const baselineIds = [
         "ex-load-flow",
         "ex-short-circuit",
         "ex-protections-coordination",
@@ -51,10 +55,19 @@ describe("Phase 3 - Warnings, Exclusions, and Spacing Constants", () => {
         "ex-environmental-permitting",
         "ex-detailed-interconnection-hv",
       ];
+      const phase8AddedIds = [
+        "ex-arc-flash",
+        "ex-insulation-coordination",
+        "ex-power-quality-pcc",
+      ];
 
-      expect(exclusionRegistry.length).toBe(11);
+      expect(exclusionRegistry.length).toBe(
+        baselineIds.length + phase8AddedIds.length
+      );
       const registryIds = exclusionRegistry.map((e) => e.id);
-      expect(registryIds).toEqual(expect.arrayContaining(expectedIds));
+      expect(registryIds).toEqual(
+        expect.arrayContaining([...baselineIds, ...phase8AddedIds])
+      );
     });
 
     it("should classify all exclusions as engineering_detail_exclusion", () => {
@@ -77,6 +90,16 @@ describe("Phase 3 - Warnings, Exclusions, and Spacing Constants", () => {
       expect(BLOCK_GAP_X_M).toBe(8);
       expect(BLOCK_GAP_Y_M).toBe(8);
       expect(MARGIN_M).toBe(24);
+    });
+
+    it("Phase 8 electrical thresholds are editable preliminary assumptions", () => {
+      // These are budget percentages, not norms. The test pins the
+      // documented defaults; if they ever change, update the design
+      // doc docs/phase8-electrical-scope.md too.
+      expect(LOSS_BUDGET_PCT).toBe(0.03);
+      expect(SSAA_BUDGET_PCT).toBe(0.02);
+      expect(BUSBAR_UTILIZATION_THRESHOLD_PCT).toBe(0.8);
+      expect(CABLE_AMPACITY_UTILIZATION_THRESHOLD_PCT).toBe(0.9);
     });
   });
 
@@ -129,12 +152,12 @@ describe("Phase 3 - Warnings, Exclusions, and Spacing Constants", () => {
       expect(generalDisc!.text).toContain("preliminary BESS predesign");
     });
 
-    it("should map exactly the 11 exclusions from registry", () => {
+    it("should map every exclusion from the registry", () => {
       const dataEs = buildReportData(minimalArgs("es"));
       const dataEn = buildReportData(minimalArgs("en"));
 
-      expect(dataEs.exclusions.length).toBe(11);
-      expect(dataEn.exclusions.length).toBe(11);
+      expect(dataEs.exclusions.length).toBe(exclusionRegistry.length);
+      expect(dataEn.exclusions.length).toBe(exclusionRegistry.length);
 
       // Verify ID transformation (ex-load-flow -> EXC-LOAD-FLOW)
       const loadFlowEs = dataEs.exclusions.find((e) => e.id === "EXC-LOAD-FLOW");
