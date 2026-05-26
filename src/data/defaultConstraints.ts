@@ -58,3 +58,10 @@ export const defaultConstraints: LayoutConstraint[] = [
       "Editable conceptual value. Final setback depends on site security, access, drainage, fire protection and local permitting.",
   },
 ];
+
+export const VEHICLE_ACCESS_MAX_DISTANCE_M = 30;
+export const CABLE_TO_EQUIPMENT_CLEARANCE_M = 1;
+export const STATION_GAP_M = 6;
+export const BLOCK_GAP_X_M = 8;
+export const BLOCK_GAP_Y_M = 8;
+export const MARGIN_M = 24;
