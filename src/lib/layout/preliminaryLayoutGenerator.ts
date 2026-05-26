@@ -1,5 +1,11 @@
 import { nanoid } from "nanoid";
 import { equipmentCatalog } from "@/data/equipmentCatalog";
+import {
+  STATION_GAP_M,
+  BLOCK_GAP_X_M,
+  BLOCK_GAP_Y_M,
+} from "@/data/defaultConstraints";
+import { BESS_BLOCK_TEMPLATES } from "./blockTemplates";
 import { allCornersInsidePolygon } from "@/lib/geometry/collision";
 import {
   distanceBetweenRectangles,
@@ -9,6 +15,7 @@ import { toLocal, toLngLat } from "@/lib/geometry/projection";
 import { rectCorners } from "@/lib/geometry/rectangles";
 import type { RegulatoryRuleSet } from "@/types/bessLayoutTypes";
 import type { PlacedEquipment } from "@/types/equipment";
+import type { SourceReliability } from "@/data/equipmentCatalog";
 import type {
   LngLat,
   LocalPoint,
@@ -44,6 +51,7 @@ export type PreliminaryLayoutRequest = {
     | "transformerToBessRecommended_m"
   >;
   fitInsidePolygon: boolean;
+  templateId?: string;
 };
 
 export type PreliminaryLayoutResult = {
@@ -59,6 +67,9 @@ export type PreliminaryLayoutResult = {
     boundarySetbackM: number;
     layoutAreaM2: number | null;
     candidateCount: number;
+    templateId?: string;
+    classification?: SourceReliability;
+    warnings?: string[];
   };
 };
 
@@ -68,6 +79,10 @@ type RelativeItem = {
   center: LocalPoint;
   rect: RotatedRectLocal;
   groupId: string;
+  blockId?: string;
+  blockIndex?: number;
+  templateId?: string;
+  classification?: SourceReliability;
 };
 
 type RelativeLayout = {
@@ -202,6 +217,7 @@ function buildRelativeLayout(args: {
   blockColumns: number;
   orientationDeg: number;
   rules: PreliminaryLayoutRequest["rules"];
+  templateId?: string;
 }): RelativeLayout | null {
   const bessSpec = equipmentCatalog.find((spec) => spec.id === args.batteryContainerSpecId);
   const pcsSpec = equipmentCatalog.find((spec) => spec.id === args.pcsSpecId);
@@ -209,86 +225,188 @@ function buildRelativeLayout(args: {
 
   const batteryContainerCount = clampCount(args.batteryContainerCount, 0);
   const pcsCount = clampCount(args.pcsCount, 0);
-  const containersPerPcs = Math.max(1, clampCount(args.containersPerPcs, 1));
-  const blockCount = Math.max(pcsCount, Math.ceil(batteryContainerCount / containersPerPcs));
-  if (blockCount === 0) return null;
 
-  const bessColumns = Math.min(4, containersPerPcs);
-  const bessRows = Math.max(1, Math.ceil(containersPerPcs / bessColumns));
-  const bessSpacingM = args.rules.bessToBess_m;
-  const stationGapM = Math.max(
-    6,
-    args.rules.electricalFrontWorkingClearance_m,
-    args.rules.transformerToBessRecommended_m
-  );
-  const blockGapXM = Math.max(8, bessSpacingM * 2);
-  const blockGapYM = Math.max(8, bessSpacingM * 2);
-  const matrixLengthM =
-    bessColumns * bessSpec.footprint.length_m + (bessColumns - 1) * bessSpacingM;
-  const matrixWidthM =
-    bessRows * bessSpec.footprint.width_m + (bessRows - 1) * bessSpacingM;
-  const stationCenterXM =
-    matrixLengthM - bessSpec.footprint.length_m / 2 + stationGapM + pcsSpec.footprint.length_m / 2;
-  const stationCenterYM = matrixWidthM / 2 - bessSpec.footprint.width_m / 2;
-  const blockPitchXM =
-    stationCenterXM + pcsSpec.footprint.length_m / 2 + bessSpec.footprint.length_m / 2 + blockGapXM;
-  const blockPitchYM = Math.max(matrixWidthM, pcsSpec.footprint.width_m) + blockGapYM;
-  const blockColumns = Math.max(1, Math.min(args.blockColumns, blockCount));
+  const template = args.templateId ? BESS_BLOCK_TEMPLATES[args.templateId] : undefined;
+
+  let blockCount = 0;
   const items: RelativeItem[] = [];
-  let remainingBess = batteryContainerCount;
 
-  for (let blockIndex = 0; blockIndex < blockCount; blockIndex++) {
-    const blockColumn = blockIndex % blockColumns;
-    const blockRow = Math.floor(blockIndex / blockColumns);
-    const blockOriginXM = blockColumn * blockPitchXM;
-    const blockOriginYM = blockRow * blockPitchYM;
-    const blockBessCount = Math.min(containersPerPcs, remainingBess);
-    const groupId = `${PRELIMINARY_TOOL_GROUP_PREFIX}block-${String(blockIndex + 1).padStart(2, "0")}`;
+  if (template) {
+    const templateContainers = template.ratio.containers;
+    blockCount = Math.max(pcsCount, Math.ceil(batteryContainerCount / templateContainers));
+    if (blockCount === 0) return null;
 
-    for (let index = 0; index < blockBessCount; index++) {
-      const row = Math.floor(index / bessColumns);
-      const column = index % bessColumns;
-      const rotated = rotatePoint(
-        blockOriginXM + column * (bessSpec.footprint.length_m + bessSpacingM),
-        blockOriginYM + row * (bessSpec.footprint.width_m + bessSpacingM),
-        args.orientationDeg
-      );
-      const rect = {
-        center: rotated,
-        length_m: bessSpec.footprint.length_m,
-        width_m: bessSpec.footprint.width_m,
-        rotation_deg: args.orientationDeg,
-      };
-      items.push({
-        equipmentSpecId: bessSpec.id,
-        type: "battery_container",
-        center: rotated,
-        rect,
-        groupId,
-      });
+    const blockGapXM = template.spacing.blockGapXM;
+    const blockGapYM = template.spacing.blockGapYM;
+
+    const blockWidth = template.widthM;
+    const blockHeight = template.heightM;
+
+    const blockPitchXM = blockWidth + blockGapXM;
+    const blockPitchYM = blockHeight + blockGapYM;
+
+    const blockColumns = Math.max(1, Math.min(args.blockColumns, blockCount));
+    let remainingBess = batteryContainerCount;
+
+    for (let blockIndex = 0; blockIndex < blockCount; blockIndex++) {
+      const blockColumn = blockIndex % blockColumns;
+      const blockRow = Math.floor(blockIndex / blockColumns);
+      const blockOriginXM = blockColumn * blockPitchXM;
+      const blockOriginYM = blockRow * blockPitchYM;
+      const blockBessCount = Math.min(templateContainers, remainingBess);
+      const groupId = `${PRELIMINARY_TOOL_GROUP_PREFIX}block-${String(blockIndex + 1).padStart(2, "0")}`;
+
+      // Place BESS containers up to blockBessCount
+      let placedBess = 0;
+      for (const item of template.items) {
+        if (item.role === "battery_container") {
+          if (placedBess >= blockBessCount) {
+            continue;
+          }
+          placedBess++;
+
+          const rotated = rotatePoint(
+            blockOriginXM + item.center.x_m,
+            blockOriginYM + item.center.y_m,
+            args.orientationDeg
+          );
+          const rect = {
+            center: rotated,
+            length_m: item.footprint.length_m,
+            width_m: item.footprint.width_m,
+            rotation_deg: (args.orientationDeg + item.rotation_deg) % 360,
+          };
+          items.push({
+            equipmentSpecId: bessSpec.id,
+            type: "battery_container",
+            center: rotated,
+            rect,
+            groupId,
+            blockId: groupId,
+            blockIndex,
+            templateId: template.id,
+            classification: template.ratio.classification,
+          });
+        }
+      }
+      remainingBess -= blockBessCount;
+
+      // Place PCS if blockIndex < pcsCount
+      if (blockIndex < pcsCount) {
+        for (const item of template.items) {
+          if (item.role === "conversion_station") {
+            const rotated = rotatePoint(
+              blockOriginXM + item.center.x_m,
+              blockOriginYM + item.center.y_m,
+              args.orientationDeg
+            );
+            const rect = {
+              center: rotated,
+              length_m: item.footprint.length_m,
+              width_m: item.footprint.width_m,
+              rotation_deg: (args.orientationDeg + item.rotation_deg) % 360,
+            };
+            items.push({
+              equipmentSpecId: pcsSpec.id,
+              type: "pcs",
+              center: rotated,
+              rect,
+              groupId,
+              blockId: groupId,
+              blockIndex,
+              templateId: template.id,
+              classification: template.ratio.classification,
+            });
+          }
+        }
+      }
     }
+  } else {
+    // FALLBACK MANUAL MATHEMATICAL GRID BUILDER
+    const containersPerPcs = Math.max(1, clampCount(args.containersPerPcs, 1));
+    blockCount = Math.max(pcsCount, Math.ceil(batteryContainerCount / containersPerPcs));
+    if (blockCount === 0) return null;
 
-    remainingBess -= blockBessCount;
+    const bessColumns = Math.min(4, containersPerPcs);
+    const bessRows = Math.max(1, Math.ceil(containersPerPcs / bessColumns));
+    const bessSpacingM = args.rules.bessToBess_m;
+    const stationGapM = Math.max(
+      STATION_GAP_M,
+      args.rules.electricalFrontWorkingClearance_m,
+      args.rules.transformerToBessRecommended_m
+    );
+    const blockGapXM = Math.max(BLOCK_GAP_X_M, bessSpacingM * 2);
+    const blockGapYM = Math.max(BLOCK_GAP_Y_M, bessSpacingM * 2);
+    const matrixLengthM =
+      bessColumns * bessSpec.footprint.length_m + (bessColumns - 1) * bessSpacingM;
+    const matrixWidthM =
+      bessRows * bessSpec.footprint.width_m + (bessRows - 1) * bessSpacingM;
+    const stationCenterXM =
+      matrixLengthM - bessSpec.footprint.length_m / 2 + stationGapM + pcsSpec.footprint.length_m / 2;
+    const stationCenterYM = matrixWidthM / 2 - bessSpec.footprint.width_m / 2;
+    const blockPitchXM =
+      stationCenterXM + pcsSpec.footprint.length_m / 2 + bessSpec.footprint.length_m / 2 + blockGapXM;
+    const blockPitchYM = Math.max(matrixWidthM, pcsSpec.footprint.width_m) + blockGapYM;
+    const blockColumns = Math.max(1, Math.min(args.blockColumns, blockCount));
+    let remainingBess = batteryContainerCount;
 
-    if (blockIndex < pcsCount) {
-      const rotated = rotatePoint(
-        blockOriginXM + stationCenterXM,
-        blockOriginYM + stationCenterYM,
-        args.orientationDeg
-      );
-      const rect = {
-        center: rotated,
-        length_m: pcsSpec.footprint.length_m,
-        width_m: pcsSpec.footprint.width_m,
-        rotation_deg: args.orientationDeg,
-      };
-      items.push({
-        equipmentSpecId: pcsSpec.id,
-        type: "pcs",
-        center: rotated,
-        rect,
-        groupId,
-      });
+    for (let blockIndex = 0; blockIndex < blockCount; blockIndex++) {
+      const blockColumn = blockIndex % blockColumns;
+      const blockRow = Math.floor(blockIndex / blockColumns);
+      const blockOriginXM = blockColumn * blockPitchXM;
+      const blockOriginYM = blockRow * blockPitchYM;
+      const blockBessCount = Math.min(containersPerPcs, remainingBess);
+      const groupId = `${PRELIMINARY_TOOL_GROUP_PREFIX}block-${String(blockIndex + 1).padStart(2, "0")}`;
+
+      for (let index = 0; index < blockBessCount; index++) {
+        const row = Math.floor(index / bessColumns);
+        const column = index % bessColumns;
+        const rotated = rotatePoint(
+          blockOriginXM + column * (bessSpec.footprint.length_m + bessSpacingM),
+          blockOriginYM + row * (bessSpec.footprint.width_m + bessSpacingM),
+          args.orientationDeg
+        );
+        const rect = {
+          center: rotated,
+          length_m: bessSpec.footprint.length_m,
+          width_m: bessSpec.footprint.width_m,
+          rotation_deg: args.orientationDeg,
+        };
+        items.push({
+          equipmentSpecId: bessSpec.id,
+          type: "battery_container",
+          center: rotated,
+          rect,
+          groupId,
+          blockId: groupId,
+          blockIndex,
+        });
+      }
+
+      remainingBess -= blockBessCount;
+
+      if (blockIndex < pcsCount) {
+        const rotated = rotatePoint(
+          blockOriginXM + stationCenterXM,
+          blockOriginYM + stationCenterYM,
+          args.orientationDeg
+        );
+        const rect = {
+          center: rotated,
+          length_m: pcsSpec.footprint.length_m,
+          width_m: pcsSpec.footprint.width_m,
+          rotation_deg: args.orientationDeg,
+        };
+        items.push({
+          equipmentSpecId: pcsSpec.id,
+          type: "pcs",
+          center: rotated,
+          rect,
+          groupId,
+          blockId: groupId,
+          blockIndex,
+        });
+      }
     }
   }
 
@@ -317,6 +435,10 @@ function toPlacedEquipment(
       rotation_deg: item.rect.rotation_deg,
       groupId: item.groupId,
       sourceReliability: spec?.source.reliability ?? "pending_validation",
+      blockId: item.blockId,
+      blockIndex: item.blockIndex,
+      templateId: item.templateId,
+      classification: item.classification,
     };
   });
 }
@@ -327,18 +449,41 @@ export function generatePreliminaryLayout(
   const batteryContainerCount = clampCount(request.batteryContainerCount, 0);
   const pcsCount = clampCount(request.pcsCount, 0);
   const containersPerPcs = Math.max(1, clampCount(request.containersPerPcs, 1));
-  const blockCount = Math.max(pcsCount, Math.ceil(batteryContainerCount / containersPerPcs));
+
+  const template = request.templateId ? BESS_BLOCK_TEMPLATES[request.templateId] : undefined;
+  const effectiveContainersPerPcs = template ? template.ratio.containers : containersPerPcs;
+  const blockCount = Math.max(pcsCount, Math.ceil(batteryContainerCount / effectiveContainersPerPcs));
   let candidateCount = 0;
+
+  const warnings: string[] = [];
+  if (template) {
+    if (batteryContainerCount % template.ratio.containers !== 0) {
+      warnings.push(
+        `La cantidad de contenedores solicitada (${batteryContainerCount}) no es múltiplo de la cantidad del bloque (${template.ratio.containers}). Algunos bloques quedarán incompletos.`
+      );
+    }
+    if (pcsCount < blockCount) {
+      warnings.push(
+        `La cantidad de PCS solicitada (${pcsCount}) es menor que el número de bloques requeridos (${blockCount}). Algunos bloques no tendrán PCS.`
+      );
+    }
+    if (template.warnings) {
+      warnings.push(...template.warnings);
+    }
+  }
 
   const baseDiagnostics = {
     batteryContainerCount,
     pcsCount,
     blockCount,
-    containersPerPcs,
-    spacingM: request.rules.bessToBess_m,
+    containersPerPcs: effectiveContainersPerPcs,
+    spacingM: template ? template.spacing.bessSpacingM : request.rules.bessToBess_m,
     boundarySetbackM: request.rules.bessToPropertyLine_m,
-    layoutAreaM2: null,
+    layoutAreaM2: null as number | null,
     candidateCount,
+    templateId: template?.id,
+    classification: template?.ratio.classification,
+    warnings: warnings.length > 0 ? warnings : undefined,
   };
 
   if (batteryContainerCount === 0 && pcsCount === 0) {
@@ -369,6 +514,7 @@ export function generatePreliminaryLayout(
       containersPerPcs,
       blockColumns: preferredColumns,
       orientationDeg: 0,
+      templateId: request.templateId,
     });
 
     if (!freeLayout) {
@@ -414,6 +560,7 @@ export function generatePreliminaryLayout(
           containersPerPcs,
           blockColumns,
           orientationDeg,
+          templateId: request.templateId,
         });
         if (!layout) continue;
         candidateCount += 1;

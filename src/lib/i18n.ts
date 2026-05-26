@@ -226,6 +226,7 @@ export const COPY = {
       preliminary_assumption: "preliminary assumption",
       pending_validation: "pending validation",
       engineering_judgement: "engineering judgement",
+      reference_only: "reference only",
     },
     constraints: {
       battery_container_spacing: {
@@ -425,6 +426,7 @@ export const COPY = {
       preliminary_assumption: "supuesto preliminar",
       pending_validation: "validación pendiente",
       engineering_judgement: "criterio de ingeniería",
+      reference_only: "solo referencia",
     },
     constraints: {
       battery_container_spacing: {

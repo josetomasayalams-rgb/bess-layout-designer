@@ -2,6 +2,7 @@ import type { BessContainerSpec } from "@/types/technical";
 import {
   pendingValidationSource,
   sungrowSt2752DatasheetSource,
+  sungrowSt2752SystemManualSource,
 } from "@/data/catalogs/sources";
 
 export const bessContainerCatalog: BessContainerSpec[] = [
@@ -60,11 +61,26 @@ export const bessContainerCatalog: BessContainerSpec[] = [
       source: sungrowSt2752DatasheetSource,
     },
     clearances: {
-      status: "pending_validation",
+      // Service / ventilation side per System Manual Ver12, figures 4-1 and 4-2.
+      // This is the access side required for maintenance and air intake/outlet.
+      maintenanceM: {
+        value: 2.5,
+        unit: "m",
+        source: sungrowSt2752SystemManualSource,
+      },
+      status: "certified_data",
       notes:
-        "Manufacturer manual includes installation spacing figures, but exact project-applicable values have not been structured yet.",
+        "Manufacturer installation clearances per System Manual Ver12 (figs 4-1, 4-2): "
+        + "service/ventilation side 2500 mm (maintenanceM above), unit ends 600 mm, "
+        + "facing adjacent units 150 mm. These are the manufacturer's rule for ST2752UX-US "
+        + "and are not a substitute for UL 9540A / NFPA 855 fire separation, which remains "
+        + "pending (UL 9540A report not yet received).",
     },
-    sources: [sungrowSt2752DatasheetSource, pendingValidationSource],
+    sources: [
+      sungrowSt2752DatasheetSource,
+      sungrowSt2752SystemManualSource,
+      pendingValidationSource,
+    ],
   },
 ];
 
