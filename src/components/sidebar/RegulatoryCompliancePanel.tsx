@@ -72,6 +72,43 @@ function localizedIssue(issue: ValidationIssue, isEs: boolean) {
       : null;
 
   switch (issue.ruleId) {
+    case "equipment_inside_polygon":
+    case "bess_inside_polygon":
+      return {
+        ruleLabel: "Validación geométrica interna del layout",
+        message: `Equipo fuera del polígono del sitio: el equipo ${objectA} sobresale o está fuera de los límites del terreno.`,
+        recommendation: "Corregir posición, rotación o distribución del equipo para mantenerlo dentro del polígono.",
+      };
+    case "equipment_collision":
+      return {
+        ruleLabel: "Validación geométrica interna del layout",
+        message: `Solapamiento entre equipos: colisión física detectada entre el equipo ${objectA} y el equipo ${objectB}.`,
+        recommendation: "Corregir posición, rotación o distribución del equipo para evitar la superposición de footprints.",
+      };
+    case "vehicle_access_distance":
+      return {
+        ruleLabel: "Validación geométrica interna del layout",
+        message: `Acceso vehicular: el equipo ${objectA} está a ${measured} de un camino de acceso conceptual (máximo permitido: ${required}).`,
+        recommendation: "Corregir posición, rotación o distribución del equipo, o bien trazar un camino adicional.",
+      };
+    case "cable_route_equipment_clearance":
+      return {
+        ruleLabel: "Validación geométrica interna del layout",
+        message: `Interferencia de cable y equipo: el corredor de cables MT ${objectA} pasa a menos de ${required} del equipo ${objectB}.`,
+        recommendation: "Corregir posición, rotación o distribución del equipo, o desviar el trazado de cables.",
+      };
+    case "cable_route_access_road_overlap":
+      return {
+        ruleLabel: "Validación geométrica interna del layout",
+        message: `Superposición de cables y caminos: el corredor de cables MT ${objectA} se superpone con el camino de acceso ${objectB}.`,
+        recommendation: "Trazar un cruce coordinado o desplazar el corredor para evitar el paralelismo sobre el camino.",
+      };
+    case "fire_boundary_setback":
+      return {
+        ruleLabel: "Validación geométrica interna del layout",
+        message: "No se puede evaluar el setback perimetral de incendio debido a que no se ha definido el polígono del sitio.",
+        recommendation: "Definir el polígono de terreno para evaluar distancias físicas perimetrales.",
+      };
     case "bess_to_bess_spacing":
       return {
         ruleLabel: "Separación BESS a BESS",
