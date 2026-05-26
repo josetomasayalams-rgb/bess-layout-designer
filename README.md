@@ -1,55 +1,65 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BESS Layout Designer
 
-## Getting Started
+Web app for **preliminary** BESS (Battery Energy Storage System) site layout in Chile. Draw a polygon, place equipment at real scale, generate a sized layout from MW/MWh targets, validate against regulatory profiles, and export a technical PDF report.
 
-First, run the development server:
+This is a conceptual design tool — it does **not** replace detailed electrical, civil, or fire engineering, manufacturer installation manuals, permitting, or interconnection studies.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Stack
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Next.js 16 · React 19 · TypeScript · Tailwind v4 · MapLibre via `react-map-gl` · Turf.js · Zustand · Zod · Vitest · `@react-pdf/renderer`.
 
-## Map Layers
-
-The map uses MapLibre through `react-map-gl/maplibre`. The standard layer works
-without credentials using CARTO/OpenStreetMap raster tiles. Satellite and hybrid
-layers prefer Google Map Tiles API and can fall back to MapTiler.
+## Getting started
 
 ```bash
-NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_google_maps_key
-NEXT_PUBLIC_MAPTILER_API_KEY=your_maptiler_key
+npm install
+npm run dev          # http://localhost:3000
 ```
 
-Create `.env.local` from `.env.example`, set one provider key, and restart the
-dev server. See `docs/map-providers.md` for provider details and limitations.
+Other scripts:
+
+```bash
+npm run build        # production build (catches TS/framework errors)
+npm run lint         # ESLint
+npm run typecheck    # tsc --noEmit
+npm run test         # Vitest (single run)
+npm run test:watch   # Vitest interactive
+```
+
+Run a single test file:
+
+```bash
+npx vitest run src/lib/geometry/collision.test.ts
+```
+
+## Map credentials (optional)
+
+The standard layer (OpenStreetMap / CARTO) works without credentials. For satellite or hybrid layers, copy `.env.example` to `.env.local` and set one of:
+
+```env
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=...
+NEXT_PUBLIC_MAPTILER_API_KEY=...
+```
+
+See [`docs/map-providers.md`](docs/map-providers.md) for provider details and limitations.
+
+## What the app does
+
+- **Site polygon**: draw on the map or generate parametrically; computes area in m² and ha.
+- **Equipment placement**: manual catalog placement or auto-layout from MW/MWh targets (`PreliminaryDesignToolsPanel`).
+- **Validation**: collision detection, clearance zones, out-of-bounds checks, spacing rules, and regulatory profile evaluation (Chile SEC/RIC, NFPA 855, …).
+- **Conceptual infrastructure**: cable routes and access roads are computed automatically from placed equipment and rendered on the map.
+- **Technical PDF report**: cover, coordinates, map capture, electrical architecture, regulatory matrix, traceability, exclusions. Available in English and Spanish (`TechnicalReportPanel`).
+- **Case studies**: real-world preset, e.g. **BESS del Desierto** (200 MW / 800 MWh, Diego de Almagro, Atacama).
 
 ## Units
 
-The app defaults to `metric_si` for Chilean BESS predesign: `m`, `m²`, `ha`,
-`MW`, `MWh`, `kV`, `Hz`, `kg`, `t`, `°C` and `%`. See `docs/unit-system.md`.
+Defaults to `metric_si` — `m`, `m²`, `ha`, `MW`, `MWh`, `kV`, `Hz`, `kg`, `t`, `°C`, `%`. See [`docs/unit-system.md`](docs/unit-system.md).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project conventions
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- All geometry runs in a flat local (meters) coordinate system anchored at the first polygon vertex.
+- Engineering constants live in `src/data/` or `src/rules/`, never inline in UI components.
+- Every technical value is classified as `certified_data`, `preliminary_assumption`, or `pending_validation`.
+- Tests are colocated next to the file under test (`*.test.ts` / `*.test.tsx`).
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+See [`CLAUDE.md`](CLAUDE.md) for domain rules and equipment specs, and [`AGENTS.md`](AGENTS.md) for contribution guidelines.
