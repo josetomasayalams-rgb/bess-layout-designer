@@ -1,14 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import {
-  AlertTriangle,
-  BookOpen,
-  CheckCircle2,
-  FileDown,
-  HelpCircle,
-  Zap,
-} from "lucide-react";
+import { BookOpen, HelpCircle } from "lucide-react";
 import { useProjectStore } from "@/store/projectStore";
 import { useRegulatoryStore } from "@/store/regulatoryStore";
 import { useUiStore } from "@/store/uiStore";
@@ -18,15 +11,15 @@ import { regulatoryRuleProfiles } from "@/rules/profiles/regulatoryRuleProfiles"
 import { runRegulatoryEvaluation } from "@/rules/regulatoryProfileEvaluator";
 import { isPhase8ElectricalRuleId } from "@/rules/regulatoryRulesCatalog";
 import { validateElectricalTopology } from "@/lib/electrical/topologyValidation";
-import { formatLength } from "@/lib/units/formatUnits";
-import { DEFAULT_UNIT_SYSTEM } from "@/data/unitSystem";
-import { findDocument } from "@/data/documentRegistry";
-import type { ValidationIssue } from "@/types/bessLayoutTypes";
-import type {
-  EvaluatedRuleEntry,
-  RuleOutcome,
-} from "@/rules/regulatoryProfileEvaluator";
 import type { RuleCategory } from "@/rules/types";
+
+import {
+  ComplianceSummary,
+  ComplianceIssuesList,
+  PreliminaryElectricalSection,
+  OUTCOME_LABEL,
+  citeLabel,
+} from "./compliance";
 
 const STATUS_COPY = {
   compliant: {
@@ -53,199 +46,6 @@ const SEVERITY_CLASS = {
   critical: "border-rose-500/40 bg-rose-500/10 text-rose-200",
 };
 
-function localizedIssue(issue: ValidationIssue, isEs: boolean) {
-  if (!isEs) {
-    return {
-      ruleLabel: issue.ruleLabel,
-      message: issue.message,
-      recommendation: issue.recommendation,
-    };
-  }
-
-  const objectA = issue.objectAId.slice(0, 6);
-  const objectB = issue.objectBId?.slice(0, 6);
-  const measured =
-    issue.measured_m !== undefined
-      ? formatLength(issue.measured_m, { digits: 2, locale: "es" })
-      : null;
-  const required =
-    issue.required_m !== undefined
-      ? formatLength(issue.required_m, { digits: 2, locale: "es" })
-      : null;
-
-  switch (issue.ruleId) {
-    case "equipment_inside_polygon":
-    case "bess_inside_polygon":
-      return {
-        ruleLabel: "Validación geométrica interna del layout",
-        message: `Equipo fuera del polígono del sitio: el equipo ${objectA} sobresale o está fuera de los límites del terreno.`,
-        recommendation: "Corregir posición, rotación o distribución del equipo para mantenerlo dentro del polígono.",
-      };
-    case "equipment_collision":
-      return {
-        ruleLabel: "Validación geométrica interna del layout",
-        message: `Solapamiento entre equipos: colisión física detectada entre el equipo ${objectA} y el equipo ${objectB}.`,
-        recommendation: "Corregir posición, rotación o distribución del equipo para evitar la superposición de footprints.",
-      };
-    case "vehicle_access_distance":
-      return {
-        ruleLabel: "Validación geométrica interna del layout",
-        message: `Acceso vehicular: el equipo ${objectA} está a ${measured} de un camino de acceso conceptual (máximo permitido: ${required}).`,
-        recommendation: "Corregir posición, rotación o distribución del equipo, o bien trazar un camino adicional.",
-      };
-    case "cable_route_equipment_clearance":
-      return {
-        ruleLabel: "Validación geométrica interna del layout",
-        message: `Interferencia de cable y equipo: el corredor de cables MT ${objectA} pasa a menos de ${required} del equipo ${objectB}.`,
-        recommendation: "Corregir posición, rotación o distribución del equipo, o desviar el trazado de cables.",
-      };
-    case "cable_route_access_road_overlap":
-      return {
-        ruleLabel: "Validación geométrica interna del layout",
-        message: `Superposición de cables y caminos: el corredor de cables MT ${objectA} se superpone con el camino de acceso ${objectB}.`,
-        recommendation: "Trazar un cruce coordinado o desplazar el corredor para evitar el paralelismo sobre el camino.",
-      };
-    case "fire_boundary_setback":
-      return {
-        ruleLabel: "Validación geométrica interna del layout",
-        message: "No se puede evaluar el setback perimetral de incendio debido a que no se ha definido el polígono del sitio.",
-        recommendation: "Definir el polígono de terreno para evaluar distancias físicas perimetrales.",
-      };
-    case "bess_to_bess_spacing":
-      return {
-        ruleLabel: "Separación BESS a BESS",
-        message: `BESS ${objectA} está a ${measured} de BESS ${objectB}. El criterio conservador activo exige ${required}.`,
-        recommendation:
-          issue.severity === "warning"
-            ? "Mantener la advertencia visible y adjuntar respaldo UL 9540A, HMA, LSFT, AHJ o fabricante antes de reducir la separación conservadora."
-            : "Aumentar la separación o declarar respaldo validado UL 9540A/HMA/LSFT/AHJ/fabricante antes de usar una distancia reducida.",
-      };
-    case "bess_to_property_line":
-      return {
-        ruleLabel: "Separación BESS a límite del terreno",
-        message: `BESS ${objectA} está a ${measured} del límite del sitio. El criterio conservador activo exige ${required}.`,
-        recommendation:
-          issue.severity === "warning"
-            ? "Mantener la advertencia visible y adjuntar respaldo de aprobación AHJ o del proyecto."
-            : "Mover el bloque BESS más lejos del límite o conseguir validación específica de autoridad competente/proyecto.",
-      };
-    case "electrical_front_working_clearance":
-      return {
-        ruleLabel: "Espacio de trabajo de equipo eléctrico",
-        message: `PCS ${objectA} tiene ${measured} libres respecto de ${objectB}. El despeje preliminar requerido es ${required}.`,
-        recommendation:
-          "Entregar al menos 0,9 m libres de trabajo o respaldo de fabricante/ingeniería eléctrica para la disposición final.",
-      };
-    case "manufacturer_manual_required":
-      return {
-        ruleLabel: "Validación con manual de fabricante",
-        message:
-          "No se declaró manual de instalación del fabricante. Las distancias reales pueden ser más restrictivas que el perfil conservador activo.",
-        recommendation:
-          "Adjuntar requisitos de instalación del fabricante y compararlos contra el perfil normativo conservador.",
-      };
-    default:
-      return {
-        ruleLabel: issue.ruleLabel,
-        message: issue.message,
-        recommendation: issue.recommendation,
-      };
-  }
-}
-
-function exportRegulatoryReport(result: ReturnType<typeof validateBessLayout>) {
-  const report = {
-    schema_version: "1.0",
-    exported_at: new Date().toISOString(),
-    unit_system: DEFAULT_UNIT_SYSTEM,
-    profile: {
-      id: result.profile.id,
-      name: result.profile.name,
-      standards: result.profile.baseStandards,
-      source: result.profile.source,
-    },
-    summary: {
-      status: result.projectStatus,
-      checked_rules: result.checkedRules,
-      critical_conflicts: result.criticalCount,
-      warnings: result.warningCount,
-      compliant_items: result.compliantCount,
-    },
-    conflicts: result.issues.map((issue) => ({
-      ...issue,
-      measured:
-        issue.measured_m === undefined
-          ? undefined
-          : {
-              value: issue.measured_m,
-              unit: "m",
-              data_classification: "preliminary_assumption",
-            },
-      required:
-        issue.required_m === undefined
-          ? undefined
-          : {
-              value: issue.required_m,
-              unit: "m",
-              data_classification: "preliminary_assumption",
-            },
-    })),
-    external_validation_required: result.issues.filter(
-      (issue) => issue.basis === "requires_validation"
-    ),
-    disclaimer:
-      "Esta herramienta entrega una revisión preliminar de layout BESS basada en criterios normativos y de prediseño. No reemplaza ingeniería de detalle, manuales de fabricante, estudios UL 9540A/LSFT, Hazard Mitigation Analysis, aprobación AHJ, revisión SEC, permisos locales ni validación de bomberos o autoridad competente.",
-  };
-  const blob = new Blob([JSON.stringify(report, null, 2)], {
-    type: "application/json",
-  });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `bess-regulatory-report-${Date.now()}.json`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
-// ──────────────────────────────────────────────────────────────────
-// Helpers para la sección "Matriz normativa candidata"
-// ──────────────────────────────────────────────────────────────────
-
-const OUTCOME_LABEL: Record<RuleOutcome, { es: string; en: string; className: string }> = {
-  pass: {
-    es: "Cumple",
-    en: "Pass",
-    className: "border-emerald-500/40 bg-emerald-500/10 text-emerald-200",
-  },
-  violation: {
-    es: "Violación",
-    en: "Violation",
-    className: "border-rose-500/40 bg-rose-500/10 text-rose-200",
-  },
-  manual_check: {
-    es: "Revisión manual",
-    en: "Manual check",
-    className: "border-sky-500/40 bg-sky-500/10 text-sky-200",
-  },
-  pending_validation: {
-    es: "Pendiente",
-    en: "Pending",
-    className: "border-amber-500/40 bg-amber-500/10 text-amber-200",
-  },
-  not_evaluable: {
-    es: "No evaluable",
-    en: "Not evaluable",
-    className: "border-slate-700 bg-slate-900 text-slate-300",
-  },
-  out_of_scope: {
-    es: "Fuera de alcance",
-    en: "Out of scope",
-    className: "border-slate-700 bg-slate-900/60 text-slate-400",
-  },
-};
-
 const CATEGORY_LABEL: Record<RuleCategory, { es: string; en: string }> = {
   physical_layout: { es: "Layout físico", en: "Physical layout" },
   electrical: { es: "Eléctrica", en: "Electrical" },
@@ -256,34 +56,6 @@ const CATEGORY_LABEL: Record<RuleCategory, { es: string; en: string }> = {
   regulatory_fire_safety: { es: "Incendio", en: "Fire safety" },
   engineering_detail: { es: "Ing. detalle", en: "Detail eng." },
 };
-
-const EFFECTIVE_SEVERITY_CLASS: Record<string, string> = {
-  blocking: "border-rose-500/40 bg-rose-500/10 text-rose-200",
-  warning: "border-amber-500/40 bg-amber-500/10 text-amber-200",
-  info: "border-sky-500/40 bg-sky-500/10 text-sky-200",
-  checklist: "border-violet-500/40 bg-violet-500/10 text-violet-200",
-  out_of_scope: "border-slate-700 bg-slate-900/60 text-slate-400",
-};
-
-const EFFECTIVE_SEVERITY_LABEL: Record<string, { es: string; en: string }> = {
-  blocking: { es: "Bloqueante", en: "Blocking" },
-  warning: { es: "Advertencia", en: "Warning" },
-  info: { es: "Informativo", en: "Info" },
-  checklist: { es: "Checklist", en: "Checklist" },
-  out_of_scope: { es: "Fuera alcance", en: "Out of scope" },
-};
-
-function citeLabel(entry: EvaluatedRuleEntry): string | null {
-  const ref = entry.evidence.find(
-    (e) => e.documentId !== "__none__" && e.documentId
-  );
-  if (!ref) return null;
-  const doc = findDocument(ref.documentId);
-  const docTitle = doc?.title ?? ref.documentId;
-  const page = ref.page ? ` · p.${ref.page}` : "";
-  const section = ref.section ? ` · ${ref.section}` : "";
-  return `${docTitle}${page}${section}`;
-}
 
 // ──────────────────────────────────────────────────────────────────
 // Panel
@@ -376,114 +148,21 @@ export function RegulatoryCompliancePanel() {
 
   return (
     <section className="border-b border-slate-800 p-4">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <div>
-          <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-200">
-            {isEs ? "Cumplimiento normativo" : "Regulatory compliance"}
-          </h2>
-          <p className="mt-0.5 text-[11px] text-slate-500">
-            {isEs
-              ? "Motor de reglas activo: distancias BESS, límite del sitio y clearances eléctricos preliminares."
-              : "Active rule engine: BESS distances, site boundary and preliminary electrical clearances."}
-          </p>
-        </div>
-        <span className={`rounded-full border px-2 py-1 text-[10px] uppercase tracking-wide ${status.className}`}>
-          {statusLabel}
-        </span>
-      </div>
+      <ComplianceSummary
+        result={result}
+        profile={profile}
+        isEs={isEs}
+        statusCopy={status}
+        statusLabel={statusLabel}
+      />
 
-      <div className="grid grid-cols-4 gap-2">
-        {[
-          [isEs ? "Reglas" : "Rules", result.checkedRules],
-          [isEs ? "Críticos" : "Critical", result.criticalCount],
-          [isEs ? "Avisos" : "Warnings", result.warningCount],
-          [isEs ? "Cumple" : "Pass", result.compliantCount],
-        ].map(([label, value]) => (
-          <div
-            key={label}
-            className="rounded-lg border border-slate-800 bg-slate-900/70 p-2"
-          >
-            <div className="font-mono text-lg font-semibold text-slate-50">
-              {value}
-            </div>
-            <div className="text-[10px] text-slate-500">{label}</div>
-          </div>
-        ))}
-      </div>
+      <ComplianceIssuesList
+        issues={result.issues}
+        isEs={isEs}
+        locale={locale}
+        severityClass={SEVERITY_CLASS}
+      />
 
-      <div className="mt-3">
-        <button
-          type="button"
-          onClick={() => exportRegulatoryReport(result)}
-          className="inline-flex items-center gap-1.5 rounded-md border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-xs text-slate-100 hover:border-slate-500"
-        >
-          <FileDown className="h-3.5 w-3.5" aria-hidden="true" />
-          {isEs ? "Exportar reporte" : "Export report"}
-        </button>
-      </div>
-
-      <div className="mt-3 rounded-lg border border-slate-800 bg-slate-900/60 p-3">
-        <div className="text-[11px] font-medium text-slate-300">
-          {isEs ? "Perfil activo" : "Active profile"}
-        </div>
-        <div className="mt-1 text-xs text-slate-100">{profile.name}</div>
-        <p className="mt-1 text-[10px] leading-snug text-slate-500">
-          {profile.notes}
-        </p>
-      </div>
-
-      <ul className="mt-3 space-y-2">
-        {result.issues.length === 0 ? (
-          <li className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-100">
-            <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
-            {isEs
-              ? "No hay conflictos normativos activos para las reglas implementadas."
-              : "No active regulatory conflicts for the implemented rules."}
-          </li>
-        ) : null}
-        {result.issues.slice(0, 8).map((issue) => {
-          const copy = localizedIssue(issue, isEs);
-          return (
-            <li
-              key={issue.id}
-              className={`rounded-lg border p-3 text-[11px] leading-snug ${SEVERITY_CLASS[issue.severity]}`}
-            >
-              <div className="mb-1 flex items-center gap-1.5 font-semibold uppercase tracking-wider text-[9px]">
-                <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
-                {issue.severity === "critical"
-                  ? isEs
-                    ? "crítico"
-                    : "critical"
-                  : isEs
-                    ? "advertencia"
-                    : "warning"} ·{" "}
-                {copy.ruleLabel}
-              </div>
-              <div>{copy.message}</div>
-              {issue.measured_m !== undefined && issue.required_m !== undefined ? (
-                <div className="mt-1 font-mono text-[10px] opacity-90">
-                  {isEs ? "Medido" : "Measured"}{" "}
-                  {formatLength(issue.measured_m, {
-                    digits: 2,
-                    locale,
-                  })}{" "}
-                  /{" "}
-                  {isEs ? "requerido" : "required"}{" "}
-                  {formatLength(issue.required_m, {
-                    digits: 2,
-                    locale,
-                  })}
-                </div>
-              ) : null}
-              <div className="mt-1 text-[10px] opacity-80">
-                {isEs ? "Acción" : "Action"}: {copy.recommendation}
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-
-      {/* ──── Validaciones eléctricas preliminares (Fase 8 wiring) ──── */}
       <PreliminaryElectricalSection
         entries={ruleEvaluation.byCategory.electrical.filter((e) =>
           isPhase8ElectricalRuleId(e.ruleId)
@@ -705,127 +384,7 @@ function PresetLoader({
  *    so a user cannot mistake it for a load-flow, short-circuit, harmonics or
  *    EMT study (which are explicitly out of scope per `exclusionRegistry`).
  */
-function PreliminaryElectricalSection({
-  entries,
-  isEs,
-  architecturePopulated,
-}: {
-  entries: EvaluatedRuleEntry[];
-  isEs: boolean;
-  architecturePopulated: boolean;
-}) {
-  // Stable sort by id so display ordering matches the docs (007, 008, 009,
-  // 013, 014, 015, 016, 017).
-  const ordered = useMemo(
-    () => [...entries].sort((a, b) => a.ruleId.localeCompare(b.ruleId)),
-    [entries]
-  );
 
-  return (
-    <div className="mt-5 border-t border-slate-800 pt-4">
-      <div className="mb-2 flex items-center justify-between gap-3">
-        <h3 className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-200">
-          <Zap className="h-3.5 w-3.5 text-amber-300" aria-hidden="true" />
-          {isEs
-            ? "Validaciones eléctricas preliminares"
-            : "Preliminary electrical checks"}
-        </h3>
-        <span className="rounded-full border border-slate-700 bg-slate-900 px-2 py-0.5 text-[10px] text-slate-300">
-          {ordered.length} {isEs ? "checks" : "checks"}
-        </span>
-      </div>
-
-      <p className="mb-3 rounded-md border border-amber-500/30 bg-amber-500/5 px-2.5 py-1.5 text-[10px] leading-snug text-amber-100/90">
-        {isEs
-          ? "Estimaciones preliminares de referencia. No reemplazan estudios eléctricos de detalle (flujo de potencia, cortocircuito, coordinación de protecciones, armónicos, estabilidad RMS/EMT, arc-flash, calidad de potencia en el PCC, coordinación de aislamiento)."
-          : "Reference-only preliminary estimates. They do not replace detailed electrical studies (load flow, short circuit, protection coordination, harmonics, RMS/EMT stability, arc flash, power quality at the PCC, insulation coordination)."}
-      </p>
-
-      {ordered.length === 0 ? (
-        <p className="rounded-md border border-slate-800 bg-slate-900/40 px-2.5 py-2 text-[11px] text-slate-400">
-          {isEs
-            ? "El perfil activo no incluye reglas eléctricas preliminares."
-            : "The active profile carries no preliminary electrical rules."}
-        </p>
-      ) : !architecturePopulated ? (
-        <p className="rounded-md border border-slate-800 bg-slate-900/40 px-2.5 py-2 text-[11px] text-slate-400">
-          {isEs
-            ? "Cargar la arquitectura v1.2 (preset BESS del Desierto o equivalente) para evaluar los 8 checks."
-            : "Load the v1.2 architecture (BESS del Desierto preset or equivalent) to evaluate the 8 checks."}
-        </p>
-      ) : (
-        <ul className="space-y-1.5">
-          {ordered.map((entry) => {
-            const sevClass =
-              EFFECTIVE_SEVERITY_CLASS[entry.severity] ??
-              EFFECTIVE_SEVERITY_CLASS.info;
-            const sevLabel =
-              EFFECTIVE_SEVERITY_LABEL[entry.severity] ??
-              EFFECTIVE_SEVERITY_LABEL.info;
-            const outcome = OUTCOME_LABEL[entry.outcome];
-            const outcomeLabel = isEs ? outcome.es : outcome.en;
-            const cite = citeLabel(entry);
-            const capped = entry.severityCappedBy;
-            return (
-              <li
-                key={entry.ruleId}
-                className={`rounded-md border px-2 py-1.5 text-[11px] leading-snug ${sevClass}`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <span className="font-medium">{entry.title}</span>
-                  <div className="flex shrink-0 flex-col items-end gap-0.5">
-                    <span className="rounded-sm border border-current/40 bg-black/10 px-1.5 py-px text-[9px] uppercase tracking-wider">
-                      {isEs ? sevLabel.es : sevLabel.en}
-                    </span>
-                    <span className="rounded-sm border border-slate-600/40 bg-slate-900/40 px-1.5 py-px text-[8.5px] uppercase tracking-wider text-slate-300">
-                      {outcomeLabel}
-                    </span>
-                  </div>
-                </div>
-                <div className="mt-0.5 font-mono text-[9px] opacity-80">
-                  {entry.ruleId}
-                  {entry.appParameter ? ` · ${entry.appParameter}` : ""}
-                </div>
-                {entry.violations.length > 0 ? (
-                  <ul className="mt-1 space-y-0.5">
-                    {entry.violations.slice(0, 3).map((v, i) => (
-                      <li
-                        key={`${entry.ruleId}-v${i}`}
-                        className="opacity-90"
-                      >
-                        · {v.message}
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-                {capped ? (
-                  <div className="mt-1 rounded-sm border border-slate-600/30 bg-slate-900/40 px-1.5 py-1 text-[9px] leading-snug text-slate-300">
-                    {isEs ? "Severidad limitada" : "Severity capped"}:{" "}
-                    <span className="font-mono">{capped.from}</span> →{" "}
-                    <span className="font-mono">{entry.severity}</span>{" "}
-                    ({capped.by === "document_level"
-                      ? isEs ? "nivel documental" : "document level"
-                      : isEs ? "confianza de evidencia" : "evidence confidence"})
-                    <div className="mt-0.5 opacity-80">{capped.detail}</div>
-                  </div>
-                ) : null}
-                {cite ? (
-                  <div className="mt-1 text-[9px] opacity-70">
-                    <HelpCircle
-                      className="mr-1 inline h-2.5 w-2.5"
-                      aria-hidden="true"
-                    />
-                    {cite}
-                  </div>
-                ) : null}
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </div>
-  );
-}
 
 function CountTile({
   value,
