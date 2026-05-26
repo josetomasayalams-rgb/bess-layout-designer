@@ -149,4 +149,30 @@ describe("SectionPanelHost", () => {
     expect(screen.getByTestId("report-panel")).toBeDefined();
     expect(screen.getByTestId("summary-panel")).toBeDefined();
   });
+
+  it("maps site panels to the site section", () => {
+    render(
+      <>
+        <SectionPanelHost activeSection="site" region="primary" />
+        <SectionPanelHost activeSection="site" region="secondary" />
+      </>
+    );
+
+    fireEvent.click(screen.getByText("Terrain"));
+
+    expect(screen.getByTestId("parametric-terrain-panel")).toBeDefined();
+    expect(screen.getByTestId("case-study-panel")).toBeDefined();
+  });
+
+  it("maps layout panels to the layout section", () => {
+    render(
+      <>
+        <SectionPanelHost activeSection="layout" region="primary" />
+        <SectionPanelHost activeSection="layout" region="secondary" />
+      </>
+    );
+
+    expect(screen.getByTestId("preliminary-design-panel")).toBeDefined();
+    expect(screen.getByTestId("layout-comparison-panel")).toBeDefined();
+  });
 });

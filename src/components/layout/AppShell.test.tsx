@@ -110,4 +110,23 @@ describe("AppShell section shell surfaces", () => {
     expect(screen.getByTestId("equipment-catalog-panel")).toBeDefined();
     expect(screen.queryByTestId("case-study-panel")).toBeNull();
   });
+
+  it("uses the rail active section to navigate to layout, compliance and report sections", () => {
+    render(<AppShell />);
+
+    // Navigate to Layout
+    fireEvent.click(screen.getByRole("button", { name: "3. Layout" }));
+    expect(screen.getByTestId("preliminary-design-panel")).toBeDefined();
+    expect(screen.getByTestId("bess-map")).toBeDefined();
+
+    // Navigate to Compliance
+    fireEvent.click(screen.getByRole("button", { name: "4. Compliance" }));
+    expect(screen.getByTestId("compliance-panel")).toBeDefined();
+    expect(screen.getByTestId("bess-map")).toBeDefined();
+
+    // Navigate to Report
+    fireEvent.click(screen.getByRole("button", { name: "5. Report" }));
+    expect(screen.getByTestId("report-panel")).toBeDefined();
+    expect(screen.getByTestId("bess-map")).toBeDefined();
+  });
 });
