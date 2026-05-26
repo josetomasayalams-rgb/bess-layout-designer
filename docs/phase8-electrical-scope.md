@@ -306,12 +306,14 @@ Fase 8 se considera cerrada cuando se cumplen TODOS los siguientes:
 
 ## Decisión de retirada de `bessRegulatoryProfiles.ts`
 
-> _Pendiente de decisión humana. Marcar una opción al cerrar este bloque:_
->
-> - [ ] **Aprobado** — ejecutar Prompt 3 (`/sparc/coder`) inmediatamente después de Fase 8 implementada.
-> - [ ] **Postergado** — mantener el legacy hasta Fase N; consignar razón:
-> - [ ] **Modificado** — ajustes propuestos al plan:
+- [x] **Postergado hasta tras Fase 8 implementada.**
 
----
+**Razón:** el legacy expone constantes físicas (spacing, setbacks) consumidas
+por layout y UI; no expone reglas eléctricas. Las 8 nuevas reglas de Fase 8
+viven en `topologyValidation.ts` + `regulatoryRulesCatalog.ts` y no tocan el
+legacy. Implementar Fase 8 primero da valor al usuario sin riesgo de conflicto,
+y deja la retirada como una migración mecánica posterior siguiendo el orden
+de §4 arriba.
 
-**Próximo paso recomendado:** revisar este doc, anotar la decisión §4 al pie, y recién entonces lanzar `/sparc/coder` con el Prompt 3 (retirada legacy) o un Prompt 5 nuevo (implementación de Fase 8 según este diseño).
+**Reactivación:** una vez Fase 8 cumpla los 10 criterios de aceptación de §5,
+ejecutar el Prompt 3 (`/sparc/coder` — retirar legacy) sin modificaciones.
