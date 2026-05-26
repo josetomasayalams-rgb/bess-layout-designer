@@ -45,6 +45,7 @@ import type {
 import type { DocumentInconsistency } from "@/types/project";
 import type { ElectricalCompatibilityIssue } from "@/types/technical";
 import type { EvidenceRef } from "@/types/evidence";
+import { effectiveSeverity } from "@/rules/severityCeiling";
 
 // ──────────────────────────────────────────────────────────────────
 // Tipos del resultado
@@ -61,7 +62,23 @@ export type RuleOutcome =
 export type EvaluatedRuleEntry = {
   ruleId: string;
   category: RuleCategory;
+  /**
+   * Effective severity after applying the evidence-level / confidence ceiling
+   * defined in `severityCeiling.ts`. Use `declaredSeverity` for the
+   * catalog-declared value.
+   */
   severity: RuleSeverity;
+  /** Severity as declared in the rule catalog, before the ceiling is applied. */
+  declaredSeverity: RuleSeverity;
+  /**
+   * When the declared severity was lowered by the matrix ceiling, this
+   * carries the reason; otherwise `null`.
+   */
+  severityCappedBy: null | {
+    from: RuleSeverity;
+    by: "document_level" | "confidence";
+    detail: string;
+  };
   title: string;
   description: string;
   appParameter?: string;
@@ -223,10 +240,13 @@ function evaluateRule(
   rule: RegulatoryRuleDefinition,
   input: RegulatoryEvaluationInput
 ): EvaluatedRuleEntry {
+  const { severity: effSeverity, cappedBy } = effectiveSeverity(rule);
   const base: EvaluatedRuleEntry = {
     ruleId: rule.id,
     category: rule.category,
-    severity: rule.severity,
+    severity: effSeverity,
+    declaredSeverity: rule.severity,
+    severityCappedBy: cappedBy,
     title: rule.title,
     description: rule.description,
     appParameter: rule.appParameter,

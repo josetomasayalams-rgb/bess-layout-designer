@@ -332,3 +332,48 @@ describe("evaluateRegulatoryProfile — newly automated electrical & detail rule
     expect(ruleRep1!.outcome).toBe("pass");
   });
 });
+
+describe("runRegulatoryEvaluation — physical validations mapping", () => {
+  it("maps equipment_inside_polygon and equipment_collision issues without external norm metadata", () => {
+    const result = evaluateRegulatoryProfile({
+      profileId: "chile-utility-predesign",
+      physicalIssues: [
+        {
+          id: "issue-containment",
+          severity: "critical",
+          ruleId: "equipment_inside_polygon",
+          ruleLabel: "Equipment inside site polygon",
+          objectAId: "bess-1",
+          source: "Geometric layout check",
+          message: "Equipment bess-1 is outside polygon.",
+          recommendation: "Reposition the equipment",
+          basis: "user_defined",
+        },
+        {
+          id: "issue-collision",
+          severity: "critical",
+          ruleId: "equipment_collision",
+          ruleLabel: "No equipment footprint collisions",
+          objectAId: "bess-1",
+          objectBId: "bess-2",
+          source: "Geometric layout check",
+          message: "Footprint collision detected between bess-1 and bess-2.",
+          recommendation: "Separate the equipment",
+          basis: "user_defined",
+        },
+      ],
+    });
+
+    const rule1 = result.rules.find((r) => r.ruleId === "RULE-PHYS-001");
+    expect(rule1).toBeDefined();
+    expect(rule1!.outcome).toBe("violation");
+    expect(rule1!.violations.length).toBe(1);
+    expect(rule1!.violations[0].message).toBe("Equipment bess-1 is outside polygon.");
+
+    const rule2 = result.rules.find((r) => r.ruleId === "RULE-PHYS-002");
+    expect(rule2).toBeDefined();
+    expect(rule2!.outcome).toBe("violation");
+    expect(rule2!.violations.length).toBe(1);
+    expect(rule2!.violations[0].message).toBe("Footprint collision detected between bess-1 and bess-2.");
+  });
+});
