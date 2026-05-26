@@ -67,6 +67,38 @@ export const BLOCK_GAP_Y_M = 8;
 export const MARGIN_M = 24;
 
 /**
+ * Fase 10 — physical-clearance preliminary assumptions.
+ *
+ * These constants are the **single source of truth** for the numeric
+ * clearances consumed by `validateBessLayout` and by the conservative
+ * predesign quick-sizing / repair helpers. They used to live inline as a
+ * `CONSERVATIVE_RULES` object inside `bessRegulatoryProfiles.ts`; that
+ * module is retired in Fase 10 and replaced by `regulatoryProfileMetadata`
+ * which builds the legacy `RegulatoryProfile.rules` shape on top of these
+ * constants.
+ *
+ * Every value here is a `preliminary_assumption` — a conservative
+ * predesign screening criterion. Reductions require UL 9540A, HMA, LSFT,
+ * AHJ or manufacturer validation. See the matrix in
+ * `severityCeiling.ts` for how rule severity gets bounded by the actual
+ * evidence chain in `regulatoryRulesCatalog.ts`.
+ */
+export const BESS_TO_BESS_M = 3;
+export const BESS_TO_BUILDING_M = 3;
+export const BESS_TO_PROPERTY_LINE_M = 3;
+export const BESS_TO_PUBLIC_WAY_M = 3;
+export const BESS_TO_COMBUSTIBLE_MATERIAL_M = 3;
+export const BESS_TO_ESCAPE_ROUTE_M = 3;
+export const COMBUSTIBLE_VEGETATION_CLEARANCE_M = 3;
+export const MAINTENANCE_AISLE_M = 1;
+export const ELECTRICAL_FRONT_WORKING_CLEARANCE_M = 0.9;
+export const INTERNAL_BATTERY_GROUP_SEPARATION_M = 0.9;
+export const MAX_ENERGY_PER_GROUP_KWH = 50;
+export const FIRE_AREA_REFERENCE_LIMIT_KWH = 600;
+export const TRANSFORMER_TO_BESS_MINIMUM_M = 1;
+export const TRANSFORMER_TO_BESS_RECOMMENDED_M = 3;
+
+/**
  * Fase 8 — umbrales editables para validaciones eléctricas preliminares.
  *
  * Todos son `preliminary_assumption`. Se usan para comparar estimaciones
