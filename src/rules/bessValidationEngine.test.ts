@@ -4,7 +4,7 @@ import type { ProjectAnchor } from "@/types/geometry";
 import {
   DEFAULT_REGULATORY_CONTEXT,
   getRegulatoryProfile,
-} from "./bessRegulatoryProfiles";
+} from "./regulatoryProfileMetadata";
 import { validateBessLayout } from "./bessValidationEngine";
 import { toLngLat } from "@/lib/geometry/projection";
 

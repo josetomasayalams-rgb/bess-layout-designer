@@ -3,7 +3,7 @@ import type {
   RegulatoryDesignContext,
   RegulatoryProfileId,
 } from "@/types/bessLayoutTypes";
-import { DEFAULT_REGULATORY_CONTEXT } from "@/rules/bessRegulatoryProfiles";
+import { DEFAULT_REGULATORY_CONTEXT } from "@/rules/regulatoryProfileMetadata";
 import type { RegulatoryRuleProfileId } from "@/rules/types";
 
 type RegulatoryState = {

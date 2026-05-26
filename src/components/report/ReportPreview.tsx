@@ -21,7 +21,7 @@ import { useRegulatoryStore } from "@/store/regulatoryStore";
 import { buildReportData, documentTitle, type TechnicalReportData } from "@/lib/report/buildReportData";
 import { captureMapImage } from "@/lib/report/captureMap";
 import { reverseGeocode } from "@/lib/report/reverseGeocode";
-import { getRegulatoryProfile } from "@/rules/bessRegulatoryProfiles";
+import { getRegulatoryProfile } from "@/rules/regulatoryProfileMetadata";
 import { validateBessLayout } from "@/rules/bessValidationEngine";
 import { validateElectricalTopology } from "@/lib/electrical/topologyValidation";
 import { runRegulatoryEvaluation } from "@/rules/regulatoryProfileEvaluator";

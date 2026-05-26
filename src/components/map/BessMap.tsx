@@ -40,7 +40,7 @@ import {
   formatLength,
   formatMassTonnes,
 } from "@/lib/units/formatUnits";
-import { getRegulatoryProfile } from "@/rules/bessRegulatoryProfiles";
+import { getRegulatoryProfile } from "@/rules/regulatoryProfileMetadata";
 import { toLngLat, toLocal } from "@/lib/geometry/projection";
 import {
   accessRoadCorridorFeatures,

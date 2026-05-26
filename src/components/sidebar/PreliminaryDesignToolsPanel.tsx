@@ -11,7 +11,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { equipmentCatalog } from "@/data/equipmentCatalog";
-import { getRegulatoryProfile } from "@/rules/bessRegulatoryProfiles";
+import { getRegulatoryProfile } from "@/rules/regulatoryProfileMetadata";
 import { useProjectStore } from "@/store/projectStore";
 import { useRegulatoryStore } from "@/store/regulatoryStore";
 import { useUiStore } from "@/store/uiStore";
