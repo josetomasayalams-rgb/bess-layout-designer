@@ -12,11 +12,7 @@ import { Toolbar } from "./Toolbar";
 import { MetricBar } from "./MetricBar";
 import { FlowStepper } from "./FlowStepper";
 import { SectionRail, type AppSectionId } from "./SectionRail";
-import { ConfigurationSidebar } from "@/components/sidebar/ConfigurationSidebar";
-import { BessParkSummaryPanel } from "@/components/sidebar/BessParkSummaryPanel";
-import { RegulatoryCompliancePanel } from "@/components/sidebar/RegulatoryCompliancePanel";
-import { TechnicalReportPanel } from "@/components/sidebar/TechnicalReportPanel";
-import { WarningsPanel } from "@/components/sidebar/WarningsPanel";
+import { SectionPanelHost } from "./SectionPanelHost";
 import { useUiStore } from "@/store/uiStore";
 
 // Las 4 combinaciones se escriben literales para que el JIT de Tailwind las detecte.
@@ -87,7 +83,7 @@ export function AppShell() {
         <div
           className={`grid w-full max-w-full min-w-0 flex-1 grid-cols-1 overflow-x-hidden bg-slate-950 lg:min-h-0 lg:overflow-hidden lg:transition-[grid-template-columns] lg:duration-300 lg:ease-in-out ${gridCols}`}
         >
-          <ConfigurationSidebar />
+          <SectionPanelHost activeSection={activeSection} region="primary" />
           <main className="relative h-[560px] min-h-[460px] min-w-0 border-y border-slate-800 lg:h-auto lg:min-h-0 lg:border-y-0">
             <BessMap />
             <button
@@ -117,14 +113,7 @@ export function AppShell() {
               )}
             </button>
           </main>
-          <aside className="min-w-0 overflow-x-hidden bg-slate-950 lg:min-h-0 lg:overflow-y-auto lg:border-l lg:border-slate-800">
-            <BessParkSummaryPanel />
-            <RegulatoryCompliancePanel />
-            <section className="border-b border-slate-800 p-4">
-              <TechnicalReportPanel />
-            </section>
-            <WarningsPanel />
-          </aside>
+          <SectionPanelHost activeSection={activeSection} region="secondary" />
         </div>
       </div>
     </div>

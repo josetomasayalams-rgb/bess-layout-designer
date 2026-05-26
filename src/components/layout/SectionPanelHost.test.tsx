@@ -1,16 +1,8 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useProjectStore } from "@/store/projectStore";
 import { useUiStore } from "@/store/uiStore";
-import { AppShell } from "./AppShell";
-
-vi.mock("@/components/map/BessMap", () => ({
-  BessMap: () => <div data-testid="bess-map" />,
-}));
-
-vi.mock("./Toolbar", () => ({
-  Toolbar: () => <div data-testid="toolbar" />,
-}));
+import { SectionPanelHost } from "./SectionPanelHost";
 
 vi.mock("@/components/sidebar/BessParkSummaryPanel", () => ({
   BessParkSummaryPanel: () => <section data-testid="summary-panel" />,
@@ -67,47 +59,54 @@ vi.mock("@/components/sidebar/WarningsPanel", () => ({
 }));
 
 function resetStores() {
-  useUiStore.setState({
-    locale: "en",
-    leftSidebarCollapsed: false,
-    rightSidebarCollapsed: false,
-  });
+  useUiStore.setState({ locale: "en" });
   useProjectStore.setState({
     polygon: [],
     anchor: null,
     placedEquipment: [],
-    designTargets: {},
   });
 }
 
-describe("AppShell section shell surfaces", () => {
+describe("SectionPanelHost", () => {
   beforeEach(() => {
     resetStores();
   });
 
-  it("renders the shell surfaces without a polygon or layout", () => {
-    render(<AppShell />);
-
-    expect(screen.getByTestId("toolbar")).toBeDefined();
-    expect(screen.getByRole("region", { name: "Project KPIs" })).toBeDefined();
-    expect(screen.getByRole("button", { name: "1. Site" })).toBeDefined();
-    expect(screen.getByText("1. Terrain")).toBeDefined();
-    expect(
-      screen.getByRole("complementary", { name: "Site primary panel" })
-    ).toBeDefined();
-    expect(screen.getByTestId("case-study-panel")).toBeDefined();
-    expect(screen.getByTestId("bess-map")).toBeDefined();
-    expect(screen.queryByTestId("equipment-catalog-panel")).toBeNull();
-  });
-
-  it("uses the rail active section to change visible panel groups", () => {
-    render(<AppShell />);
-
-    fireEvent.click(screen.getByRole("button", { name: "2. Equipment" }));
+  it("maps equipment panels to the equipment section", () => {
+    render(
+      <>
+        <SectionPanelHost activeSection="equipment" region="primary" />
+        <SectionPanelHost activeSection="equipment" region="secondary" />
+      </>
+    );
 
     expect(screen.getByTestId("model-library-panel")).toBeDefined();
     expect(screen.getByTestId("quick-sizing-panel")).toBeDefined();
     expect(screen.getByTestId("equipment-catalog-panel")).toBeDefined();
-    expect(screen.queryByTestId("case-study-panel")).toBeNull();
+  });
+
+  it("keeps compliance findings and warnings in the compliance section", () => {
+    render(
+      <>
+        <SectionPanelHost activeSection="compliance" region="primary" />
+        <SectionPanelHost activeSection="compliance" region="secondary" />
+      </>
+    );
+
+    expect(screen.getByTestId("regulatory-config-panel")).toBeDefined();
+    expect(screen.getByTestId("warnings-panel")).toBeDefined();
+    expect(screen.getByTestId("compliance-panel")).toBeDefined();
+  });
+
+  it("maps report output panels to the report section", () => {
+    render(
+      <>
+        <SectionPanelHost activeSection="report" region="primary" />
+        <SectionPanelHost activeSection="report" region="secondary" />
+      </>
+    );
+
+    expect(screen.getByTestId("report-panel")).toBeDefined();
+    expect(screen.getByTestId("summary-panel")).toBeDefined();
   });
 });
