@@ -127,6 +127,7 @@ export function BessMap() {
   const lastRepairResult = useProjectStore((s) => s.lastRepairResult);
   const storedCableRoutes = useProjectStore((s) => s.cableRoutes);
   const storedAccessRoads = useProjectStore((s) => s.accessRoads);
+  const poi = useProjectStore((s) => s.poi);
 
   const addPolygonVertex = useProjectStore((s) => s.addPolygonVertex);
   const addRepairZoneVertex = useProjectStore((s) => s.addRepairZoneVertex);
@@ -392,8 +393,9 @@ export function BessMap() {
         placed: displayedPlaced,
         anchor,
         polygon,
+        hasPoi: !!poi,
       }),
-    [displayedPlaced, anchor, polygon]
+    [displayedPlaced, anchor, polygon, poi]
   );
   const previewCableRoutes = terrainFitPreview.result?.cableRoutes ?? [];
   const previewAccessRoads = terrainFitPreview.result?.accessRoads ?? [];

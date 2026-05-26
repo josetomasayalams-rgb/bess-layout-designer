@@ -1,12 +1,7 @@
-import type {
-  BESSBlock,
-  ConversionStation,
-  MVBus,
-  MVFeeder,
-  POI,
-} from "@/types/electrical";
+import type { BESSBlock, ConversionStation, MVBus, MVFeeder, POI } from "@/types/electrical";
 import type { DocumentInconsistency } from "@/types/project";
 import type { ElectricalCompatibilityIssue } from "@/types/technical";
+import { pcsCatalog, getPcsSpec } from "@/data/catalogs/pcsCatalog";
 
 export type ElectricalTopologyLimits = {
   maxContainersPerStation?: number;
@@ -76,6 +71,34 @@ export function validateElectricalTopology(
   const feederById = new Map(input.mvFeeders.map((feeder) => [feeder.id, feeder]));
   const feederStationIds = new Set(input.mvFeeders.flatMap((feeder) => feeder.conversionStationIds));
 
+  // Preset warning (reference_only)
+  if (input.blocks.length > 0) {
+    issues.push(
+      issue({
+        id: "rule-elec-bess-del-desierto-preset-in-use",
+        severity: "warning",
+        message: "El preset BESS del Desierto está activo. Los límites de la arquitectura (8:1 y 4:1) y las distancias son supuestos referenciales y no reglas de diseño universales.",
+        recommendation: "Validar y ajustar los parámetros según las especificaciones del fabricante, del EPC y del terreno.",
+        basis: "reference_only",
+        affectedIds: ["project"],
+      })
+    );
+  }
+
+  // Missing feeders
+  if (input.mvFeeders.length === 0) {
+    issues.push(
+      issue({
+        id: "rule-elec-missing-feeders",
+        severity: "warning",
+        message: "No se han definido alimentadores de media tensión en la arquitectura eléctrica.",
+        recommendation: "Definir al menos un alimentador de media tensión para interconectar las estaciones de conversión.",
+        basis: "pending_validation",
+        affectedIds: ["project"],
+      })
+    );
+  }
+
   for (const block of input.blocks) {
     const station = stationById.get(block.conversionStationId);
     if (!station) {
@@ -96,11 +119,25 @@ export function validateElectricalTopology(
       issues.push(
         issue({
           id: `rule-elec-001-block-container-count-${block.id}`,
-          severity: "critical",
-          message: `BESS block ${block.id} has ${block.containerIds.length} containers; preliminary limit is ${limits.maxContainersPerStation} per conversion station.`,
-          recommendation: "Split the block or use an equipment architecture with documented higher capacity.",
-          basis: "engineering_judgement",
+          severity: "warning",
+          message: `El bloque BESS ${block.id} tiene ${block.containerIds.length} contenedores. La proporción máxima recomendada por el supuesto de predimensionamiento es de ${limits.maxContainersPerStation} por estación.`,
+          recommendation: "Verificar la relación BESS-PCS con el fabricante; la relación 8:1 es referencial.",
+          basis: "reference_only",
           affectedIds: [block.id, station.id, ...block.containerIds],
+        })
+      );
+    }
+
+    // Ratio mismatch vs preset (8:1 is the target preset ratio)
+    if (block.containerIds.length !== 8) {
+      issues.push(
+        issue({
+          id: `rule-elec-block-ratio-preset-mismatch-${block.id}`,
+          severity: "warning",
+          message: `La proporción BESS-PCS del bloque ${block.id} (${block.containerIds.length}:1) difiere de la proporción fija del preset BESS del Desierto (8:1).`,
+          recommendation: "Ajustar el número de contenedores por bloque para alinearse con el preset o justificar la diferencia técnica.",
+          basis: "reference_only",
+          affectedIds: [block.id],
         })
       );
     }
@@ -138,10 +175,10 @@ export function validateElectricalTopology(
       issues.push(
         issue({
           id: `rule-elec-001-station-container-count-${station.id}`,
-          severity: "critical",
-          message: `Conversion station ${station.id} has ${station.associatedContainerIds.length} associated containers; preliminary limit is ${limits.maxContainersPerStation}.`,
-          recommendation: "Reduce associated containers or validate a different vendor configuration.",
-          basis: "engineering_judgement",
+          severity: "warning",
+          message: `La estación de conversión ${station.id} tiene ${station.associatedContainerIds.length} contenedores asociados. La relación máxima recomendada de predimensionamiento es de ${limits.maxContainersPerStation}.`,
+          recommendation: "Reducir el número de contenedores asociados o validar la capacidad con el fabricante.",
+          basis: "reference_only",
           affectedIds: [station.id, ...station.associatedContainerIds],
         })
       );
@@ -182,8 +219,49 @@ export function validateElectricalTopology(
       );
     }
 
-    const transformerLvKv = station.blockTransformer.lvVoltageKv.value;
-    const transformerHvKv = station.blockTransformer.hvVoltageKv.value;
+    if (!station.blockTransformer) {
+      issues.push(
+        issue({
+          id: `rule-elec-missing-transformer-${station.id}`,
+          severity: "warning",
+          message: `La estación de conversión ${station.id} no tiene un transformador de bloque definido.`,
+          recommendation: "Definir un transformador de bloque para elevar la tensión al nivel de media tensión del colector.",
+          basis: "pending_validation",
+          affectedIds: [station.id],
+        })
+      );
+      continue;
+    }
+
+    const transformerLvKv = station.blockTransformer.lvVoltageKv?.value ?? 0;
+    const transformerHvKv = station.blockTransformer.hvVoltageKv?.value ?? 0;
+
+    if (transformerLvKv === 0) {
+      issues.push(
+        issue({
+          id: `rule-elec-missing-transformer-lv-${station.id}`,
+          severity: "warning",
+          message: `La tensión de baja tensión (LV) del transformador en la estación ${station.id} no está definida o es cero.`,
+          recommendation: "Confirmar la tensión LV del transformador (ej. 0.9 kV) según la ficha técnica del fabricante.",
+          basis: "pending_validation",
+          affectedIds: [station.id, station.blockTransformer.id],
+        })
+      );
+    }
+
+    if (transformerHvKv === 0) {
+      issues.push(
+        issue({
+          id: `rule-elec-missing-transformer-hv-${station.id}`,
+          severity: "warning",
+          message: `La tensión de media tensión (HV) del transformador en la estación ${station.id} no está definida o es cero.`,
+          recommendation: "Confirmar la tensión HV del transformador (ej. 33 kV) según el diagrama unifilar del proyecto.",
+          basis: "pending_validation",
+          affectedIds: [station.id, station.blockTransformer.id],
+        })
+      );
+    }
+
     for (const pcs of station.pcsModules) {
       if (!pcs.dcVoltageRangeV) {
         issues.push(
@@ -203,17 +281,30 @@ export function validateElectricalTopology(
         issues.push(
           issue({
             id: `rule-elec-003-pcs-dc-range-mismatch-${pcs.id}`,
-            severity: "critical",
+            severity: "warning",
             message: `PCS module ${pcs.id} DC range ${pcs.dcVoltageRangeV[0]}-${pcs.dcVoltageRangeV[1]} V is outside the preliminary container range ${limits.containerDcVoltageRangeV[0]}-${limits.containerDcVoltageRangeV[1]} V.`,
             recommendation: "Confirm a compatible PCS-container configuration with the manufacturer.",
-            basis: "datasheet",
+            basis: "preliminary_assumption",
             affectedIds: [station.id, pcs.id],
           })
         );
       }
 
-      const pcsLvKv = pcs.nominalAcVoltageV / 1000;
-      if (Math.abs(pcsLvKv - transformerLvKv) > limits.lvVoltageToleranceKv) {
+      const pcsLvKv = pcs.nominalAcVoltageV ? pcs.nominalAcVoltageV / 1000 : 0;
+      if (pcsLvKv === 0) {
+        issues.push(
+          issue({
+            id: `rule-elec-missing-pcs-ac-${pcs.id}`,
+            severity: "warning",
+            message: `El módulo PCS ${pcs.id} no tiene definida su tensión nominal AC.`,
+            recommendation: "Confirmar la tensión nominal AC del PCS en su ficha técnica.",
+            basis: "pending_validation",
+            affectedIds: [station.id, pcs.id],
+          })
+        );
+      }
+
+      if (pcsLvKv !== 0 && transformerLvKv !== 0 && Math.abs(pcsLvKv - transformerLvKv) > limits.lvVoltageToleranceKv) {
         issues.push(
           issue({
             id: `rule-elec-004-pcs-transformer-lv-mismatch-${pcs.id}`,
@@ -225,9 +316,30 @@ export function validateElectricalTopology(
           })
         );
       }
+
+      // Voltage Contradiction check
+      const pcsSpec = getPcsSpec(pcs.id) || pcsCatalog.find(p => p.model === pcs.model || p.aliases.includes(pcs.model));
+      if (pcsSpec && pcsSpec.knownVoltageContradictions) {
+        const contradiction = pcsSpec.knownVoltageContradictions;
+        if (
+          Math.abs(transformerLvKv - contradiction.projectReportedLvKv!) < 0.01 &&
+          Math.abs(transformerHvKv - contradiction.projectReportedMvKv!) < 0.01
+        ) {
+          issues.push(
+            issue({
+              id: `rule-elec-pcs-transformer-voltage-contradiction-${pcs.id}`,
+              severity: "warning",
+              message: `Contradicción de datos de tensión: la ficha técnica de ${pcs.model} reporta LV ${contradiction.datasheetLvKv} kV / MV ${contradiction.datasheetMvKv} kV, mientras que el proyecto reporta LV ${contradiction.projectReportedLvKv} kV / MV ${contradiction.projectReportedMvKv} kV.`,
+              recommendation: "Confirmar la variante contractual exacta y los valores nominales con el fabricante.",
+              basis: "pending_validation",
+              affectedIds: [station.id, pcs.id, station.blockTransformer.id],
+            })
+          );
+        }
+      }
     }
 
-    if (Math.abs(transformerHvKv - limits.expectedCollectorVoltageKv) > 0.001) {
+    if (transformerHvKv !== 0 && Math.abs(transformerHvKv - limits.expectedCollectorVoltageKv) > 0.001) {
       issues.push(
         issue({
           id: `rule-elec-005-transformer-collector-voltage-${station.id}`,
@@ -246,20 +358,33 @@ export function validateElectricalTopology(
       .map((id) => stationById.get(id))
       .filter((station): station is ConversionStation => Boolean(station));
 
+    if (feeder.nominalVoltageKv === 0 || !feeder.nominalVoltageKv) {
+      issues.push(
+        issue({
+          id: `rule-elec-missing-feeder-voltage-${feeder.id}`,
+          severity: "warning",
+          message: `El alimentador de media tensión ${feeder.id} no tiene definida su tensión nominal.`,
+          recommendation: "Asignar la tensión nominal correspondiente al colector MT (ej. 33 kV).",
+          basis: "pending_validation",
+          affectedIds: [feeder.id],
+        })
+      );
+    }
+
     if (feeder.conversionStationIds.length > limits.maxStationsPerFeeder) {
       issues.push(
         issue({
           id: `rule-elec-002-feeder-station-count-${feeder.id}`,
-          severity: "critical",
-          message: `MV feeder ${feeder.id} has ${feeder.conversionStationIds.length} stations; preliminary limit is ${limits.maxStationsPerFeeder}.`,
-          recommendation: "Split the feeder or validate a different feeder loading criterion.",
-          basis: "engineering_judgement",
+          severity: "warning",
+          message: `El alimentador MT ${feeder.id} tiene ${feeder.conversionStationIds.length} estaciones asociadas. La proporción máxima recomendada por el supuesto de predimensionamiento es de ${limits.maxStationsPerFeeder} estaciones.`,
+          recommendation: "Verificar la carga máxima del alimentador; la relación 4:1 es un supuesto de predimensionamiento referencial.",
+          basis: "reference_only",
           affectedIds: [feeder.id, ...feeder.conversionStationIds],
         })
       );
     }
 
-    if (Math.abs(feeder.nominalVoltageKv - limits.expectedCollectorVoltageKv) > 0.001) {
+    if (feeder.nominalVoltageKv !== 0 && Math.abs(feeder.nominalVoltageKv - limits.expectedCollectorVoltageKv) > 0.001) {
       issues.push(
         issue({
           id: `rule-elec-005-feeder-collector-voltage-${feeder.id}`,
@@ -353,13 +478,13 @@ export function validateElectricalTopology(
       issue({
         id: "rule-elec-006-poi-missing",
         severity: "warning",
-        message: "No preliminary POI is defined for the electrical architecture.",
-        recommendation: "Define at least a conceptual POI boundary for reporting.",
+        message: "No se ha definido el Punto de Interconexión (POI) conceptual para el proyecto.",
+        recommendation: "Definir un Punto de Interconexión preliminar para cerrar el diagrama unifilar y la arquitectura.",
         basis: "pending_validation",
         affectedIds: ["poi"],
       })
     );
-  } else if (Math.abs(input.poi.voltageKv - limits.expectedCollectorVoltageKv) > 0.001) {
+  } else if (input.poi.voltageKv !== 0 && Math.abs(input.poi.voltageKv - limits.expectedCollectorVoltageKv) > 0.001) {
     issues.push(
       issue({
         id: "rule-elec-006-poi-voltage-mismatch",

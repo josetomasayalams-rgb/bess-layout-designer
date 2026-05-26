@@ -7,6 +7,7 @@
 
 import type { LocalPoint } from "@/types/geometry";
 import type { EvidenceRef } from "@/types/evidence";
+import type { SourceReliability } from "@/data/equipmentCatalog";
 
 export type AccessRoadType =
   | "perimeter"
@@ -33,4 +34,5 @@ export type AccessRoad = {
   turningRadius_m?: number;
   surface?: AccessRoadSurface;
   evidence?: EvidenceRef[];
+  classification?: SourceReliability;
 };
