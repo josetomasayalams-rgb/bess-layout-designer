@@ -12,6 +12,7 @@ import {
   Activity, 
   BookOpen, 
   Compass,
+  AlertTriangle,
   type LucideIcon
 } from "lucide-react";
 import { useProjectStore } from "@/store/projectStore";
@@ -928,6 +929,66 @@ export function ReportPreview({ isOpen, onClose, includeGeocoding }: ReportPrevi
                         <div className="text-[10px] text-violet-650 font-bold uppercase tracking-wider">
                           {isEs ? "Fase Requerida:" : "Required Phase:"} {ex.futureStage}
                         </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Preliminary Roads & Cable Routes (Phase 6) */}
+                {reportData.infrastructure ? (
+                  <div className="mb-8 mt-6">
+                    <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-3 font-sans">
+                      {isEs ? "Caminos y Corredores MT Preliminares" : "Preliminary Roads & MV Corridors"}
+                    </h3>
+                    <p className="text-slate-650 text-xs leading-normal mb-3 font-sans">
+                      {isEs
+                        ? "El trazado físico de accesos y canalizaciones es conceptual. A continuación se detallan las métricas y exclusiones de infraestructura calculadas:"
+                        : "The physical routing of access roads and cable trenches is conceptual. Calculated infrastructure metrics and exclusions are detailed below:"}
+                    </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-slate-900 mb-4 font-sans text-xs">
+                      <div className="bg-slate-50 border border-slate-200 p-2.5 rounded text-center">
+                        <div className="text-slate-400 font-medium mb-1">{isEs ? "Bloques" : "Blocks"}</div>
+                        <div className="font-mono font-bold text-sm text-slate-800">{reportData.infrastructure.blocksCount}</div>
+                      </div>
+                      <div className="bg-slate-50 border border-slate-200 p-2.5 rounded text-center">
+                        <div className="text-slate-400 font-medium mb-1">{isEs ? "Rutas MT" : "MV Routes"}</div>
+                        <div className="font-mono font-bold text-sm text-slate-800">{reportData.infrastructure.cableRoutesCount}</div>
+                      </div>
+                      <div className="bg-slate-50 border border-slate-200 p-2.5 rounded text-center">
+                        <div className="text-slate-400 font-medium mb-1">{isEs ? "Caminos" : "Access Roads"}</div>
+                        <div className="font-mono font-bold text-sm text-slate-800">{reportData.infrastructure.accessRoadsCount}</div>
+                      </div>
+                      <div className="bg-slate-50 border border-slate-200 p-2.5 rounded text-center">
+                        <div className="text-slate-400 font-medium mb-1">{isEs ? "Longitud MT" : "Total MV Length"}</div>
+                        <div className="font-mono font-bold text-sm text-slate-800">{reportData.infrastructure.totalCableLengthM} m</div>
+                      </div>
+                    </div>
+                    {reportData.infrastructure.warnings.length > 0 ? (
+                      <div className="space-y-2 mt-3 font-sans text-xs">
+                        {reportData.infrastructure.warnings.map((w, idx) => (
+                          <div key={idx} className="flex gap-2 bg-amber-50 border border-amber-200/50 p-2.5 rounded text-amber-800">
+                            <span className="font-bold font-mono text-[10px] shrink-0 uppercase border border-amber-300 rounded px-1.5 h-fit bg-white">
+                              INFO
+                            </span>
+                            <div className="leading-normal">{w}</div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {/* Technical Disclaimers */}
+                <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-3 font-sans mt-8">
+                  {isEs ? "Advertencias y Limitaciones Técnicas del MVP" : "MVP Warnings & Technical Limitations"}
+                </h3>
+                <div className="space-y-3 font-sans text-xs mb-8">
+                  {reportData.disclaimers.map((disc, idx) => (
+                    <div key={idx} className="flex gap-2.5 bg-slate-900/40 border border-slate-800 p-3 rounded-md text-slate-350">
+                      <AlertTriangle className="h-4.5 w-4.5 text-amber-500 shrink-0 mt-0.5" />
+                      <div>
+                        <div className="font-bold text-slate-200 mb-1">{disc.title}</div>
+                        <div className="text-slate-400 leading-normal">{disc.text}</div>
                       </div>
                     </div>
                   ))}

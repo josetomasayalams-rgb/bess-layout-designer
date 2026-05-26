@@ -1139,6 +1139,71 @@ function ScopeSection({ data }: Props) {
         </View>
       ))}
 
+      {data.infrastructure ? (
+        <View style={{ marginBottom: 12 }}>
+          <Text style={s.subTitle}>
+            {data.metadata.locale === "es"
+              ? "Caminos y corredores MT preliminares (conceptual)"
+              : "Preliminary Access Roads & MV Corridors (conceptual)"}
+          </Text>
+          <Text style={s.paragraph}>
+            {data.metadata.locale === "es"
+              ? "El trazado físico de accesos y canalizaciones es conceptual. A continuación se presentan las métricas del trazado:"
+              : "The layout of accesses and cable corridors is conceptual. The estimated layout metrics are:"}
+          </Text>
+          <Table
+            cols={[
+              { header: "Métrica", width: "70%" },
+              { header: "Valor", width: "30%", align: "right" },
+            ]}
+            rows={[
+              [
+                data.metadata.locale === "es" ? "Bloques BESS-PCS detectados" : "BESS-PCS blocks detected",
+                String(data.infrastructure.blocksCount)
+              ],
+              [
+                data.metadata.locale === "es" ? "Corredores MT preliminares" : "Preliminary MV corridors",
+                String(data.infrastructure.cableRoutesCount)
+              ],
+              [
+                data.metadata.locale === "es" ? "Caminos y accesos preliminares" : "Preliminary roads & accesses",
+                String(data.infrastructure.accessRoadsCount)
+              ],
+              [
+                data.metadata.locale === "es" ? "Longitud total estimada de cables MT" : "Estimated total MV cable length",
+                `${data.infrastructure.totalCableLengthM} m`
+              ],
+            ]}
+          />
+          {data.infrastructure.warnings.map((w, idx) => (
+            <View key={idx} style={s.bulletRow}>
+              <Text style={s.bulletDot}>·</Text>
+              <Text style={s.bulletText}>
+                <Text style={{ fontFamily: REPORT_FONTS.dataBold }}>
+                  {data.metadata.locale === "es" ? "Advertencia: " : "Warning: "}
+                </Text>
+                {w}
+              </Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
+
+      <Text style={s.subTitle}>
+        {data.metadata.locale === "es"
+          ? "Advertencias y limitaciones del prediseño"
+          : "Warnings and Predesign Limitations"}
+      </Text>
+      {data.disclaimers.map((disc) => (
+        <View key={disc.id} style={s.bulletRow}>
+          <Text style={s.bulletDot}>·</Text>
+          <Text style={s.bulletText}>
+            <Text style={{ fontFamily: REPORT_FONTS.dataBold }}>{disc.title}:</Text>{" "}
+            {disc.text}
+          </Text>
+        </View>
+      ))}
+
       <Text style={s.subTitle}>Checklist de ingeniería de detalle</Text>
       <Table
         cols={[
