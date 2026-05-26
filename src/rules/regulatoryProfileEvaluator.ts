@@ -165,6 +165,16 @@ const ELEC_RULE_PREFIX: Record<string, string> = {
   "mvFeeders.uniformVoltage": "rule-elec-005-",
   // RULE-ELEC-006: Feeder preliminary rating not exceeded
   "mvFeeders.ratingCheck": "rule-elec-006-feeder-power-overload-",
+  // Fase 8 — preliminary electrical checks
+  // (see docs/phase8-electrical-scope.md §3)
+  "mvBuses.capacityCheck": "rule-elec-007-",
+  "cableRoutes.ampacityEstimate": "rule-elec-008-",
+  "losses.budget": "rule-elec-009-",
+  "poi.capacityFit": "rule-elec-013-",
+  "ssaa.budget": "rule-elec-014-",
+  "ppc.rampRate": "rule-elec-015-",
+  "ppc.controlCoverage": "rule-elec-016-",
+  "transformer.noLoadAnnual": "rule-elec-017-",
 };
 
 // ──────────────────────────────────────────────────────────────────

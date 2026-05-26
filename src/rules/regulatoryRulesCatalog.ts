@@ -278,30 +278,182 @@ export const regulatoryRulesCatalog = [
     category: "electrical",
     severity: "warning",
     title: "MV bus capacity screening",
-    description: "Aggregated feeder loading should be checked against the preliminary MV bus capacity when known.",
+    description:
+      "Aggregated feeder loading should not exceed the preliminary MV bus rating. Final rating depends on the actual switchgear datasheet.",
     appParameter: "mvBuses.capacityCheck",
-    priority: "P3",
-    evidence: [derived("Calculated preliminary MVA aggregation; bus rating data may be missing.")],
+    automation: "yes",
+    status: "implemented",
+    priority: "P2",
+    evidence: [
+      ev(
+        "SIEMENS-8DA-8DB-40p5",
+        "inferred",
+        "Referential switchgear family (Siemens 8DA/8DB 40.5 kV). Project-specific busbar rating must be confirmed."
+      ),
+    ],
+    appliesToProfiles: [
+      "chile-utility-predesign",
+      "chile-pmgd-predesign",
+      "bess-del-desierto-reference",
+    ],
   }),
   rule({
     id: "RULE-ELEC-008",
     category: "electrical",
     severity: "info",
-    title: "Cable ampacity estimate",
-    description: "Cable section can be screened against conceptual current, but final ampacity requires installation conditions.",
+    title: "Cable ampacity screening",
+    description:
+      "Conceptual feeder current is screened against a reference cable ampacity. Final ampacity depends on installation conditions, grouping factor, soil thermal resistivity and ambient temperature.",
     appParameter: "cableRoutes.ampacityEstimate",
-    automation: "partial",
-    evidence: [ev("NEXANS-NA2XS2Y-19-33", "inferred", "Reference cable datasheet, not a project-specific design basis.")],
+    automation: "yes",
+    status: "implemented",
+    priority: "P3",
+    evidence: [
+      ev(
+        "NEXANS-NA2XS2Y-19-33",
+        "inferred",
+        "Reference cable datasheet (Nexans 33 kV Al XLPE), not project-specific design basis."
+      ),
+    ],
+    appliesToProfiles: [
+      "chile-utility-predesign",
+      "chile-pmgd-predesign",
+      "bess-del-desierto-reference",
+    ],
   }),
   rule({
     id: "RULE-ELEC-009",
     category: "electrical",
     severity: "warning",
     title: "Conceptual loss budget",
-    description: "MV and equipment losses should remain within an editable conceptual budget.",
+    description:
+      "MV, transformer and PCS losses are summed for a discharge-nominal scenario and compared against an editable conceptual budget. Not a substitute for a detailed loss study.",
     appParameter: "losses.budget",
+    automation: "yes",
+    status: "implemented",
+    priority: "P2",
+    evidence: [
+      ev(
+        "SUNGROW-SC5000UD-MV-US",
+        "documented",
+        "PCS converter efficiency from datasheet."
+      ),
+      derived("MV losses aggregated from feeder ratings."),
+    ],
+    appliesToProfiles: [
+      "chile-utility-predesign",
+      "chile-pmgd-predesign",
+      "bess-del-desierto-reference",
+    ],
+  }),
+  // Fase 8 — nuevas reglas eléctricas preliminares (docs/phase8-electrical-scope.md §1)
+  rule({
+    id: "RULE-ELEC-013",
+    category: "electrical",
+    severity: "warning",
+    title: "Plant MVA fits POI declared capacity",
+    description:
+      "Aggregated plant power should not exceed the POI declared capacity. When the POI capacity is missing, the rule is downgraded to checklist by the severity ceiling.",
+    appParameter: "poi.capacityFit",
+    automation: "yes",
+    status: "implemented",
+    priority: "P1",
+    evidence: [
+      ev(
+        EVIDENCE_NONE,
+        "missing",
+        "Project-specific POI capacity comes from the CEN/CNE interconnection study."
+      ),
+    ],
+    appliesToProfiles: ["chile-utility-predesign", "chile-pmgd-predesign"],
+  }),
+  rule({
+    id: "RULE-ELEC-014",
+    category: "electrical",
+    severity: "info",
+    title: "Auxiliary services budget",
+    description:
+      "Aggregated auxiliary services (fixed + per-station + per-container) should remain within an editable budget as a percentage of POI power.",
+    appParameter: "ssaa.budget",
+    automation: "yes",
+    status: "implemented",
     priority: "P3",
-    evidence: [inferred("Screening criterion; not a detailed load-flow result.")],
+    evidence: [
+      ev(
+        "SUNGROW-ST2752UX-V15",
+        "inferred",
+        "Per-container auxiliary draw inferred from container datasheet HVAC and pumping data."
+      ),
+    ],
+    appliesToProfiles: [
+      "chile-utility-predesign",
+      "chile-pmgd-predesign",
+      "bess-del-desierto-reference",
+    ],
+  }),
+  rule({
+    id: "RULE-ELEC-015",
+    category: "electrical",
+    severity: "warning",
+    title: "Plant ramp rate declared for NTSyCS",
+    description:
+      "The plant must declare a preliminary ramp rate so NTSyCS compliance can be verified later by dynamic study.",
+    appParameter: "ppc.rampRate",
+    automation: "yes",
+    status: "implemented",
+    priority: "P2",
+    evidence: [
+      ev(
+        "CNE-NTSyCS-RES45-2026",
+        "documented",
+        "Norma Técnica de Seguridad y Calidad de Servicio (NTSyCS) RES 45/2026."
+      ),
+    ],
+    appliesToProfiles: ["chile-utility-predesign"],
+  }),
+  rule({
+    id: "RULE-ELEC-016",
+    category: "electrical",
+    severity: "checklist",
+    title: "Declared PPC control modes coverage",
+    description:
+      "PPC must declare at minimum active power, reactive power, voltage and frequency control modes per NTSyCS. The app does not execute the controls; it only inspects the declared coverage.",
+    appParameter: "ppc.controlCoverage",
+    automation: "yes",
+    status: "implemented",
+    priority: "P2",
+    evidence: [
+      ev(
+        "CNE-NTSyCS-RES45-2026",
+        "documented",
+        "NTSyCS requires at least P/Q/V/f control at the POI."
+      ),
+    ],
+    appliesToProfiles: ["chile-utility-predesign", "chile-pmgd-predesign"],
+  }),
+  rule({
+    id: "RULE-ELEC-017",
+    category: "electrical",
+    severity: "info",
+    title: "Transformer no-load losses 24x7 estimate",
+    description:
+      "Annual no-load losses of the block transformer bank are estimated as a planning input for SSAA and availability. Refines with the final datasheet and operational mode.",
+    appParameter: "transformer.noLoadAnnual",
+    automation: "yes",
+    status: "implemented",
+    priority: "P3",
+    evidence: [
+      ev(
+        EVIDENCE_NONE,
+        "derived",
+        "Calculated from noLoadLossKw × 8760 h × number of stations."
+      ),
+    ],
+    appliesToProfiles: [
+      "chile-utility-predesign",
+      "chile-pmgd-predesign",
+      "bess-del-desierto-reference",
+    ],
   }),
   ...[
     ["RULE-ELEC-010", "Protection coordination study"],
