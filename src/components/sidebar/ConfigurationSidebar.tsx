@@ -9,7 +9,6 @@ import { LayoutComparisonPanel } from "@/components/sidebar/LayoutComparisonPane
 import { MVArchitecturePanel } from "@/components/sidebar/MVArchitecturePanel";
 import { ParametricTerrainPanel } from "@/components/sidebar/ParametricTerrainPanel";
 import { RegulatoryConfigPanel } from "@/components/sidebar/RegulatoryConfigPanel";
-import { FlowStepper } from "@/components/layout/FlowStepper";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import { useProjectStore } from "@/store/projectStore";
 import { useUiStore } from "@/store/uiStore";
@@ -28,10 +27,8 @@ export function ConfigurationSidebar() {
 
   return (
     <aside className="flex w-full max-w-full min-w-0 flex-col overflow-x-hidden bg-slate-950 text-slate-100 lg:min-h-0 lg:border-r lg:border-slate-800">
-      <div className="border-b border-slate-800 p-3 sm:p-4 lg:p-3">
-        <FlowStepper />
-      </div>
-
+      {/* FlowStepper relocated to AppShell (Fase 11A.1) so it stays visible
+       * regardless of the sidebar collapse state. */}
       <div className="flex-1 lg:min-h-0 lg:overflow-y-auto">
         <CollapsibleSection
           icon={MapPinned}
