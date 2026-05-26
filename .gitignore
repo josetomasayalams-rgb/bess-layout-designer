@@ -45,6 +45,7 @@ next-env.d.ts
 /DOCUMENTACION_APP_BESS/
 /DIRECTRICES_APP_BESS/
 
-# orchestration tool output
-/.claude-flow/
+# Ruflo / Claude Flow runtime artifacts
+ruvector.db
+.claude-flow/
 
