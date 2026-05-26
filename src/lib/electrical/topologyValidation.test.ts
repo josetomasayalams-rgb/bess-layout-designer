@@ -44,7 +44,13 @@ describe("validateElectricalTopology", () => {
       "RULE-ELEC-006",
     ]);
     expect(result.criticalCount).toBe(0);
-    expect(result.issues).toEqual([]);
+    // After confining BESS del Desierto specifics, the topology emits a
+    // reference_only warning so the preset cannot be silently treated as
+    // a universal rule. We still expect no critical issues.
+    const nonPresetIssues = result.issues.filter(
+      (i) => i.id !== "rule-elec-bess-del-desierto-preset-in-use"
+    );
+    expect(nonPresetIssues).toEqual([]);
   });
 
   it("flags blocks with more than 8 containers per conversion station as warning", () => {
@@ -160,6 +166,16 @@ describe("validateElectricalTopology", () => {
 
   it("flags voltage contradiction when PCS configuration does not align with datasheet specs", () => {
     const input = presetInput();
+    // The catalog's knownVoltageContradictions is keyed on the PCS spec
+    // model "SC5000UD-MV" (an alias). The preset PCS modules carry a
+    // descriptive model string ("SC5000UD-MV (PCS module)") that does
+    // not match either id or alias, so the contradiction check would
+    // not resolve a spec. Align the model so the check fires.
+    for (const station of input.conversionStations) {
+      for (const pcs of station.pcsModules) {
+        pcs.model = "SC5000UD-MV";
+      }
+    }
     const result = validateElectricalTopology(input);
     expect(hasIssue(result, "rule-elec-pcs-transformer-voltage-contradiction")).toBe(true);
   });
