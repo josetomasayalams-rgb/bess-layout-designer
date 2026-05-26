@@ -42,6 +42,15 @@ describe("validateElectricalTopology", () => {
       "RULE-ELEC-004",
       "RULE-ELEC-005",
       "RULE-ELEC-006",
+      // Fase 8 — preliminary electrical checks (defensible scope)
+      "RULE-ELEC-007",
+      "RULE-ELEC-008",
+      "RULE-ELEC-009",
+      "RULE-ELEC-013",
+      "RULE-ELEC-014",
+      "RULE-ELEC-015",
+      "RULE-ELEC-016",
+      "RULE-ELEC-017",
     ]);
     expect(result.criticalCount).toBe(0);
     // After confining BESS del Desierto specifics, the topology emits a

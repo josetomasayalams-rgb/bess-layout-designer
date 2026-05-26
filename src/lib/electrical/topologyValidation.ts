@@ -1,7 +1,24 @@
-import type { BESSBlock, ConversionStation, MVBus, MVFeeder, POI } from "@/types/electrical";
+import type {
+  AuxiliaryServices,
+  BESSBlock,
+  ConversionStation,
+  MVBus,
+  MVFeeder,
+  OperationalLimits,
+  POI,
+  PPC,
+} from "@/types/electrical";
 import type { DocumentInconsistency } from "@/types/project";
 import type { ElectricalCompatibilityIssue } from "@/types/technical";
 import { pcsCatalog, getPcsSpec } from "@/data/catalogs/pcsCatalog";
+import {
+  BUSBAR_UTILIZATION_THRESHOLD_PCT,
+  CABLE_AMPACITY_UTILIZATION_THRESHOLD_PCT,
+  LOSS_BUDGET_PCT,
+  MV_REFERENCE_CABLE_AMPACITY_A,
+  PPC_REQUIRED_CONTROL_MODES,
+  SSAA_BUDGET_PCT,
+} from "@/data/defaultConstraints";
 
 export type ElectricalTopologyLimits = {
   maxContainersPerStation?: number;
@@ -18,6 +35,12 @@ export type ElectricalTopologyInput = {
   mvBuses?: MVBus[];
   poi?: POI | null;
   limits?: ElectricalTopologyLimits;
+  /** Fase 8: cuando está presente activa RULE-ELEC-014 (SSAA budget). */
+  auxiliaryServices?: AuxiliaryServices | null;
+  /** Fase 8: cuando está presente activa RULE-ELEC-015 (ramp rate). */
+  operationalLimits?: OperationalLimits | null;
+  /** Fase 8: cuando está presente activa RULE-ELEC-015 / RULE-ELEC-016. */
+  ppc?: PPC | null;
 };
 
 export type ElectricalTopologyValidationResult = {
@@ -497,6 +520,237 @@ export function validateElectricalTopology(
     );
   }
 
+  // ────────────────────────────────────────────────────────────
+  // Fase 8 — validaciones eléctricas preliminares defendibles
+  // (ver docs/phase8-electrical-scope.md §1)
+  //
+  // Política transversal de severidades:
+  //   - El motor emite "warning" o "info" según naturaleza del check.
+  //   - El catálogo declarativo determina la severidad final por regla.
+  //   - severityCeiling.ts ajusta esa severidad al nivel y la
+  //     confianza de la evidencia citada. NUNCA emitimos "critical"
+  //     en Fase 8.
+  // ────────────────────────────────────────────────────────────
+
+  // 1.1 RULE-ELEC-007 — MV bus capacity screening
+  if (input.mvBuses) {
+    for (const bus of input.mvBuses) {
+      const busRatingA = bus.switchgear?.busbarCurrentA?.value;
+      if (!busRatingA || busRatingA <= 0) continue;
+      const busFeeders = input.mvFeeders.filter((f) => bus.feederIds.includes(f.id));
+      const aggregateMva = busFeeders.reduce(
+        (acc, f) => acc + (f.ratedPowerMVA ?? sumStationPowerMva(
+          f.conversionStationIds
+            .map((id) => stationById.get(id))
+            .filter((s): s is ConversionStation => Boolean(s))
+        )),
+        0
+      );
+      const busRatingMva = (busRatingA * Math.sqrt(3) * bus.nominalVoltageKv) / 1000;
+      if (busRatingMva <= 0) continue;
+      const utilization = aggregateMva / busRatingMva;
+      if (utilization > BUSBAR_UTILIZATION_THRESHOLD_PCT) {
+        issues.push(
+          issue({
+            id: `rule-elec-007-busbar-utilization-${bus.id}`,
+            severity: "warning",
+            message: `La barra MT ${bus.id} acumula ${aggregateMva.toFixed(1)} MVA contra un rating preliminar de ${busRatingMva.toFixed(1)} MVA (${(utilization * 100).toFixed(0)}%).`,
+            recommendation: "Confirmar la corriente nominal de la barra y la potencia agregada por alimentadores.",
+            basis: "preliminary_assumption",
+            affectedIds: [bus.id, ...bus.feederIds],
+          })
+        );
+      }
+    }
+  }
+
+  // 1.2 RULE-ELEC-008 — Cable ampacity screening (info)
+  for (const feeder of input.mvFeeders) {
+    if (!feeder.ratedPowerMVA || feeder.nominalVoltageKv <= 0) continue;
+    const conceptualCurrentA = (feeder.ratedPowerMVA * 1000) / (Math.sqrt(3) * feeder.nominalVoltageKv);
+    const utilization = conceptualCurrentA / MV_REFERENCE_CABLE_AMPACITY_A;
+    if (utilization > CABLE_AMPACITY_UTILIZATION_THRESHOLD_PCT) {
+      issues.push(
+        issue({
+          id: `rule-elec-008-cable-ampacity-${feeder.id}`,
+          severity: "info",
+          message: `La corriente conceptual del alimentador ${feeder.id} es ${conceptualCurrentA.toFixed(0)} A (${(utilization * 100).toFixed(0)}% de la ampacidad de referencia ${MV_REFERENCE_CABLE_AMPACITY_A} A). La ampacidad final depende de instalación, agrupamiento y temperatura del suelo.`,
+          recommendation: "Validar con cálculo termoeléctrico para la sección y condiciones reales de instalación.",
+          basis: "reference_only",
+          affectedIds: [feeder.id],
+        })
+      );
+    }
+  }
+
+  // 1.3 RULE-ELEC-009 — Conceptual loss budget
+  if (input.poi && input.poi.voltageKv > 0) {
+    let pcsLossesMW = 0;
+    let trafoLoadLossMW = 0;
+    let trafoNoLoadLossMW = 0;
+    let plantMva = 0;
+    for (const station of input.conversionStations) {
+      plantMva += station.ratedPowerMVA.value;
+      const stationEff = (() => {
+        const m = station.pcsModules[0];
+        if (!m) return 0.99;
+        const spec = getPcsSpec(m.id) || pcsCatalog.find((p) => p.aliases.includes(m.model));
+        const specEff =
+          spec?.efficiencyConverterPct?.value ??
+          spec?.efficiencyIncludingTransformerPct?.value;
+        return (specEff ?? m.maxEfficiencyPct ?? 99) / 100;
+      })();
+      pcsLossesMW += station.ratedPowerMVA.value * (1 - stationEff);
+      // Guard against simulated/missing transformer; an explicit
+      // missing-transformer rule already covers that case.
+      const trafo = station.blockTransformer;
+      if (trafo) {
+        trafoLoadLossMW += (trafo.loadLossKw?.value ?? 0) / 1000;
+        trafoNoLoadLossMW += (trafo.noLoadLossKw?.value ?? 0) / 1000;
+      }
+    }
+    const totalLossMW = pcsLossesMW + trafoLoadLossMW + trafoNoLoadLossMW;
+    if (plantMva > 0) {
+      const lossPct = totalLossMW / plantMva;
+      if (lossPct > LOSS_BUDGET_PCT) {
+        issues.push(
+          issue({
+            id: "rule-elec-009-loss-budget",
+            severity: "warning",
+            message: `Las pérdidas conceptuales estimadas son ${totalLossMW.toFixed(2)} MW (${(lossPct * 100).toFixed(1)}% de la planta), por encima del budget editable ${(LOSS_BUDGET_PCT * 100).toFixed(1)}%.`,
+            recommendation: "Refinar eficiencias PCS, pérdidas del transformador y longitud del corredor MT; no reemplaza un estudio de pérdidas detallado.",
+            basis: "calculated",
+            affectedIds: input.conversionStations.map((s) => s.id),
+          })
+        );
+      }
+    }
+  }
+
+  // 1.4 RULE-ELEC-013 — Plant MVA fits POI declared capacity
+  if (input.poi) {
+    const plantMva = sumStationPowerMva(input.conversionStations);
+    const poiCapMva = input.poi.declaredCapacityMVA?.value;
+    if (!poiCapMva || poiCapMva <= 0) {
+      issues.push(
+        issue({
+          id: "rule-elec-013-poi-capacity-missing",
+          severity: "warning",
+          message: "El POI no declara capacidad MVA. No se puede comparar con la potencia agregada de la planta.",
+          recommendation: "Registrar la capacidad declarada del POI según informe de conexión CEN/CNE.",
+          basis: "pending_validation",
+          affectedIds: [input.poi.id],
+        })
+      );
+    } else if (plantMva > poiCapMva + 0.001) {
+      issues.push(
+        issue({
+          id: "rule-elec-013-poi-capacity-exceeded",
+          severity: "warning",
+          message: `La potencia agregada de la planta (${plantMva.toFixed(1)} MVA) excede la capacidad declarada del POI (${poiCapMva.toFixed(1)} MVA).`,
+          recommendation: "Confirmar con estudio de interconexión CEN/CNE antes de avanzar a ingeniería de detalle.",
+          basis: "pending_validation",
+          affectedIds: [input.poi.id, ...input.conversionStations.map((s) => s.id)],
+        })
+      );
+    }
+  }
+
+  // 1.5 RULE-ELEC-014 — Auxiliary services budget
+  if (input.auxiliaryServices && input.poi) {
+    const aux = input.auxiliaryServices;
+    const stationsCount = input.conversionStations.length;
+    const containerCount = input.conversionStations.reduce(
+      (acc, s) => acc + s.associatedContainerIds.length,
+      0
+    );
+    const ssaaTotalKw =
+      (aux.plantFixedKw?.value ?? 0) +
+      (aux.perConversionStationKw?.value ?? 0) * stationsCount +
+      (aux.perContainerKw?.value ?? 0) * containerCount;
+    const plantMva = sumStationPowerMva(input.conversionStations);
+    if (plantMva > 0 && ssaaTotalKw > 0) {
+      const ssaaPct = ssaaTotalKw / 1000 / plantMva;
+      if (ssaaPct > SSAA_BUDGET_PCT) {
+        issues.push(
+          issue({
+            id: "rule-elec-014-ssaa-budget",
+            severity: "info",
+            message: `Los servicios auxiliares estimados son ${ssaaTotalKw.toFixed(0)} kW (${(ssaaPct * 100).toFixed(1)}% de la planta), por encima del budget editable ${(SSAA_BUDGET_PCT * 100).toFixed(1)}%.`,
+            recommendation: "Validar con manual del fabricante y plano eléctrico definitivo.",
+            basis: "preliminary_assumption",
+            affectedIds: input.conversionStations.map((s) => s.id),
+          })
+        );
+      }
+    }
+  }
+
+  // 1.6 RULE-ELEC-015 — Ramp rate vs declared NTSyCS limit
+  if (input.operationalLimits || input.ppc) {
+    const declaredRamp =
+      input.ppc?.rampRateLimit_mw_per_min?.value ??
+      input.operationalLimits?.plantRampUpMWperMin?.value ??
+      null;
+    if (declaredRamp === null) {
+      issues.push(
+        issue({
+          id: "rule-elec-015-ramp-rate-missing",
+          severity: "warning",
+          message: "No se ha declarado la rampa de la planta. NTSyCS exige una rampa preliminar para predimensionamiento.",
+          recommendation: "Registrar la rampa preliminar en OperationalLimits o PPC y confirmar tras estudio dinámico.",
+          basis: "pending_validation",
+          affectedIds: ["plant", "ppc"],
+        })
+      );
+    }
+  }
+
+  // 1.7 RULE-ELEC-016 — Declared PPC control modes coverage
+  if (input.ppc) {
+    const modes = input.ppc.controlModes;
+    const missing = PPC_REQUIRED_CONTROL_MODES.filter(
+      (m) => !(modes as Record<string, boolean>)[m]
+    );
+    if (missing.length > 0) {
+      issues.push(
+        issue({
+          id: "rule-elec-016-ppc-control-coverage",
+          severity: "warning",
+          message: `Modos de control PPC declarados incompletos para NTSyCS. Faltan: ${missing.join(", ")}.`,
+          recommendation: "Confirmar con el fabricante del PPC y los requisitos vigentes de NTSyCS / NTSyCS RES45-2026.",
+          basis: "pending_validation",
+          affectedIds: ["ppc"],
+        })
+      );
+    }
+  }
+
+  // 1.8 RULE-ELEC-017 — Transformer no-load losses 24x7 budget
+  if (input.conversionStations.length > 0) {
+    const totalNoLoadKw = input.conversionStations.reduce(
+      (acc, s) => acc + (s.blockTransformer?.noLoadLossKw?.value ?? 0),
+      0
+    );
+    if (totalNoLoadKw > 0) {
+      const annualMwh = (totalNoLoadKw * 8760) / 1000;
+      // Threshold: 1000 MWh/año es relevante para utility BESS (a
+      // ~70 USD/MWh ≈ 70k USD/año por banco de trafos). Editable.
+      if (annualMwh > 1000) {
+        issues.push(
+          issue({
+            id: "rule-elec-017-no-load-losses-annual",
+            severity: "info",
+            message: `Las pérdidas estáticas anuales del banco de transformadores son ${annualMwh.toFixed(0)} MWh/año (${totalNoLoadKw.toFixed(0)} kW × 8760 h). Considerar al dimensionar SSAA y disponibilidad.`,
+            recommendation: "Refinar con el datasheet final y modo operativo del proyecto.",
+            basis: "calculated",
+            affectedIds: input.conversionStations.map((s) => s.id),
+          })
+        );
+      }
+    }
+  }
+
   return {
     issues,
     criticalCount: severityCount(issues, "critical"),
@@ -509,6 +763,14 @@ export function validateElectricalTopology(
       "RULE-ELEC-004",
       "RULE-ELEC-005",
       "RULE-ELEC-006",
+      "RULE-ELEC-007",
+      "RULE-ELEC-008",
+      "RULE-ELEC-009",
+      "RULE-ELEC-013",
+      "RULE-ELEC-014",
+      "RULE-ELEC-015",
+      "RULE-ELEC-016",
+      "RULE-ELEC-017",
     ],
   };
 }

@@ -78,3 +78,24 @@ export const LOSS_BUDGET_PCT = 0.03;
 export const SSAA_BUDGET_PCT = 0.02;
 export const BUSBAR_UTILIZATION_THRESHOLD_PCT = 0.8;
 export const CABLE_AMPACITY_UTILIZATION_THRESHOLD_PCT = 0.9;
+
+/**
+ * Reference ampacity used for the RULE-ELEC-008 screening when the
+ * project has not chosen a specific cable. Conservative value typical
+ * for Al XLPE 240 mm² 33 kV in air at 30 °C. NOT a design value; the
+ * final ampacity depends on installation, grouping, soil thermal
+ * resistivity and ambient temperature.
+ */
+export const MV_REFERENCE_CABLE_AMPACITY_A = 460;
+
+/**
+ * Minimum mandatory PPC control modes per CEN NTSyCS for utility-scale
+ * BESS at the POI. Used by RULE-ELEC-016 as a declarative checklist
+ * (not a runtime test of the controls themselves).
+ */
+export const PPC_REQUIRED_CONTROL_MODES = [
+  "activePower",
+  "reactivePower",
+  "voltage",
+  "frequency",
+] as const;
