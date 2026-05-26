@@ -250,12 +250,6 @@ export type TechnicalReportData = {
 // Defaults estáticos
 // ──────────────────────────────────────────────────────────────────
 
-const DISCLAIMER_EN =
-  "This report is a preliminary engineering evaluation. It does not replace detailed engineering, manufacturer manuals, protection coordination, short-circuit studies, ground grid design, fire protection engineering, environmental permitting, civil engineering, or final review by SEC, CNE, CEN, SEA or any authority having jurisdiction.";
-
-const DISCLAIMER_ES =
-  "Este reporte es una evaluación preliminar de ingeniería. No reemplaza ingeniería de detalle, manuales de fabricante, coordinación de protecciones, estudios de cortocircuito, diseño de malla a tierra, ingeniería contra incendios, permisos ambientales, ingeniería civil, ni revisión final por SEC, CNE, CEN, SEA o cualquier autoridad competente.";
-
 /** Lista de exclusiones explícitas del análisis técnico ancla (§6). */
 const EXCLUSION_TRANSLATIONS_EN: Record<string, { scope: string; reason: string; reportText: string }> = {
   "ex-load-flow": {

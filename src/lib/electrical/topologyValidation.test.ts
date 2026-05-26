@@ -215,7 +215,7 @@ describe("validateElectricalTopology", () => {
   it("verifies validation does not modify any MW/MWh metrics", () => {
     const input = presetInput();
     const beforeSum = input.conversionStations.reduce((acc, c) => acc + c.ratedPowerMVA.value, 0);
-    const result = validateElectricalTopology(input);
+    validateElectricalTopology(input);
     const afterSum = input.conversionStations.reduce((acc, c) => acc + c.ratedPowerMVA.value, 0);
     expect(beforeSum).toBe(afterSum);
   });

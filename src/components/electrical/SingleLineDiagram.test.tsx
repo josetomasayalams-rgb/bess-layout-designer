@@ -162,8 +162,6 @@ describe("SingleLineDiagram Component", () => {
     rects.forEach((rect) => {
       const width = rect.getAttribute("width");
       const height = rect.getAttribute("height");
-      const x = rect.getAttribute("x");
-      const y = rect.getAttribute("y");
       
       if (width === "160" && height === "65") {
         pcsTargetRect = rect;

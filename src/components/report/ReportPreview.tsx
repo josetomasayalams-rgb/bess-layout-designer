@@ -508,6 +508,11 @@ export function ReportPreview({ isOpen, onClose, includeGeocoding }: ReportPrevi
                 <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-3 font-sans">{isEs ? "Captura Cartográfica" : "Map View Capture"}</h3>
                 {reportData.mapCapture ? (
                   <div className="border border-slate-200 rounded p-1 bg-slate-50 flex flex-col items-center">
+                    {/*
+                      El preview usa la imagen dinámica capturada del mapa para el reporte PDF.
+                      Se preserva <img> para no distorsionar el renderizado ni depender de optimización externa.
+                    */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img 
                       src={reportData.mapCapture.dataUrl} 
                       alt="Map capture preview" 
