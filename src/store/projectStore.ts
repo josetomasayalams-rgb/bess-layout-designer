@@ -1,5 +1,4 @@
 import { create } from "zustand";
-import { nanoid } from "nanoid";
 import { createDemoProject } from "@/lib/layout/demoProject";
 
 import {
@@ -13,6 +12,7 @@ import {
   recordHistory,
   snapshotOf,
 } from "./projectStore.history";
+import { createComparisonSlice } from "./slices/comparisonSlice";
 import { createEquipmentSlice } from "./slices/equipmentSlice";
 import { createLayoutEditSlice } from "./slices/layoutEditSlice";
 import { createPolygonSlice } from "./slices/polygonSlice";
@@ -37,49 +37,10 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   ...createRepairZoneSlice(set),
   ...createEquipmentSlice(set, get),
   ...createLayoutEditSlice(set),
+  ...createComparisonSlice(set),
   interactionMode: "select",
-  comparison: emptyComparison,
   past: [],
   future: [],
-
-  captureAlternative: (slot) =>
-    set((state) => ({
-      comparison: {
-        ...state.comparison,
-        [slot]: {
-          id: nanoid(8),
-          capturedAt: new Date().toISOString(),
-          anchor: state.anchor,
-          polygon: state.polygon,
-          placedEquipment: state.placedEquipment,
-        },
-      },
-    })),
-
-  clearAlternative: (slot) =>
-    set((state) => ({
-      comparison: { ...state.comparison, [slot]: null },
-    })),
-
-  restoreAlternative: (slot) =>
-    set((state) => {
-      const alternative = state.comparison[slot];
-      if (!alternative) return {};
-      return {
-        ...recordHistory(state),
-        anchor: alternative.anchor,
-        polygon: alternative.polygon,
-        placedEquipment: alternative.placedEquipment,
-        cableRoutes: [],
-        accessRoads: [],
-        previewTerrain: null,
-        interactionMode: "select",
-        pendingPlacementSpecId: null,
-        selectedEquipmentId: null,
-        layoutEdit: emptyLayoutEditState,
-        terrainFitPreview: emptyTerrainFitPreviewState,
-      };
-    }),
 
   setMode: (mode) =>
     set({
