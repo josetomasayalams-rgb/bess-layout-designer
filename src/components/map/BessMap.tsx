@@ -27,6 +27,8 @@ import { useUiStore } from "@/store/uiStore";
 import { useRegulatoryStore } from "@/store/regulatoryStore";
 import { useBaseMapStyle } from "./hooks/useBaseMapStyle";
 import { useMapLifecycle } from "./hooks/useMapLifecycle";
+import { usePolygonFeatures } from "./hooks/usePolygonFeatures";
+import { useRepairZoneFeatures } from "./hooks/useRepairZoneFeatures";
 import { resolveEquipment3DVisualProfile } from "@/data/equipment3dVisualProfiles";
 import { getProjectMetrics } from "@/lib/layout/projectMetrics";
 import { copyFor } from "@/lib/i18n";
@@ -65,7 +67,6 @@ import {
   equipment3DDetailFeatures,
   equipment3DLabelFeatures,
   gridLineFeatures,
-  measurementLabelFeatures,
   regulatoryBufferFeatures,
   warningMarkerFeatures,
 } from "@/lib/layout/mapFeatures";
@@ -140,6 +141,12 @@ export function BessMap() {
   const layerVisibility = useUiStore((s) => s.layerVisibility);
   const activeProfileId = useRegulatoryStore((s) => s.activeProfileId);
   const profile = getRegulatoryProfile(activeProfileId);
+
+  const { polygonFc, polygonLineFc, polygonVerticesFc, measurementFc } =
+    usePolygonFeatures(polygon, anchor);
+
+  const { repairZoneFc, repairZoneLineFc, repairZoneVerticesFc, showRepairZoneOverlay } =
+    useRepairZoneFeatures(repairZone, interactionMode);
   const [previewTerrainDrag, setPreviewTerrainDrag] = useState<{
     last: { lng: number; lat: number };
     moved: boolean;
@@ -216,12 +223,6 @@ export function BessMap() {
     clearLayoutEditSelection,
   ]);
 
-  const polygonFc = useMemo(() => polygonToFeature(polygon), [polygon]);
-  const polygonLineFc = useMemo(() => polygonToLineFeature(polygon), [polygon]);
-  const polygonVerticesFc = useMemo(
-    () => polygonVerticesToFeature(polygon),
-    [polygon]
-  );
   const previewTerrainFc = useMemo(
     () => polygonToFeature(previewTerrain?.polygon ?? []),
     [previewTerrain]
@@ -311,17 +312,7 @@ export function BessMap() {
       ],
     };
   }, [previewTerrain]);
-  const repairZoneFc = useMemo(() => polygonToFeature(repairZone), [repairZone]);
-  const repairZoneLineFc = useMemo(
-    () => polygonToLineFeature(repairZone),
-    [repairZone]
-  );
-  const repairZoneVerticesFc = useMemo(
-    () => polygonVerticesToFeature(repairZone),
-    [repairZone]
-  );
-  const showRepairZoneOverlay =
-    interactionMode === "draw-repair-zone" || repairZone.length > 0;
+
   const equipmentFc = useMemo(
     () =>
       equipmentToFeatures(
@@ -423,10 +414,7 @@ export function BessMap() {
     () => warningMarkerFeatures(metrics.warnings, displayedPlaced),
     [metrics.warnings, displayedPlaced]
   );
-  const measurementFc = useMemo(
-    () => measurementLabelFeatures(polygon, anchor),
-    [polygon, anchor]
-  );
+
   const selectionFc = useMemo(
     () => polygonToFeature(layoutEdit.selectionPolygon),
     [layoutEdit.selectionPolygon]
