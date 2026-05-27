@@ -1,7 +1,5 @@
 import { create } from "zustand";
 import { nanoid } from "nanoid";
-import type { LngLat, ProjectAnchor } from "@/types/geometry";
-import type { PlacedEquipment } from "@/types/equipment";
 import { equipmentCatalog } from "@/data/equipmentCatalog";
 import {
   bessDelDesiertoPresetV12,
@@ -16,20 +14,13 @@ import {
 import {
   generatePreliminaryLayout,
   PRELIMINARY_TOOL_GROUP_PREFIX,
-  type PreliminaryLayoutRequest,
-  type PreliminaryLayoutResult,
 } from "@/lib/layout/preliminaryLayoutGenerator";
-import {
-  repairLayout as runLayoutRepair,
-  type LayoutRepairRules,
-  type LayoutRepairResult,
-} from "@/lib/layout/layoutRepair";
+import { repairLayout as runLayoutRepair } from "@/lib/layout/layoutRepair";
 import { fitLayoutToTerrain } from "@/lib/layout/fitLayoutToTerrain";
 import {
   generateParametricTerrain,
   rotateParametricTerrainPreview,
   translateParametricTerrainPreview,
-  type ParametricTerrainInput,
 } from "@/lib/terrain/parametricTerrain";
 import {
   moveSelectedEquipment,
@@ -37,47 +28,20 @@ import {
   rotateSelectedEquipment,
   setEquipmentLock,
 } from "@/lib/layout/layoutEditing";
-import type { BessArrayInput } from "@/types/bess";
-import type {
-  AuxiliaryServices,
-  BESSBlock,
-  ConversionStation,
-  LossEstimate,
-  MainTransformer,
-  MVBus,
-  MVFeeder,
-  OperationalLimits,
-  POI,
-  PPC,
-} from "@/types/electrical";
-import type { CableRoute } from "@/types/cable";
-import type { AccessRoad } from "@/types/road";
-import type { FireSafetyZone } from "@/types/safety";
-import type {
-  DocumentInconsistency,
-  ProjectAssumption,
-  ProjectDesignTargets,
-} from "@/types/project";
 
 import {
+  DEFAULT_CONCEPTUAL_LAYOUT_POINT,
   emptyComparison,
   emptyLayoutEditState,
   emptyTerrainFitPreviewState,
-} from "./projectStore.types";
-import type {
-  ComparisonSlot,
-  ComparisonState,
-  InteractionMode,
-  LayoutEditState,
-  PreviewTerrainState,
-  ProjectSnapshot,
-  TerrainFitPreviewState,
+  type ProjectState,
 } from "./projectStore.types";
 import {
   HISTORY_LIMIT,
   recordHistory,
   snapshotOf,
 } from "./projectStore.history";
+import { createPolygonSlice } from "./slices/polygonSlice";
 
 // Re-export the 7 public types so consumers continue to import them
 // from `@/store/projectStore` unchanged (Phase 12B guardrail D9).
@@ -91,133 +55,10 @@ export type {
   TerrainFitPreviewState,
 } from "./projectStore.types";
 
-const DEFAULT_CONCEPTUAL_LAYOUT_POINT: LngLat = {
-  lng: -70.6483,
-  lat: -33.4569,
-};
-
-type ProjectState = {
-  anchor: ProjectAnchor | null;
-  polygon: LngLat[];
-  repairZone: LngLat[];
-  previewTerrain: PreviewTerrainState;
-  mapViewCenter: LngLat | null;
-  placedEquipment: PlacedEquipment[];
-  interactionMode: InteractionMode;
-  pendingPlacementSpecId: string | null;
-  selectedEquipmentId: string | null;
-  selectedCaseStudyId: string | null;
-  lastToolResult: PreliminaryLayoutResult | null;
-  lastRepairResult: LayoutRepairResult | null;
-  layoutEdit: LayoutEditState;
-  terrainFitPreview: TerrainFitPreviewState;
-  comparison: ComparisonState;
-  past: ProjectSnapshot[];
-  future: ProjectSnapshot[];
-
-  // ──────────────────────────────────────────────────────────────────
-  // Fase 1 — slices nuevos para arquitectura eléctrica y trazabilidad.
-  // Por ahora son read-only desde el store (no hay acciones de mutación).
-  // Las acciones se añadirán en fases siguientes cuando exista UI para ellas.
-  // ──────────────────────────────────────────────────────────────────
-  designTargets: ProjectDesignTargets;
-  blocks: BESSBlock[];
-  conversionStations: ConversionStation[];
-  mvFeeders: MVFeeder[];
-  mvBuses: MVBus[];
-  poi: POI | null;
-  mainTransformer: MainTransformer | null;
-  auxiliaryServices: AuxiliaryServices | null;
-  ppc: PPC | null;
-  operationalLimits: OperationalLimits | null;
-  lossEstimates: LossEstimate[];
-  cableRoutes: CableRoute[];
-  accessRoads: AccessRoad[];
-  fireSafetyZones: FireSafetyZone[];
-  assumptionsV2: ProjectAssumption[];
-  inconsistencies: DocumentInconsistency[];
-
-  startDrawingPolygon: () => void;
-  addPolygonVertex: (p: LngLat) => void;
-  finishPolygon: () => void;
-  clearPolygon: () => void;
-  setMapViewCenter: (center: LngLat) => void;
-  createPreviewTerrain: (
-    input: Omit<ParametricTerrainInput, "center"> & { center?: LngLat | null }
-  ) => void;
-  updatePreviewTerrain: (
-    input: Partial<Omit<ParametricTerrainInput, "center">>
-  ) => void;
-  movePreviewTerrainBy: (delta: { x_m: number; y_m: number }) => void;
-  applyPreviewTerrain: () => void;
-  cancelPreviewTerrain: () => void;
-
-  startDrawingRepairZone: () => void;
-  addRepairZoneVertex: (p: LngLat) => void;
-  finishRepairZone: () => void;
-  clearRepairZone: () => void;
-
-  setPlacementSpec: (specId: string | null) => void;
-  placeEquipmentAt: (p: LngLat) => void;
-  insertBessArray: (input: Omit<BessArrayInput, "startPoint">) => void;
-  insertCaseStudyLayout: (caseStudyId: string) => void;
-  /**
-   * Fase 10 — Pobla los slices v1.2 (mvBuses, mvFeeders, conversionStations,
-   * poi, mainTransformer, auxiliaryServices, ppc, operationalLimits,
-   * lossEstimates, inconsistencies, blocks) desde el preset evidenciado.
-   *
-   * No coloca equipos físicos en el mapa: para eso usar `insertCaseStudyLayout`.
-   * Estas dos acciones pueden coexistir; cada una opera sobre slices distintos.
-   */
-  loadBessDelDesiertoPresetV12: () => void;
-  /** Limpia los slices v1.2 sin afectar el layout físico. */
-  clearProjectV12Slices: () => void;
-  insertPreliminaryToolLayout: (
-    input: Omit<PreliminaryLayoutRequest, "anchor" | "startPoint" | "polygon" | "fitInsidePolygon">
-  ) => void;
-  regularizePreliminaryToolLayout: (
-    input: Omit<PreliminaryLayoutRequest, "anchor" | "startPoint" | "polygon" | "fitInsidePolygon">
-  ) => void;
-  repairLayout: (rules: LayoutRepairRules) => void;
-  clearToolResult: () => void;
-  clearRepairResult: () => void;
-  removeEquipment: (id: string) => void;
-  rotateEquipment: (id: string, deltaDeg: number) => void;
-  selectEquipment: (id: string | null) => void;
-  selectCaseStudy: (id: string | null) => void;
-  startLayoutEdit: () => void;
-  cancelLayoutEdit: () => void;
-  setLayoutEditSelection: (ids: string[], selectionPolygon: LngLat[]) => void;
-  clearLayoutEditSelection: () => void;
-  previewRotateSelection: (deltaDeg: number) => void;
-  previewOrientSelection: (rotationDeg: number) => void;
-  previewMoveSelection: (delta: { x_m: number; y_m: number }) => void;
-  setSelectionLocked: (locked: boolean) => void;
-  previewRepairSelection: (rules: LayoutRepairRules) => void;
-  previewCompactSelection: (rules: LayoutRepairRules) => void;
-  markLayoutEditValidated: () => void;
-  revertLayoutEdit: () => void;
-  applyLayoutEdit: () => void;
-  previewFitLayoutToTerrain: (rules: LayoutRepairRules) => void;
-  applyTerrainFitPreview: () => void;
-  revertTerrainFitPreview: () => void;
-  captureAlternative: (slot: ComparisonSlot) => void;
-  clearAlternative: (slot: ComparisonSlot) => void;
-  restoreAlternative: (slot: ComparisonSlot) => void;
-
-  setMode: (mode: InteractionMode) => void;
-  loadDemoProject: () => void;
-  resetProject: () => void;
-  undo: () => void;
-  redo: () => void;
-};
-
 export const useProjectStore = create<ProjectState>((set, get) => ({
-  anchor: null,
-  polygon: [],
+  ...createPolygonSlice(set),
   repairZone: [],
   previewTerrain: null,
-  mapViewCenter: DEFAULT_CONCEPTUAL_LAYOUT_POINT,
   placedEquipment: [],
   interactionMode: "select",
   pendingPlacementSpecId: null,
@@ -248,39 +89,6 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   fireSafetyZones: [],
   assumptionsV2: [],
   inconsistencies: [],
-
-  startDrawingPolygon: () =>
-    set((state) => ({
-      ...recordHistory(state),
-      interactionMode: "draw-site",
-      polygon: [],
-      anchor: null,
-      previewTerrain: null,
-      selectedEquipmentId: null,
-      pendingPlacementSpecId: null,
-      layoutEdit: emptyLayoutEditState,
-      terrainFitPreview: emptyTerrainFitPreviewState,
-    })),
-
-  addPolygonVertex: (p) =>
-    set((state) => {
-      const anchor = state.anchor ?? { lng0: p.lng, lat0: p.lat };
-      return { polygon: [...state.polygon, p], anchor };
-    }),
-
-  finishPolygon: () => set({ interactionMode: "select" }),
-
-  clearPolygon: () =>
-    set((state) => ({
-      ...recordHistory(state),
-      polygon: [],
-      interactionMode: "select",
-      previewTerrain: null,
-      layoutEdit: emptyLayoutEditState,
-      terrainFitPreview: emptyTerrainFitPreviewState,
-    })),
-
-  setMapViewCenter: (center) => set({ mapViewCenter: center }),
 
   createPreviewTerrain: (input) =>
     set((state) => {

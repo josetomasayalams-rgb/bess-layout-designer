@@ -42,22 +42,53 @@
  *   - emptyTerrainFitPreviewState
  *   - emptyComparison
  *
- * What does NOT live here (intentional, per phase12b.1 scope)
- * ----------------------------------------------------------
- *   - `HISTORY_LIMIT`, `snapshotOf`, `recordHistory` → moving in
- *     `phase12b.2: extract projectStore history helpers`.
- *   - `DEFAULT_CONCEPTUAL_LAYOUT_POINT` → not a type, stays in
- *     `projectStore.ts` near its only consumer (the default state).
- *   - `ProjectState`, `ProjectSliceCreator` → introduced when slices
- *     start being extracted (phase12b.3+).
+ * What does NOT live here (intentional, per phase12b.1–12b.3 scope)
+ * ----------------------------------------------------------------
+ *   - `HISTORY_LIMIT`, `snapshotOf`, `recordHistory` → moved to
+ *     `projectStore.history.ts` in `phase12b.2`.
+ *   - `DEFAULT_CONCEPTUAL_LAYOUT_POINT` → moved here in `phase12b.3`
+ *     so both `polygonSlice` (initial `mapViewCenter`) and the still-
+ *     in-store actions that fall back to this point can share one
+ *     source without creating an import cycle.
+ *   - `ProjectState`, `ProjectSliceCreator` → moved here in
+ *     `phase12b.3` to support typed slice factories such as
+ *     `createPolygonSlice`.
  */
 
+import type { StateCreator } from "zustand";
 import type { LngLat, ProjectAnchor } from "@/types/geometry";
 import type { PlacedEquipment } from "@/types/equipment";
 import type { CableRoute } from "@/types/cable";
 import type { AccessRoad } from "@/types/road";
 import type { TerrainFitResult } from "@/lib/layout/fitLayoutToTerrain";
-import type { ParametricTerrainPreview } from "@/lib/terrain/parametricTerrain";
+import type {
+  ParametricTerrainInput,
+  ParametricTerrainPreview,
+} from "@/lib/terrain/parametricTerrain";
+import type {
+  PreliminaryLayoutRequest,
+  PreliminaryLayoutResult,
+} from "@/lib/layout/preliminaryLayoutGenerator";
+import type { LayoutRepairResult, LayoutRepairRules } from "@/lib/layout/layoutRepair";
+import type { BessArrayInput } from "@/types/bess";
+import type {
+  AuxiliaryServices,
+  BESSBlock,
+  ConversionStation,
+  LossEstimate,
+  MainTransformer,
+  MVBus,
+  MVFeeder,
+  OperationalLimits,
+  POI,
+  PPC,
+} from "@/types/electrical";
+import type { FireSafetyZone } from "@/types/safety";
+import type {
+  DocumentInconsistency,
+  ProjectAssumption,
+  ProjectDesignTargets,
+} from "@/types/project";
 
 export type InteractionMode =
   | "select"
@@ -118,3 +149,158 @@ export type ComparisonState = {
 };
 
 export const emptyComparison: ComparisonState = { A: null, B: null };
+
+/**
+ * Default map view center for projects that have not yet drawn a
+ * polygon (Santiago, Chile). Used as the initial value of
+ * `mapViewCenter` and as a fallback by actions that resolve to a
+ * map point when `state.mapViewCenter` is null.
+ */
+export const DEFAULT_CONCEPTUAL_LAYOUT_POINT: LngLat = {
+  lng: -70.6483,
+  lat: -33.4569,
+};
+
+// ──────────────────────────────────────────────────────────────────
+// Full ProjectState shape — single source of truth for every slice.
+//
+// Moved here in `phase12b.3` so that:
+//   - each per-domain slice factory can be typed as
+//     `ProjectSliceCreator<MySlice>` and read/write the full state
+//     via `set` / `get` without re-declaring the shape;
+//   - the slice files compose into a single `useProjectStore` whose
+//     runtime surface is byte-equivalent to the pre-12B store.
+// No action implementations or state-default values move with this
+// declaration — those still live inside `projectStore.ts`'s
+// `create<ProjectState>((set, get) => ({ ... }))` call.
+// ──────────────────────────────────────────────────────────────────
+
+export type ProjectState = {
+  anchor: ProjectAnchor | null;
+  polygon: LngLat[];
+  repairZone: LngLat[];
+  previewTerrain: PreviewTerrainState;
+  mapViewCenter: LngLat | null;
+  placedEquipment: PlacedEquipment[];
+  interactionMode: InteractionMode;
+  pendingPlacementSpecId: string | null;
+  selectedEquipmentId: string | null;
+  selectedCaseStudyId: string | null;
+  lastToolResult: PreliminaryLayoutResult | null;
+  lastRepairResult: LayoutRepairResult | null;
+  layoutEdit: LayoutEditState;
+  terrainFitPreview: TerrainFitPreviewState;
+  comparison: ComparisonState;
+  past: ProjectSnapshot[];
+  future: ProjectSnapshot[];
+
+  // ──────────────────────────────────────────────────────────────────
+  // Fase 1 — slices nuevos para arquitectura eléctrica y trazabilidad.
+  // Por ahora son read-only desde el store (no hay acciones de mutación).
+  // Las acciones se añadirán en fases siguientes cuando exista UI para ellas.
+  // ──────────────────────────────────────────────────────────────────
+  designTargets: ProjectDesignTargets;
+  blocks: BESSBlock[];
+  conversionStations: ConversionStation[];
+  mvFeeders: MVFeeder[];
+  mvBuses: MVBus[];
+  poi: POI | null;
+  mainTransformer: MainTransformer | null;
+  auxiliaryServices: AuxiliaryServices | null;
+  ppc: PPC | null;
+  operationalLimits: OperationalLimits | null;
+  lossEstimates: LossEstimate[];
+  cableRoutes: CableRoute[];
+  accessRoads: AccessRoad[];
+  fireSafetyZones: FireSafetyZone[];
+  assumptionsV2: ProjectAssumption[];
+  inconsistencies: DocumentInconsistency[];
+
+  startDrawingPolygon: () => void;
+  addPolygonVertex: (p: LngLat) => void;
+  finishPolygon: () => void;
+  clearPolygon: () => void;
+  setMapViewCenter: (center: LngLat) => void;
+  createPreviewTerrain: (
+    input: Omit<ParametricTerrainInput, "center"> & { center?: LngLat | null }
+  ) => void;
+  updatePreviewTerrain: (
+    input: Partial<Omit<ParametricTerrainInput, "center">>
+  ) => void;
+  movePreviewTerrainBy: (delta: { x_m: number; y_m: number }) => void;
+  applyPreviewTerrain: () => void;
+  cancelPreviewTerrain: () => void;
+
+  startDrawingRepairZone: () => void;
+  addRepairZoneVertex: (p: LngLat) => void;
+  finishRepairZone: () => void;
+  clearRepairZone: () => void;
+
+  setPlacementSpec: (specId: string | null) => void;
+  placeEquipmentAt: (p: LngLat) => void;
+  insertBessArray: (input: Omit<BessArrayInput, "startPoint">) => void;
+  insertCaseStudyLayout: (caseStudyId: string) => void;
+  /**
+   * Fase 10 — Pobla los slices v1.2 (mvBuses, mvFeeders, conversionStations,
+   * poi, mainTransformer, auxiliaryServices, ppc, operationalLimits,
+   * lossEstimates, inconsistencies, blocks) desde el preset evidenciado.
+   *
+   * No coloca equipos físicos en el mapa: para eso usar `insertCaseStudyLayout`.
+   * Estas dos acciones pueden coexistir; cada una opera sobre slices distintos.
+   */
+  loadBessDelDesiertoPresetV12: () => void;
+  /** Limpia los slices v1.2 sin afectar el layout físico. */
+  clearProjectV12Slices: () => void;
+  insertPreliminaryToolLayout: (
+    input: Omit<PreliminaryLayoutRequest, "anchor" | "startPoint" | "polygon" | "fitInsidePolygon">
+  ) => void;
+  regularizePreliminaryToolLayout: (
+    input: Omit<PreliminaryLayoutRequest, "anchor" | "startPoint" | "polygon" | "fitInsidePolygon">
+  ) => void;
+  repairLayout: (rules: LayoutRepairRules) => void;
+  clearToolResult: () => void;
+  clearRepairResult: () => void;
+  removeEquipment: (id: string) => void;
+  rotateEquipment: (id: string, deltaDeg: number) => void;
+  selectEquipment: (id: string | null) => void;
+  selectCaseStudy: (id: string | null) => void;
+  startLayoutEdit: () => void;
+  cancelLayoutEdit: () => void;
+  setLayoutEditSelection: (ids: string[], selectionPolygon: LngLat[]) => void;
+  clearLayoutEditSelection: () => void;
+  previewRotateSelection: (deltaDeg: number) => void;
+  previewOrientSelection: (rotationDeg: number) => void;
+  previewMoveSelection: (delta: { x_m: number; y_m: number }) => void;
+  setSelectionLocked: (locked: boolean) => void;
+  previewRepairSelection: (rules: LayoutRepairRules) => void;
+  previewCompactSelection: (rules: LayoutRepairRules) => void;
+  markLayoutEditValidated: () => void;
+  revertLayoutEdit: () => void;
+  applyLayoutEdit: () => void;
+  previewFitLayoutToTerrain: (rules: LayoutRepairRules) => void;
+  applyTerrainFitPreview: () => void;
+  revertTerrainFitPreview: () => void;
+  captureAlternative: (slot: ComparisonSlot) => void;
+  clearAlternative: (slot: ComparisonSlot) => void;
+  restoreAlternative: (slot: ComparisonSlot) => void;
+
+  setMode: (mode: InteractionMode) => void;
+  loadDemoProject: () => void;
+  resetProject: () => void;
+  undo: () => void;
+  redo: () => void;
+};
+
+/**
+ * Canonical Zustand `StateCreator` alias for per-domain slices.
+ * Every slice factory under `src/store/slices/` is typed as
+ * `ProjectSliceCreator<MySlice>` so that `set` / `get` see the full
+ * `ProjectState` and the spread of slice outputs in `projectStore.ts`
+ * builds a valid composed store.
+ */
+export type ProjectSliceCreator<TSlice> = StateCreator<
+  ProjectState,
+  [],
+  [],
+  TSlice
+>;
