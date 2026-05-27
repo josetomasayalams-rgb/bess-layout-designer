@@ -73,6 +73,11 @@ import type {
   ProjectSnapshot,
   TerrainFitPreviewState,
 } from "./projectStore.types";
+import {
+  HISTORY_LIMIT,
+  recordHistory,
+  snapshotOf,
+} from "./projectStore.history";
 
 // Re-export the 7 public types so consumers continue to import them
 // from `@/store/projectStore` unchanged (Phase 12B guardrail D9).
@@ -90,9 +95,6 @@ const DEFAULT_CONCEPTUAL_LAYOUT_POINT: LngLat = {
   lng: -70.6483,
   lat: -33.4569,
 };
-
-/** How many undo steps (and redo steps) are remembered. */
-const HISTORY_LIMIT = 5;
 
 type ProjectState = {
   anchor: ProjectAnchor | null;
@@ -209,26 +211,6 @@ type ProjectState = {
   undo: () => void;
   redo: () => void;
 };
-
-function snapshotOf(state: ProjectState): ProjectSnapshot {
-  return {
-    anchor: state.anchor,
-    polygon: state.polygon,
-    placedEquipment: state.placedEquipment,
-    cableRoutes: state.cableRoutes,
-    accessRoads: state.accessRoads,
-  };
-}
-
-/** Pushes the current state onto the undo stack and clears the redo stack. */
-function recordHistory(
-  state: ProjectState
-): Pick<ProjectState, "past" | "future"> {
-  return {
-    past: [...state.past, snapshotOf(state)].slice(-HISTORY_LIMIT),
-    future: [],
-  };
-}
 
 export const useProjectStore = create<ProjectState>((set, get) => ({
   anchor: null,
