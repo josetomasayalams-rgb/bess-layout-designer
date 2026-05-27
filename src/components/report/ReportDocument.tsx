@@ -22,6 +22,7 @@ import { svgPolygonPath } from "@/lib/report/buildSiteSvg";
 import { CoverPage } from "./pdfChrome";
 import { fmtInt, fmtNum, formatIsoDate, kpiSourceLabel } from "./pdfFormatters";
 import { AlertCard, DefGrid, SectionPage, Table } from "./pdfPrimitives";
+import { OUTCOME_LABEL, SEVERITY_PILL, outcomePillStyle } from "./pdfSeverityMaps";
 
 type Props = { data: TechnicalReportData };
 
@@ -526,14 +527,6 @@ function ElectricalSection({ data }: Props) {
 // Section: Preliminary electrical checks (Fase 9)
 // ──────────────────────────────────────────────────────────────────
 
-const SEVERITY_PILL: Record<string, keyof typeof s> = {
-  blocking: "pillViolation",
-  warning: "pillManual",
-  info: "pillPending",
-  checklist: "pillManual",
-  out_of_scope: "pillOut",
-};
-
 function PreliminaryElectricalChecksSection({ data }: Props) {
   const block = data.preliminaryElectricalChecks;
   const checks = block.checks;
@@ -664,31 +657,6 @@ function PreliminaryElectricalChecksSection({ data }: Props) {
 // ──────────────────────────────────────────────────────────────────
 // Section: Regulatory
 // ──────────────────────────────────────────────────────────────────
-
-const OUTCOME_LABEL: Record<string, { label: string; style: keyof typeof s }> = {
-  pass: { label: "PASS", style: "pillPass" },
-  violation: { label: "VIOLATION", style: "pillViolation" },
-  manual_check: { label: "MANUAL", style: "pillManual" },
-  pending_validation: { label: "PENDING", style: "pillPending" },
-  not_evaluable: { label: "N/A", style: "pillOut" },
-  out_of_scope: { label: "OUT", style: "pillOut" },
-};
-
-function outcomePillStyle(style: keyof typeof s) {
-  switch (style) {
-    case "pillPass":
-      return s.pillPass;
-    case "pillViolation":
-      return s.pillViolation;
-    case "pillManual":
-      return s.pillManual;
-    case "pillPending":
-      return s.pillPending;
-    case "pillOut":
-    default:
-      return s.pillOut;
-  }
-}
 
 function RegulatorySection({ data }: Props) {
   const ev = data.regulatoryEvaluation;
