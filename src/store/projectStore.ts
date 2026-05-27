@@ -36,6 +36,7 @@ import {
   snapshotOf,
 } from "./projectStore.history";
 import { createPolygonSlice } from "./slices/polygonSlice";
+import { createRepairZoneSlice } from "./slices/repairZoneSlice";
 import { createTerrainSlice } from "./slices/terrainSlice";
 
 // Re-export the 7 public types so consumers continue to import them
@@ -53,7 +54,7 @@ export type {
 export const useProjectStore = create<ProjectState>((set, get) => ({
   ...createPolygonSlice(set),
   ...createTerrainSlice(set),
-  repairZone: [],
+  ...createRepairZoneSlice(set),
   placedEquipment: [],
   interactionMode: "select",
   pendingPlacementSpecId: null,
@@ -83,29 +84,6 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   fireSafetyZones: [],
   assumptionsV2: [],
   inconsistencies: [],
-
-  startDrawingRepairZone: () =>
-    set({
-      interactionMode: "draw-repair-zone",
-      repairZone: [],
-      previewTerrain: null,
-      layoutEdit: emptyLayoutEditState,
-      terrainFitPreview: emptyTerrainFitPreviewState,
-    }),
-
-  addRepairZoneVertex: (p) =>
-    set((state) => ({ repairZone: [...state.repairZone, p] })),
-
-  finishRepairZone: () => set({ interactionMode: "select" }),
-
-  clearRepairZone: () =>
-    set((state) => ({
-      repairZone: [],
-      interactionMode:
-        state.interactionMode === "draw-repair-zone"
-          ? "select"
-          : state.interactionMode,
-    })),
 
   setPlacementSpec: (specId) =>
     set({
