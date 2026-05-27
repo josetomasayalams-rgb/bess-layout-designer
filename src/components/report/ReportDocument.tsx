@@ -9,7 +9,6 @@ import {
   Document,
   Image,
   Line,
-  Page,
   Path,
   Polygon,
   Rect,
@@ -20,154 +19,11 @@ import {
 import { REPORT_COLORS, REPORT_FONTS, reportStyles as s } from "./reportStyles";
 import { documentTitle, type TechnicalReportData } from "@/lib/report/buildReportData";
 import { svgPolygonPath } from "@/lib/report/buildSiteSvg";
-import { CoverPage, PageFooter, PageHeader } from "./pdfChrome";
+import { CoverPage } from "./pdfChrome";
 import { fmtInt, fmtNum, formatIsoDate, kpiSourceLabel } from "./pdfFormatters";
+import { AlertCard, DefGrid, SectionPage, Table } from "./pdfPrimitives";
 
 type Props = { data: TechnicalReportData };
-
-// ──────────────────────────────────────────────────────────────────
-// Generic section page wrapper
-// ──────────────────────────────────────────────────────────────────
-
-function SectionPage({
-  data,
-  number,
-  title,
-  children,
-}: {
-  data: TechnicalReportData;
-  number: string;
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <Page size="A4" style={s.page}>
-      <PageHeader data={data} />
-      <View>
-        <Text style={s.sectionTitle}>
-          <Text style={s.sectionNumber}>{number}.</Text>
-          {"  "}
-          {title}
-        </Text>
-        {children}
-      </View>
-      <PageFooter data={data} />
-    </Page>
-  );
-}
-
-// ──────────────────────────────────────────────────────────────────
-// Tabular helpers
-// ──────────────────────────────────────────────────────────────────
-
-type Col = {
-  header: string;
-  width: string;
-  align?: "left" | "right";
-  mono?: boolean;
-};
-
-function Table({
-  cols,
-  rows,
-}: {
-  cols: Col[];
-  rows: (string | number)[][];
-}) {
-  return (
-    <View style={s.table} wrap>
-      <View style={[s.tableRow, s.tableHeaderRow]}>
-        {cols.map((c) => (
-          <Text
-            key={c.header}
-            style={[
-              s.tableHeaderCell,
-              { width: c.width },
-              c.align === "right" ? { textAlign: "right" as const } : {},
-            ]}
-          >
-            {c.header}
-          </Text>
-        ))}
-      </View>
-      {rows.map((r, i) => (
-        <View
-          key={`row-${i}`}
-          style={[s.tableRow, i % 2 === 1 ? s.tableRowAlt : {}]}
-        >
-          {cols.map((c, j) => (
-            <Text
-              key={c.header + j}
-              style={[
-                s.tableCell,
-                { width: c.width },
-                c.align === "right" ? s.tableCellRight : {},
-                c.mono ? s.tableCellMono : {},
-              ]}
-            >
-              {String(r[j] ?? "—")}
-            </Text>
-          ))}
-        </View>
-      ))}
-    </View>
-  );
-}
-
-function DefGrid({
-  items,
-}: {
-  items: { label: string; value: string }[];
-}) {
-  return (
-    <View style={s.defGrid}>
-      {items.map((it) => (
-        <View key={it.label} style={s.defCell}>
-          <Text style={s.defLabel}>{it.label}</Text>
-          <Text style={s.defValue}>{it.value}</Text>
-        </View>
-      ))}
-    </View>
-  );
-}
-
-function AlertCard({
-  severity,
-  title,
-  message,
-  recommendation,
-}: {
-  severity: "critical" | "warning" | "info";
-  title: string;
-  message: string;
-  recommendation: string;
-}) {
-  const color =
-    severity === "critical"
-      ? REPORT_COLORS.danger
-      : severity === "warning"
-        ? REPORT_COLORS.warn
-        : REPORT_COLORS.accent;
-  return (
-    <View
-      style={{
-        borderWidth: 0.8,
-        borderColor: color,
-        backgroundColor: severity === "critical" ? "#fff1f2" : "#fffbeb",
-        padding: 8,
-        marginBottom: 7,
-      }}
-    >
-      <Text style={{ fontFamily: REPORT_FONTS.dataBold, fontSize: 9, color }}>
-        {severity.toUpperCase()} · {title}
-      </Text>
-      <Text style={{ marginTop: 3, fontSize: 8.5 }}>{message}</Text>
-      <Text style={{ marginTop: 3, fontSize: 8, color: REPORT_COLORS.muted }}>
-        Acción recomendada: {recommendation}
-      </Text>
-    </View>
-  );
-}
 
 function ExecutiveSection({ data }: Props) {
   const k = data.reportKpis;
