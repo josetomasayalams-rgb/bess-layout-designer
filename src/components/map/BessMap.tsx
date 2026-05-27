@@ -20,7 +20,6 @@ import {
   type MapMouseEvent,
 } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
-import type { FilterSpecification } from "maplibre-gl";
 import { equipmentCatalog, is3DCapable } from "@/data/equipmentCatalog";
 import { useProjectStore } from "@/store/projectStore";
 import { useUiStore } from "@/store/uiStore";
@@ -30,7 +29,8 @@ import { useMapLifecycle } from "./hooks/useMapLifecycle";
 import { usePolygonFeatures } from "./hooks/usePolygonFeatures";
 import { useRepairZoneFeatures } from "./hooks/useRepairZoneFeatures";
 import { usePreviewTerrainFeatures } from "./hooks/usePreviewTerrainFeatures";
-import { resolveEquipment3DVisualProfile } from "@/data/equipment3dVisualProfiles";
+import { useEquipmentFeatures } from "./hooks/useEquipmentFeatures";
+import { useSelectionFeatures } from "./hooks/useSelectionFeatures";
 import { getProjectMetrics } from "@/lib/layout/projectMetrics";
 import { copyFor } from "@/lib/i18n";
 import {
@@ -40,7 +40,7 @@ import {
   formatMassTonnes,
 } from "@/lib/units/formatUnits";
 import { getRegulatoryProfile } from "@/rules/regulatoryProfileMetadata";
-import { toLngLat, toLocal } from "@/lib/geometry/projection";
+import { toLocal } from "@/lib/geometry/projection";
 import {
   accessRoadCorridorFeatures,
   accessRoadLineFeatures,
@@ -61,12 +61,6 @@ import { LayoutEditToolbar } from "@/components/map/LayoutEditToolbar";
 import { OrientationCube } from "@/components/map/OrientationCube";
 import { selectEquipmentWithinPolygon } from "@/lib/layout/layoutEditing";
 import {
-  polygonToFeature,
-  polygonToLineFeature,
-  polygonVerticesToFeature,
-  equipmentToFeatures,
-  equipment3DDetailFeatures,
-  equipment3DLabelFeatures,
   gridLineFeatures,
   regulatoryBufferFeatures,
   warningMarkerFeatures,
@@ -123,6 +117,13 @@ export function BessMap() {
   const setPlacementSpec = useProjectStore((s) => s.setPlacementSpec);
   const locale = useUiStore((s) => s.locale);
 
+  const isLayoutEditMode = interactionMode === "edit-layout";
+  const displayedPlaced = isLayoutEditMode
+    ? layoutEdit.draftPlacedEquipment ?? placed
+    : terrainFitPreview.draftPlacedEquipment ?? placed;
+  const hasLayoutDraft = layoutEdit.draftPlacedEquipment !== null;
+  const hasTerrainFitDraft = terrainFitPreview.draftPlacedEquipment !== null;
+
   const {
     baseMapStyleId,
     setBaseMapStyleId,
@@ -156,6 +157,30 @@ export function BessMap() {
     previewTerrainCenterFc,
     previewTerrainRotationHandleFc,
   } = usePreviewTerrainFeatures(previewTerrain);
+
+  const {
+    equipmentFc,
+    equipment3DDetailsFc,
+    equipment3DLabelsFc,
+    selectedSpec,
+    selectedVisualProfile,
+    equipmentTypeFilter,
+    equipmentAnd3DFilter,
+    equipmentLockedFilter,
+    threeDVisible,
+  } = useEquipmentFeatures({
+    displayedPlaced,
+    anchor,
+    selectedEquipmentId,
+    layoutEditSelectedIds: layoutEdit.selectedIds,
+    hasLayoutDraft,
+    hasTerrainFitDraft,
+    layerVisibility,
+    viewMode,
+  });
+
+  const { selectionFc, selectionLineFc, selectionVerticesFc } =
+    useSelectionFeatures(layoutEdit.selectionPolygon);
   const [previewTerrainDrag, setPreviewTerrainDrag] = useState<{
     last: { lng: number; lat: number };
     moved: boolean;
@@ -171,12 +196,7 @@ export function BessMap() {
     lng: number;
     lat: number;
   } | null>(null);
-  const isLayoutEditMode = interactionMode === "edit-layout";
-  const displayedPlaced = isLayoutEditMode
-    ? layoutEdit.draftPlacedEquipment ?? placed
-    : terrainFitPreview.draftPlacedEquipment ?? placed;
-  const hasLayoutDraft = layoutEdit.draftPlacedEquipment !== null;
-  const hasTerrainFitDraft = terrainFitPreview.draftPlacedEquipment !== null;
+
   const lockedSelectedCount = useMemo(() => {
     const ids = new Set(layoutEdit.selectedIds);
     return displayedPlaced.filter((item) => ids.has(item.id) && item.locked)
@@ -234,46 +254,7 @@ export function BessMap() {
 
 
 
-  const equipmentFc = useMemo(
-    () =>
-      equipmentToFeatures(
-        displayedPlaced,
-        anchor,
-        selectedEquipmentId,
-        layoutEdit.selectedIds,
-        hasLayoutDraft
-          ? layoutEdit.selectedIds
-          : hasTerrainFitDraft
-            ? displayedPlaced.map((item) => item.id)
-            : []
-      ),
-    [
-      displayedPlaced,
-      anchor,
-      selectedEquipmentId,
-      layoutEdit.selectedIds,
-      hasLayoutDraft,
-      hasTerrainFitDraft,
-    ]
-  );
-  const equipment3DDetailsFc = useMemo(
-    () => equipment3DDetailFeatures(displayedPlaced, anchor),
-    [displayedPlaced, anchor]
-  );
-  const equipment3DLabelsFc = useMemo(
-    () => equipment3DLabelFeatures(displayedPlaced, anchor),
-    [displayedPlaced, anchor]
-  );
-  const selectedSpec = useMemo(() => {
-    const selected = displayedPlaced.find((item) => item.id === selectedEquipmentId);
-    return selected
-      ? equipmentCatalog.find((item) => item.id === selected.equipmentSpecId)
-      : null;
-  }, [displayedPlaced, selectedEquipmentId]);
-  const selectedVisualProfile = useMemo(
-    () => resolveEquipment3DVisualProfile(selectedSpec),
-    [selectedSpec]
-  );
+
   const metrics = getProjectMetrics(polygon, displayedPlaced, anchor);
   const bufferFc = useMemo(
     () => regulatoryBufferFeatures(displayedPlaced, anchor, profile),
@@ -336,18 +317,7 @@ export function BessMap() {
     [metrics.warnings, displayedPlaced]
   );
 
-  const selectionFc = useMemo(
-    () => polygonToFeature(layoutEdit.selectionPolygon),
-    [layoutEdit.selectionPolygon]
-  );
-  const selectionLineFc = useMemo(
-    () => polygonToLineFeature(layoutEdit.selectionPolygon),
-    [layoutEdit.selectionPolygon]
-  );
-  const selectionVerticesFc = useMemo(
-    () => polygonVerticesToFeature(layoutEdit.selectionPolygon),
-    [layoutEdit.selectionPolygon]
-  );
+
   const searchedPointFc = useMemo(
     () => ({
       type: "FeatureCollection" as const,
@@ -370,35 +340,7 @@ export function BessMap() {
   const mapStyle = layerVisibility.baseMap
     ? resolvedBaseMap.style
     : BLANK_BASE_MAP_STYLE;
-  const equipmentVisibleTypes = useMemo(() => {
-    const types: string[] = [];
-    if (layerVisibility.bessContainers) types.push("battery_container");
-    if (layerVisibility.pcs) types.push("pcs_mv_station");
-    if (layerVisibility.transformers) types.push("mv_transformer");
-    return types;
-  }, [
-    layerVisibility.bessContainers,
-    layerVisibility.pcs,
-    layerVisibility.transformers,
-  ]);
-  const equipmentTypeFilter = useMemo<FilterSpecification>(
-    () =>
-      (equipmentVisibleTypes.length > 0
-        ? ["match", ["get", "type"], equipmentVisibleTypes, true, false]
-        : ["==", ["get", "type"], "__hidden__"]) as unknown as FilterSpecification,
-    [equipmentVisibleTypes]
-  );
-  const equipmentAnd3DFilter = useMemo<FilterSpecification>(
-    () =>
-      ["all", equipmentTypeFilter, ["==", ["get", "has3D"], true]] as unknown as FilterSpecification,
-    [equipmentTypeFilter]
-  );
-  const equipmentLockedFilter = useMemo<FilterSpecification>(
-    () =>
-      ["all", equipmentTypeFilter, ["==", ["get", "locked"], true]] as unknown as FilterSpecification,
-    [equipmentTypeFilter]
-  );
-  const threeDVisible = viewMode === "iso" && layerVisibility.threeD;
+
 
   const fitToPolygon = (duration = 600) => {
     if (!isMapLoaded) return;
