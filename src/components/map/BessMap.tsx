@@ -20,17 +20,13 @@ import {
   type MapMouseEvent,
 } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
-import type { FilterSpecification, StyleSpecification } from "maplibre-gl";
+import type { FilterSpecification } from "maplibre-gl";
 import { equipmentCatalog, is3DCapable } from "@/data/equipmentCatalog";
 import { useProjectStore } from "@/store/projectStore";
 import { useUiStore } from "@/store/uiStore";
 import { useRegulatoryStore } from "@/store/regulatoryStore";
-import {
-  FALLBACK_BASE_MAP_STYLE,
-  resolveBaseMapStyle,
-  type ResolvedBaseMapStyle,
-  type BaseMapStyleId,
-} from "@/data/mapStyles";
+import { useBaseMapStyle } from "./hooks/useBaseMapStyle";
+import { useMapLifecycle } from "./hooks/useMapLifecycle";
 import { resolveEquipment3DVisualProfile } from "@/data/equipment3dVisualProfiles";
 import { getProjectMetrics } from "@/lib/layout/projectMetrics";
 import { copyFor } from "@/lib/i18n";
@@ -78,12 +74,7 @@ import { normalizeRotation, shortestDeltaDeg } from "./BessMap.geometry";
 
 export function BessMap() {
   const mapRef = useRef<MapRef | null>(null);
-  const [isMapLoaded, setIsMapLoaded] = useState(false);
-  const [mapError, setMapError] = useState<string | null>(null);
-  const [baseMapStyleId, setBaseMapStyleId] = useState<BaseMapStyleId>("standard");
   const [isLayerPanelOpen, setIsLayerPanelOpen] = useState(false);
-  const [resolvedBaseMap, setResolvedBaseMap] =
-    useState<ResolvedBaseMapStyle>(FALLBACK_BASE_MAP_STYLE);
   const [searchedPoint, setSearchedPoint] = useState<{
     lng: number;
     lat: number;
@@ -129,6 +120,22 @@ export function BessMap() {
   const clearPolygon = useProjectStore((s) => s.clearPolygon);
   const setPlacementSpec = useProjectStore((s) => s.setPlacementSpec);
   const locale = useUiStore((s) => s.locale);
+
+  const {
+    baseMapStyleId,
+    setBaseMapStyleId,
+    resolvedBaseMap,
+    mapError,
+    setMapError,
+  } = useBaseMapStyle(locale);
+
+  const {
+    isMapLoaded,
+    updateMapCenterFromInstance,
+    handleLoad,
+    handleError,
+  } = useMapLifecycle(mapRef, setMapViewCenter, setMapError);
+
   const viewMode = useUiStore((s) => s.viewMode);
   const layerVisibility = useUiStore((s) => s.layerVisibility);
   const activeProfileId = useRegulatoryStore((s) => s.activeProfileId);
@@ -484,33 +491,6 @@ export function BessMap() {
   );
   const threeDVisible = viewMode === "iso" && layerVisibility.threeD;
 
-  useEffect(() => {
-    let isActive = true;
-
-    resolveBaseMapStyle(baseMapStyleId, locale)
-      .then((nextStyle) => {
-        if (!isActive) return;
-        setResolvedBaseMap(nextStyle);
-        setMapError(null);
-      })
-      .catch((error: unknown) => {
-        if (!isActive) return;
-        const message =
-          error instanceof Error ? error.message : "Map style failed to load";
-        setMapError(message);
-      });
-
-    return () => {
-      isActive = false;
-    };
-  }, [baseMapStyleId, locale]);
-
-  const updateMapCenterFromInstance = () => {
-    const center = mapRef.current?.getMap().getCenter();
-    if (!center) return;
-    setMapViewCenter({ lng: center.lng, lat: center.lat });
-  };
-
   const fitToPolygon = (duration = 600) => {
     if (!isMapLoaded) return;
     if (polygon.length < 3) return;
@@ -789,16 +769,8 @@ export function BessMap() {
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMoveEnd={updateMapCenterFromInstance}
-        onLoad={() => {
-          setIsMapLoaded(true);
-          setMapError(null);
-          updateMapCenterFromInstance();
-        }}
-        onError={(event) => {
-          const message = event.error?.message ?? "Map rendering failed";
-          if (message.includes("Failed to fetch")) return;
-          setMapError(message);
-        }}
+        onLoad={handleLoad}
+        onError={handleError}
         cursor={cursor}
         dragPan={!previewTerrain && !isLayoutEditMode}
       >
