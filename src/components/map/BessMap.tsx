@@ -32,6 +32,7 @@ import { useSelectionFeatures } from "./hooks/useSelectionFeatures";
 import { useLayoutInfrastructureFeatures } from "./hooks/useLayoutInfrastructureFeatures";
 import { useOverlayFeatures } from "./hooks/useOverlayFeatures";
 import { useMapCamera } from "./hooks/useMapCamera";
+import { useDrawModeHandlers } from "./hooks/useDrawModeHandlers";
 import { PolygonTerrainLayers } from "./layers/PolygonTerrainLayers";
 import { EquipmentSelectionOverlayLayers } from "./layers/EquipmentSelectionOverlayLayers";
 import { getProjectMetrics } from "@/lib/layout/projectMetrics";
@@ -75,9 +76,7 @@ export function BessMap() {
   const storedAccessRoads = useProjectStore((s) => s.accessRoads);
   const poi = useProjectStore((s) => s.poi);
 
-  const addPolygonVertex = useProjectStore((s) => s.addPolygonVertex);
-  const addRepairZoneVertex = useProjectStore((s) => s.addRepairZoneVertex);
-  const placeEquipmentAt = useProjectStore((s) => s.placeEquipmentAt);
+
   const selectEquipment = useProjectStore((s) => s.selectEquipment);
   const setMapViewCenter = useProjectStore((s) => s.setMapViewCenter);
   const movePreviewTerrainBy = useProjectStore((s) => s.movePreviewTerrainBy);
@@ -206,6 +205,8 @@ export function BessMap() {
     interactionMode,
     setSearchedPoint,
   });
+
+  const { handleDrawingClick } = useDrawModeHandlers();
   const [previewTerrainDrag, setPreviewTerrainDrag] = useState<{
     last: { lng: number; lat: number };
     moved: boolean;
@@ -299,18 +300,7 @@ export function BessMap() {
       return;
     }
     const { lng, lat } = e.lngLat;
-    if (interactionMode === "draw-site") {
-      addPolygonVertex({ lng, lat });
-      return;
-    }
-    if (interactionMode === "draw-repair-zone") {
-      addRepairZoneVertex({ lng, lat });
-      return;
-    }
-    if (interactionMode === "place-equipment") {
-      placeEquipmentAt({ lng, lat });
-      return;
-    }
+    if (handleDrawingClick(lng, lat, interactionMode)) return;
     if (isLayoutEditMode) {
       // Direct click-select on an equipment hit: bypass the lasso entirely.
       // Shift toggles the id in the selection; a plain click replaces it.
