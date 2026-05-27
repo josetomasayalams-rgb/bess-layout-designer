@@ -33,6 +33,7 @@ import { useLayoutInfrastructureFeatures } from "./hooks/useLayoutInfrastructure
 import { useOverlayFeatures } from "./hooks/useOverlayFeatures";
 import { useMapCamera } from "./hooks/useMapCamera";
 import { useDrawModeHandlers } from "./hooks/useDrawModeHandlers";
+import { usePreviewTerrainGestures } from "./hooks/usePreviewTerrainGestures";
 import { PolygonTerrainLayers } from "./layers/PolygonTerrainLayers";
 import { EquipmentSelectionOverlayLayers } from "./layers/EquipmentSelectionOverlayLayers";
 import { getProjectMetrics } from "@/lib/layout/projectMetrics";
@@ -53,7 +54,7 @@ import { OrientationCube } from "@/components/map/OrientationCube";
 import { selectEquipmentWithinPolygon } from "@/lib/layout/layoutEditing";
 
 import { INITIAL_VIEW, BLANK_BASE_MAP_STYLE, LAYOUT_MOVE_STEP_M } from "./BessMap.constants";
-import { normalizeRotation, shortestDeltaDeg } from "./BessMap.geometry";
+
 
 export function BessMap() {
   const mapRef = useRef<MapRef | null>(null);
@@ -207,16 +208,23 @@ export function BessMap() {
   });
 
   const { handleDrawingClick } = useDrawModeHandlers();
-  const [previewTerrainDrag, setPreviewTerrainDrag] = useState<{
-    last: { lng: number; lat: number };
-    moved: boolean;
-  } | null>(null);
-  const [previewTerrainRotate, setPreviewTerrainRotate] = useState<{
-    startAngleDeg: number;
-    startRotationDeg: number;
-    moved: boolean;
-  } | null>(null);
-  const suppressPreviewTerrainClickRef = useRef(false);
+
+  const {
+    previewTerrainDrag,
+    previewTerrainRotate,
+    suppressPreviewTerrainClickRef,
+    handlePreviewTerrainMouseDown,
+    handlePreviewTerrainMouseMove,
+    handlePreviewTerrainMouseUp,
+  } = usePreviewTerrainGestures({
+    previewTerrain,
+    interactionMode,
+    isLayoutEditMode,
+    mapRef,
+    updatePreviewTerrain,
+    movePreviewTerrainBy,
+  });
+
   const suppressLayoutEditClickRef = useRef(false);
   const [layoutMoveDrag, setLayoutMoveDrag] = useState<{
     lng: number;
@@ -350,6 +358,7 @@ export function BessMap() {
   };
 
   const handleMouseDown = (event: MapMouseEvent) => {
+    if (handlePreviewTerrainMouseDown(event)) return;
     if (isLayoutEditMode) {
       if (event.originalEvent.button !== 0) return;
       if (layoutEdit.selectedIds.length === 0) return;
@@ -364,49 +373,10 @@ export function BessMap() {
       }
       return;
     }
-    if (!previewTerrain) return;
-    if (
-      interactionMode === "draw-site" ||
-      interactionMode === "draw-repair-zone" ||
-      interactionMode === "place-equipment" ||
-      isLayoutEditMode
-    ) {
-      return;
-    }
-    if (event.originalEvent.button !== 0) return;
-    const map = mapRef.current?.getMap();
-    if (!map) return;
-    const handleFeatures = map.queryRenderedFeatures(event.point, {
-      layers: ["terrain-preview-rotation-handle"],
-    });
-    if (handleFeatures.length > 0) {
-      const terrainAnchor = {
-        lng0: previewTerrain.center.lng,
-        lat0: previewTerrain.center.lat,
-      };
-      const local = toLocal(
-        { lng: event.lngLat.lng, lat: event.lngLat.lat },
-        terrainAnchor
-      );
-      setPreviewTerrainRotate({
-        startAngleDeg: (Math.atan2(local.y_m, local.x_m) * 180) / Math.PI,
-        startRotationDeg: previewTerrain.rotationDeg,
-        moved: false,
-      });
-      return;
-    }
-
-    const features = map.queryRenderedFeatures(event.point, {
-      layers: ["terrain-preview-fill"],
-    });
-    if (features.length === 0) return;
-    setPreviewTerrainDrag({
-      last: { lng: event.lngLat.lng, lat: event.lngLat.lat },
-      moved: false,
-    });
   };
 
   const handleMouseMove = (event: MapMouseEvent) => {
+    if (handlePreviewTerrainMouseMove(event)) return;
     if (layoutMoveDrag) {
       if (!anchor) return;
       const previous = toLocal(layoutMoveDrag, anchor);
@@ -421,65 +391,15 @@ export function BessMap() {
       setLayoutMoveDrag({ lng: event.lngLat.lng, lat: event.lngLat.lat });
       return;
     }
-    if (previewTerrainRotate && previewTerrain) {
-      const terrainAnchor = {
-        lng0: previewTerrain.center.lng,
-        lat0: previewTerrain.center.lat,
-      };
-      const local = toLocal(
-        { lng: event.lngLat.lng, lat: event.lngLat.lat },
-        terrainAnchor
-      );
-      const currentAngleDeg = (Math.atan2(local.y_m, local.x_m) * 180) / Math.PI;
-      const deltaDeg = shortestDeltaDeg(
-        previewTerrainRotate.startAngleDeg,
-        currentAngleDeg
-      );
-      updatePreviewTerrain({
-        rotationDeg: normalizeRotation(
-          previewTerrainRotate.startRotationDeg + deltaDeg
-        ),
-      });
-      setPreviewTerrainRotate((current) =>
-        current ? { ...current, moved: true } : current
-      );
-      return;
-    }
-
-    if (!previewTerrainDrag || !previewTerrain) return;
-    const terrainAnchor = {
-      lng0: previewTerrain.center.lng,
-      lat0: previewTerrain.center.lat,
-    };
-    const previous = toLocal(previewTerrainDrag.last, terrainAnchor);
-    const next = toLocal(
-      { lng: event.lngLat.lng, lat: event.lngLat.lat },
-      terrainAnchor
-    );
-    movePreviewTerrainBy({
-      x_m: next.x_m - previous.x_m,
-      y_m: next.y_m - previous.y_m,
-    });
-    setPreviewTerrainDrag({
-      last: { lng: event.lngLat.lng, lat: event.lngLat.lat },
-      moved: true,
-    });
   };
 
   const handleMouseUp = () => {
+    if (handlePreviewTerrainMouseUp()) return;
     if (layoutMoveDrag) {
       suppressLayoutEditClickRef.current = true;
       setLayoutMoveDrag(null);
       return;
     }
-    if (previewTerrainRotate) {
-      suppressPreviewTerrainClickRef.current = previewTerrainRotate.moved;
-      setPreviewTerrainRotate(null);
-      return;
-    }
-    if (!previewTerrainDrag) return;
-    suppressPreviewTerrainClickRef.current = previewTerrainDrag.moved;
-    setPreviewTerrainDrag(null);
   };
 
   const cursor = layoutMoveDrag
