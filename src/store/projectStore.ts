@@ -16,12 +16,6 @@ import {
   PRELIMINARY_TOOL_GROUP_PREFIX,
 } from "@/lib/layout/preliminaryLayoutGenerator";
 import { repairLayout as runLayoutRepair } from "@/lib/layout/layoutRepair";
-import { fitLayoutToTerrain } from "@/lib/layout/fitLayoutToTerrain";
-import {
-  generateParametricTerrain,
-  rotateParametricTerrainPreview,
-  translateParametricTerrainPreview,
-} from "@/lib/terrain/parametricTerrain";
 import {
   moveSelectedEquipment,
   orientSelectedEquipment,
@@ -42,6 +36,7 @@ import {
   snapshotOf,
 } from "./projectStore.history";
 import { createPolygonSlice } from "./slices/polygonSlice";
+import { createTerrainSlice } from "./slices/terrainSlice";
 
 // Re-export the 7 public types so consumers continue to import them
 // from `@/store/projectStore` unchanged (Phase 12B guardrail D9).
@@ -57,8 +52,8 @@ export type {
 
 export const useProjectStore = create<ProjectState>((set, get) => ({
   ...createPolygonSlice(set),
+  ...createTerrainSlice(set),
   repairZone: [],
-  previewTerrain: null,
   placedEquipment: [],
   interactionMode: "select",
   pendingPlacementSpecId: null,
@@ -67,7 +62,6 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   lastToolResult: null,
   lastRepairResult: null,
   layoutEdit: emptyLayoutEditState,
-  terrainFitPreview: emptyTerrainFitPreviewState,
   comparison: emptyComparison,
   past: [],
   future: [],
@@ -89,94 +83,6 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   fireSafetyZones: [],
   assumptionsV2: [],
   inconsistencies: [],
-
-  createPreviewTerrain: (input) =>
-    set((state) => {
-      const center =
-        input.center ??
-        state.mapViewCenter ??
-        (state.polygon[0]
-          ? state.polygon[0]
-          : state.anchor
-            ? { lng: state.anchor.lng0, lat: state.anchor.lat0 }
-            : DEFAULT_CONCEPTUAL_LAYOUT_POINT);
-      return {
-        previewTerrain: generateParametricTerrain({ ...input, center }),
-        interactionMode: "select",
-        pendingPlacementSpecId: null,
-        layoutEdit: emptyLayoutEditState,
-        terrainFitPreview: emptyTerrainFitPreviewState,
-      };
-    }),
-
-  updatePreviewTerrain: (input) =>
-    set((state) => {
-      if (!state.previewTerrain) return {};
-      const isRotationOnly =
-        input.rotationDeg !== undefined &&
-        input.shape === undefined &&
-        input.sizingMode === undefined &&
-        input.areaHa === undefined &&
-        input.lengthM === undefined &&
-        input.widthM === undefined &&
-        input.aspectRatio === undefined &&
-        input.vertexCount === undefined;
-
-      if (isRotationOnly) {
-        return {
-          previewTerrain: rotateParametricTerrainPreview(
-            state.previewTerrain,
-            input.rotationDeg as number
-          ),
-        };
-      }
-
-      return {
-        previewTerrain: generateParametricTerrain({
-          shape: input.shape ?? state.previewTerrain.shape,
-          sizingMode: input.sizingMode ?? state.previewTerrain.sizingMode,
-          center: state.previewTerrain.center,
-          areaHa: input.areaHa ?? state.previewTerrain.areaHa,
-          lengthM: input.lengthM ?? state.previewTerrain.lengthM,
-          widthM: input.widthM ?? state.previewTerrain.widthM,
-          aspectRatio: input.aspectRatio ?? state.previewTerrain.aspectRatio,
-          vertexCount: input.vertexCount ?? state.previewTerrain.vertexCount,
-          rotationDeg: input.rotationDeg ?? state.previewTerrain.rotationDeg,
-        }),
-      };
-    }),
-
-  movePreviewTerrainBy: (delta) =>
-    set((state) => {
-      if (!state.previewTerrain) return {};
-      return {
-        previewTerrain: translateParametricTerrainPreview(
-          state.previewTerrain,
-          delta
-        ),
-      };
-    }),
-
-  applyPreviewTerrain: () =>
-    set((state) => {
-      if (!state.previewTerrain) return {};
-      return {
-        ...recordHistory(state),
-        polygon: state.previewTerrain.polygon,
-        anchor: {
-          lng0: state.previewTerrain.center.lng,
-          lat0: state.previewTerrain.center.lat,
-        },
-        previewTerrain: null,
-        interactionMode: "select",
-        pendingPlacementSpecId: null,
-        selectedEquipmentId: null,
-        layoutEdit: emptyLayoutEditState,
-        terrainFitPreview: emptyTerrainFitPreviewState,
-      };
-    }),
-
-  cancelPreviewTerrain: () => set({ previewTerrain: null }),
 
   startDrawingRepairZone: () =>
     set({
@@ -745,61 +651,6 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         },
         terrainFitPreview: emptyTerrainFitPreviewState,
       };
-    }),
-
-  previewFitLayoutToTerrain: (rules) =>
-    set((state) => {
-      const result = fitLayoutToTerrain({
-        placed: state.placedEquipment,
-        anchor: state.anchor,
-        polygon: state.polygon,
-        rules,
-        blockedAreas: state.fireSafetyZones.map((zone) => zone.polygon),
-        poiExists: state.poi !== null,
-      });
-
-      if (result.status === "error") {
-        return {
-          lastRepairResult: null,
-          terrainFitPreview: {
-            draftPlacedEquipment: null,
-            result,
-          },
-        };
-      }
-
-      return {
-        interactionMode: "select",
-        pendingPlacementSpecId: null,
-        selectedEquipmentId: null,
-        layoutEdit: emptyLayoutEditState,
-        terrainFitPreview: {
-          draftPlacedEquipment: result.placed,
-          result,
-        },
-      };
-    }),
-
-  applyTerrainFitPreview: () =>
-    set((state) => {
-      if (!state.terrainFitPreview.draftPlacedEquipment) return {};
-      const result = state.terrainFitPreview.result;
-      return {
-        ...recordHistory(state),
-        placedEquipment: state.terrainFitPreview.draftPlacedEquipment,
-        cableRoutes: result?.cableRoutes ?? [],
-        accessRoads: result?.accessRoads ?? [],
-        selectedEquipmentId: null,
-        pendingPlacementSpecId: null,
-        interactionMode: "select",
-        layoutEdit: emptyLayoutEditState,
-        terrainFitPreview: emptyTerrainFitPreviewState,
-      };
-    }),
-
-  revertTerrainFitPreview: () =>
-    set({
-      terrainFitPreview: emptyTerrainFitPreviewState,
     }),
 
   captureAlternative: (slot) =>
