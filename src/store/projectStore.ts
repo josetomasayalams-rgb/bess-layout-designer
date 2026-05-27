@@ -24,16 +24,12 @@ import {
   type LayoutRepairRules,
   type LayoutRepairResult,
 } from "@/lib/layout/layoutRepair";
-import {
-  fitLayoutToTerrain,
-  type TerrainFitResult,
-} from "@/lib/layout/fitLayoutToTerrain";
+import { fitLayoutToTerrain } from "@/lib/layout/fitLayoutToTerrain";
 import {
   generateParametricTerrain,
   rotateParametricTerrainPreview,
   translateParametricTerrainPreview,
   type ParametricTerrainInput,
-  type ParametricTerrainPreview,
 } from "@/lib/terrain/parametricTerrain";
 import {
   moveSelectedEquipment,
@@ -63,12 +59,32 @@ import type {
   ProjectDesignTargets,
 } from "@/types/project";
 
-export type InteractionMode =
-  | "select"
-  | "draw-site"
-  | "place-equipment"
-  | "draw-repair-zone"
-  | "edit-layout";
+import {
+  emptyComparison,
+  emptyLayoutEditState,
+  emptyTerrainFitPreviewState,
+} from "./projectStore.types";
+import type {
+  ComparisonSlot,
+  ComparisonState,
+  InteractionMode,
+  LayoutEditState,
+  PreviewTerrainState,
+  ProjectSnapshot,
+  TerrainFitPreviewState,
+} from "./projectStore.types";
+
+// Re-export the 7 public types so consumers continue to import them
+// from `@/store/projectStore` unchanged (Phase 12B guardrail D9).
+export type {
+  ComparisonSlot,
+  ComparisonState,
+  InteractionMode,
+  LayoutAlternative,
+  LayoutEditState,
+  PreviewTerrainState,
+  TerrainFitPreviewState,
+} from "./projectStore.types";
 
 const DEFAULT_CONCEPTUAL_LAYOUT_POINT: LngLat = {
   lng: -70.6483,
@@ -77,59 +93,6 @@ const DEFAULT_CONCEPTUAL_LAYOUT_POINT: LngLat = {
 
 /** How many undo steps (and redo steps) are remembered. */
 const HISTORY_LIMIT = 5;
-
-/** Snapshot of undoable project content (UI selection is not tracked). */
-type ProjectSnapshot = {
-  anchor: ProjectAnchor | null;
-  polygon: LngLat[];
-  placedEquipment: PlacedEquipment[];
-  cableRoutes: CableRoute[];
-  accessRoads: AccessRoad[];
-};
-
-export type LayoutEditState = {
-  selectedIds: string[];
-  selectionPolygon: LngLat[];
-  draftPlacedEquipment: PlacedEquipment[] | null;
-  lastValidationAt: string | null;
-};
-
-const emptyLayoutEditState: LayoutEditState = {
-  selectedIds: [],
-  selectionPolygon: [],
-  draftPlacedEquipment: null,
-  lastValidationAt: null,
-};
-
-export type TerrainFitPreviewState = {
-  draftPlacedEquipment: PlacedEquipment[] | null;
-  result: TerrainFitResult | null;
-};
-
-const emptyTerrainFitPreviewState: TerrainFitPreviewState = {
-  draftPlacedEquipment: null,
-  result: null,
-};
-
-export type PreviewTerrainState = ParametricTerrainPreview | null;
-
-/** A captured layout snapshot used by the A/B alternatives comparator. */
-export type LayoutAlternative = {
-  id: string;
-  capturedAt: string;
-  anchor: ProjectAnchor | null;
-  polygon: LngLat[];
-  placedEquipment: PlacedEquipment[];
-};
-
-export type ComparisonSlot = "A" | "B";
-
-export type ComparisonState = {
-  A: LayoutAlternative | null;
-  B: LayoutAlternative | null;
-};
-
-const emptyComparison: ComparisonState = { A: null, B: null };
 
 type ProjectState = {
   anchor: ProjectAnchor | null;
