@@ -15,7 +15,6 @@ import {
 import {
   Map,
   type MapRef,
-  type MapMouseEvent,
 } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { equipmentCatalog, is3DCapable } from "@/data/equipmentCatalog";
@@ -32,9 +31,7 @@ import { useSelectionFeatures } from "./hooks/useSelectionFeatures";
 import { useLayoutInfrastructureFeatures } from "./hooks/useLayoutInfrastructureFeatures";
 import { useOverlayFeatures } from "./hooks/useOverlayFeatures";
 import { useMapCamera } from "./hooks/useMapCamera";
-import { useDrawModeHandlers } from "./hooks/useDrawModeHandlers";
-import { usePreviewTerrainGestures } from "./hooks/usePreviewTerrainGestures";
-import { useLayoutEditGestures } from "./hooks/useLayoutEditGestures";
+import { useMapInteractionRouter } from "./hooks/useMapInteractionRouter";
 import { PolygonTerrainLayers } from "./layers/PolygonTerrainLayers";
 import { EquipmentSelectionOverlayLayers } from "./layers/EquipmentSelectionOverlayLayers";
 import { getProjectMetrics } from "@/lib/layout/projectMetrics";
@@ -52,7 +49,7 @@ import { BaseMapSelector } from "@/components/map/BaseMapSelector";
 import { LayerManagerPanel } from "@/components/map/LayerManagerPanel";
 import { LayoutEditToolbar } from "@/components/map/LayoutEditToolbar";
 import { OrientationCube } from "@/components/map/OrientationCube";
-import { selectEquipmentWithinPolygon } from "@/lib/layout/layoutEditing";
+
 
 import { INITIAL_VIEW, BLANK_BASE_MAP_STYLE, LAYOUT_MOVE_STEP_M } from "./BessMap.constants";
 
@@ -208,36 +205,25 @@ export function BessMap() {
     setSearchedPoint,
   });
 
-  const { handleDrawingClick } = useDrawModeHandlers();
-
   const {
-    previewTerrainDrag,
-    previewTerrainRotate,
-    suppressPreviewTerrainClickRef,
-    handlePreviewTerrainMouseDown,
-    handlePreviewTerrainMouseMove,
-    handlePreviewTerrainMouseUp,
-  } = usePreviewTerrainGestures({
-    previewTerrain,
+    handleClick,
+    handleMouseDown,
+    handleMouseMove,
+    handleMouseUp,
+    cursor,
+  } = useMapInteractionRouter({
+    mapRef,
     interactionMode,
     isLayoutEditMode,
-    mapRef,
+    layoutEdit,
+    displayedPlaced,
+    anchor,
+    previewTerrain,
     updatePreviewTerrain,
     movePreviewTerrainBy,
-  });
-
-  const {
-    layoutMoveDrag,
-    suppressLayoutEditClickRef,
-    handleLayoutEditMouseDown,
-    handleLayoutEditMouseMove,
-    handleLayoutEditMouseUp,
-  } = useLayoutEditGestures({
-    isLayoutEditMode,
-    layoutEditSelectedIds: layoutEdit.selectedIds,
-    mapRef,
-    anchor,
     previewMoveSelection,
+    setLayoutEditSelection,
+    selectEquipment,
   });
 
   const lockedSelectedCount = useMemo(() => {
@@ -307,94 +293,7 @@ export function BessMap() {
 
 
 
-  const handleClick = (e: MapMouseEvent) => {
-    if (suppressPreviewTerrainClickRef.current) {
-      suppressPreviewTerrainClickRef.current = false;
-      return;
-    }
-    if (suppressLayoutEditClickRef.current) {
-      suppressLayoutEditClickRef.current = false;
-      return;
-    }
-    const { lng, lat } = e.lngLat;
-    if (handleDrawingClick(lng, lat, interactionMode)) return;
-    if (isLayoutEditMode) {
-      // Direct click-select on an equipment hit: bypass the lasso entirely.
-      // Shift toggles the id in the selection; a plain click replaces it.
-      const map = mapRef.current?.getMap();
-      const hit = map
-        ? (map.queryRenderedFeatures(e.point, { layers: ["equipment-fill"] })[0]
-            ?.properties?.id as string | undefined)
-        : undefined;
-      if (hit) {
-        const shiftHeld = e.originalEvent.shiftKey;
-        let nextIds: string[];
-        if (shiftHeld) {
-          const set = new Set(layoutEdit.selectedIds);
-          if (set.has(hit)) set.delete(hit);
-          else set.add(hit);
-          nextIds = Array.from(set);
-        } else {
-          nextIds = [hit];
-        }
-        setLayoutEditSelection(nextIds, []);
-        return;
-      }
-      // Click on empty space: lasso vertex (existing behaviour).
-      const nextPolygon = [...layoutEdit.selectionPolygon, { lng, lat }];
-      const selectedIds =
-        nextPolygon.length >= 3
-          ? selectEquipmentWithinPolygon({
-              placed: displayedPlaced,
-              anchor,
-              polygon: nextPolygon,
-            })
-          : [];
-      setLayoutEditSelection(selectedIds, nextPolygon);
-      return;
-    }
-    const map = mapRef.current?.getMap();
-    if (!map) return;
-    const features = map.queryRenderedFeatures(e.point, {
-      layers: ["equipment-fill"],
-    });
-    if (features.length > 0) {
-      const id = features[0].properties?.id as string | undefined;
-      if (id) selectEquipment(id);
-    } else {
-      selectEquipment(null);
-    }
-  };
 
-  const handleMouseDown = (event: MapMouseEvent) => {
-    if (handlePreviewTerrainMouseDown(event)) return;
-    handleLayoutEditMouseDown(event);
-  };
-
-  const handleMouseMove = (event: MapMouseEvent) => {
-    if (handlePreviewTerrainMouseMove(event)) return;
-    handleLayoutEditMouseMove(event);
-  };
-
-  const handleMouseUp = () => {
-    if (handlePreviewTerrainMouseUp()) return;
-    handleLayoutEditMouseUp();
-  };
-
-  const cursor = layoutMoveDrag
-    ? "grabbing"
-    : interactionMode === "draw-site" ||
-    interactionMode === "place-equipment" ||
-    interactionMode === "draw-repair-zone" ||
-    isLayoutEditMode
-      ? "crosshair"
-      : previewTerrainDrag
-        ? "grabbing"
-        : previewTerrainRotate
-          ? "grabbing"
-        : previewTerrain
-          ? "grab"
-          : "grab";
 
   const floatingButton =
     "inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-700 bg-slate-950/90 text-slate-200 shadow-lg backdrop-blur transition hover:border-cyan-400 hover:text-cyan-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-400 disabled:cursor-not-allowed disabled:opacity-40";
