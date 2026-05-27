@@ -15,7 +15,6 @@ export function MVArchitecturePanel() {
   const anchor = useProjectStore((state) => state.anchor);
   const storedCableRoutes = useProjectStore((state) => state.cableRoutes);
   const storedAccessRoads = useProjectStore((state) => state.accessRoads);
-  const mvBuses = useProjectStore((state) => state.mvBuses);
   const poi = useProjectStore((state) => state.poi);
   const locale = useUiStore((state) => state.locale);
   const isEs = locale === "es";
@@ -24,11 +23,17 @@ export function MVArchitecturePanel() {
     placed,
     anchor,
     polygon,
+    hasPoi: !!poi,
   });
   const cableRoutes =
     storedCableRoutes.length > 0 ? storedCableRoutes : generated.cableRoutes;
   const accessRoads =
     storedAccessRoads.length > 0 ? storedAccessRoads : generated.accessRoads;
+
+  const totalCableLength = cableRoutes.reduce(
+    (sum, route) => sum + (route.estimatedLength_m ?? 0),
+    0
+  );
 
   return (
     <CollapsibleSection
@@ -43,10 +48,22 @@ export function MVArchitecturePanel() {
     >
       <div className="space-y-3">
         <div className="grid grid-cols-2 gap-2 text-[11px]">
-          <Metric label={isEs ? "Estaciones" : "Stations"} value={generated.diagnostics.stationCount} />
-          <Metric label={isEs ? "Rutas MT" : "MV routes"} value={cableRoutes.length} />
-          <Metric label={isEs ? "Caminos" : "Roads"} value={accessRoads.length} />
-          <Metric label={isEs ? "Barras" : "Buses"} value={mvBuses.length || generated.layoutZones.filter((zone) => zone.type === "mv_yard").length} />
+          <Metric
+            label={isEs ? "Bloques BESS-PCS" : "BESS-PCS Blocks"}
+            value={generated.diagnostics.blockCount}
+          />
+          <Metric
+            label={isEs ? "Corredores MT" : "MV Corridors"}
+            value={cableRoutes.length}
+          />
+          <Metric
+            label={isEs ? "Accesos y Caminos" : "Access & Roads"}
+            value={accessRoads.length}
+          />
+          <Metric
+            label={isEs ? "Longitud total MT" : "Total MV Length"}
+            value={formatLength(totalCableLength, { digits: 0, locale })}
+          />
         </div>
 
         <SingleLineDiagram />
@@ -82,11 +99,31 @@ export function MVArchitecturePanel() {
           </p>
         ) : null}
 
-        <p className="text-[10px] leading-snug text-slate-500">
-          {isEs
-            ? "Capa conceptual para predimensionamiento. Las rutas, patios y accesos no reemplazan planos IFC, estudios de canalizacion ni permisos."
-            : "Conceptual predesign layer. Routes, yards and access roads do not replace IFC drawings, ductbank studies or permits."}
-        </p>
+        {generated.diagnostics.warnings && generated.diagnostics.warnings.length > 0 ? (
+          <div className="space-y-1.5 mt-2">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-amber-500">
+              {isEs ? "Advertencias de Infraestructura" : "Infrastructure Warnings"}
+            </div>
+            <div className="space-y-1">
+              {generated.diagnostics.warnings.map((w, idx) => (
+                <div
+                  key={idx}
+                  className="rounded border border-amber-500/20 bg-amber-500/5 px-2 py-1.5 text-[10px] leading-snug text-amber-200/90 flex gap-1.5"
+                >
+                  <span className="text-amber-500 shrink-0 font-bold">!</span>
+                  <span>{w}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        <div className="flex items-center justify-between gap-2 rounded border border-violet-500/20 bg-violet-500/5 px-2 py-1.5 text-[10px] text-violet-300">
+          <span>{isEs ? "Clasificación:" : "Classification:"}</span>
+          <span className="font-semibold uppercase tracking-wider text-[8px] text-violet-200">
+            {isEs ? "Trazado conceptual / Supuesto" : "Conceptual route / Assumption"}
+          </span>
+        </div>
 
         {poi ? (
           <p className="rounded-md border border-violet-500/30 bg-violet-500/10 px-2 py-1.5 text-[11px] text-violet-100">
@@ -98,7 +135,7 @@ export function MVArchitecturePanel() {
   );
 }
 
-function Metric({ label, value }: { label: string; value: number }) {
+function Metric({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="rounded-md border border-slate-800 bg-slate-900/70 p-2">
       <div className="text-slate-500">{label}</div>

@@ -156,7 +156,7 @@ export function SingleLineDiagram() {
       };
 
   // Helper for evidence tags
-  const renderEvidence = (val: EvidencedValue<any> | undefined | null) => {
+  const renderEvidence = (val: EvidencedValue<unknown> | undefined | null) => {
     if (!val || !val.evidence || val.evidence.length === 0) {
       return <Badge variant="preliminary">{isEs ? "PRELIMINAR" : "PRELIMINARY"}</Badge>;
     }

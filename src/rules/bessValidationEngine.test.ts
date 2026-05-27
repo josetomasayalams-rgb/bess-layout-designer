@@ -4,7 +4,7 @@ import type { ProjectAnchor } from "@/types/geometry";
 import {
   DEFAULT_REGULATORY_CONTEXT,
   getRegulatoryProfile,
-} from "./bessRegulatoryProfiles";
+} from "./regulatoryProfileMetadata";
 import { validateBessLayout } from "./bessValidationEngine";
 import { toLngLat } from "@/lib/geometry/projection";
 
@@ -150,5 +150,108 @@ describe("validateBessLayout", () => {
         (item) => item.ruleId === "cable_route_equipment_clearance"
       )
     ).toBe(true);
+  });
+
+  it("flags equipment outside polygon (RULE-PHYS-001)", () => {
+    const result = validateBessLayout({
+      placed: [battery("b1", 60, 0)],
+      polygon,
+      anchor,
+      profile,
+      context: { ...DEFAULT_REGULATORY_CONTEXT, hasManufacturerManual: true },
+    });
+
+    expect(
+      result.issues.some((item) => item.ruleId === "equipment_inside_polygon")
+    ).toBe(true);
+    expect(result.criticalCount).toBeGreaterThan(0);
+  });
+
+  it("flags overlapping equipment footprints (RULE-PHYS-002)", () => {
+    const result = validateBessLayout({
+      placed: [battery("b1", 0, 0), battery("b2", 1, 0)],
+      polygon,
+      anchor,
+      profile,
+      context: { ...DEFAULT_REGULATORY_CONTEXT, hasManufacturerManual: true },
+    });
+
+    expect(
+      result.issues.some((item) => item.ruleId === "equipment_collision")
+    ).toBe(true);
+    expect(result.criticalCount).toBeGreaterThan(0);
+  });
+
+  it("correctly evaluates rotated footprints", () => {
+    const resultCollision = validateBessLayout({
+      placed: [
+        {
+          id: "b1",
+          equipmentSpecId: "sungrow-st2752ux-us",
+          anchor: toLngLat({ x_m: 0, y_m: 0 }, anchor),
+          rotation_deg: 0,
+          sourceReliability: "certified_data",
+        },
+        {
+          id: "b2",
+          equipmentSpecId: "sungrow-st2752ux-us",
+          anchor: toLngLat({ x_m: 5, y_m: 0 }, anchor),
+          rotation_deg: 90,
+          sourceReliability: "certified_data",
+        },
+      ],
+      polygon,
+      anchor,
+      profile,
+      context: { ...DEFAULT_REGULATORY_CONTEXT, hasManufacturerManual: true },
+    });
+
+    expect(
+      resultCollision.issues.some((item) => item.ruleId === "equipment_collision")
+    ).toBe(true);
+
+    const resultNoCollision = validateBessLayout({
+      placed: [
+        {
+          id: "b1",
+          equipmentSpecId: "sungrow-st2752ux-us",
+          anchor: toLngLat({ x_m: 0, y_m: 0 }, anchor),
+          rotation_deg: 0,
+          sourceReliability: "certified_data",
+        },
+        {
+          id: "b2",
+          equipmentSpecId: "sungrow-st2752ux-us",
+          anchor: toLngLat({ x_m: 10, y_m: 0 }, anchor),
+          rotation_deg: 90,
+          sourceReliability: "certified_data",
+        },
+      ],
+      polygon,
+      anchor,
+      profile,
+      context: { ...DEFAULT_REGULATORY_CONTEXT, hasManufacturerManual: true },
+    });
+
+    expect(
+      resultNoCollision.issues.some((item) => item.ruleId === "equipment_collision")
+    ).toBe(false);
+  });
+
+  it("valid layout does not emit containment or collision issues", () => {
+    const result = validateBessLayout({
+      placed: [battery("b1", -20, 0), battery("b2", 20, 0)],
+      polygon,
+      anchor,
+      profile,
+      context: { ...DEFAULT_REGULATORY_CONTEXT, hasManufacturerManual: true },
+    });
+
+    expect(
+      result.issues.some((item) => item.ruleId === "equipment_inside_polygon")
+    ).toBe(false);
+    expect(
+      result.issues.some((item) => item.ruleId === "equipment_collision")
+    ).toBe(false);
   });
 });

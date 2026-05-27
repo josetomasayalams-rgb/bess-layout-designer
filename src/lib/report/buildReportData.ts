@@ -9,6 +9,7 @@
  */
 
 import { equipmentCatalog } from "@/data/equipmentCatalog";
+import { generateConceptualPhysicalInfrastructure } from "@/lib/layout/physicalInfrastructure";
 import {
   DEFAULT_STATIONS_PER_FEEDER,
   DEFAULT_USABLE_FACTOR,
@@ -36,7 +37,15 @@ import type {
   POI,
   PPC,
 } from "@/types/electrical";
-import type { RegulatoryEvaluationResult } from "@/rules/regulatoryProfileEvaluator";
+import type {
+  EvaluatedRuleEntry,
+  RegulatoryEvaluationResult,
+  RuleOutcome,
+} from "@/rules/regulatoryProfileEvaluator";
+import { isPhase8ElectricalRuleId } from "@/rules/regulatoryRulesCatalog";
+import type { RuleSeverity } from "@/rules/types";
+import { strongestCitedLevel } from "@/rules/severityCeiling";
+import type { DocumentLevel } from "@/data/documentRegistry";
 import type { PlacedEquipment } from "@/types/equipment";
 import type { LngLat, ProjectAnchor } from "@/types/geometry";
 import type {
@@ -55,6 +64,8 @@ import {
   findDocument,
   type DocumentRegistryEntry,
 } from "@/data/documentRegistry";
+import { disclaimerTexts } from "@/data/disclaimerTexts";
+import { exclusionRegistry } from "@/data/exclusionRegistry";
 
 export type ReportEquipmentRow = {
   type: string;
@@ -122,6 +133,48 @@ export type ReportSiteMetrics = {
   bbox: SiteSvgModel["bboxLocalM"] | null;
 };
 
+/**
+ * One row of the "Preliminary electrical checks" report block (Fase 9).
+ *
+ * This block is the report-side view of the 8 Fase 8 electrical screening
+ * rules already evaluated by the engine. It is intentionally narrower than
+ * `EvaluatedRuleEntry`: only the data the PDF needs to render the table.
+ */
+export type ReportPreliminaryElectricalCheck = {
+  ruleId: string;
+  title: string;
+  description: string;
+  /** Severity after applying the `severityCeiling` matrix. */
+  effectiveSeverity: RuleSeverity;
+  /** Severity declared in the catalog, before the ceiling. */
+  declaredSeverity: RuleSeverity;
+  /** Strongest cited document level, when any. */
+  documentLevel: DocumentLevel | null;
+  /** Engine outcome (pass / violation / not_evaluable / …). */
+  outcome: RuleOutcome;
+  /** If severity was lowered by the matrix, the reason; otherwise null. */
+  severityCappedBy: EvaluatedRuleEntry["severityCappedBy"];
+  /** Short citation label like "Doc title · p.X · §Y" or null. */
+  citation: string | null;
+  /** Engine messages tied to this rule (empty when the rule passes). */
+  violations: { message: string; affectedIds?: string[] }[];
+};
+
+export type ReportPreliminaryElectricalBlock = {
+  /** All 8 Fase 8 checks visible in the active profile (may be empty). */
+  checks: ReportPreliminaryElectricalCheck[];
+  /** Outcome counts for the block (subset of the regulatory totals). */
+  totals: {
+    pass: number;
+    violation: number;
+    notEvaluable: number;
+    pendingValidation: number;
+    other: number;
+  };
+  /** True when at least one rule was capped by the severity matrix. */
+  hasSeverityCaps: boolean;
+};
+
 export type ReportEngineeringChecklist = {
   topic: string;
   required: boolean;
@@ -168,12 +221,26 @@ export type TechnicalReportData = {
   };
 
   regulatoryEvaluation: RegulatoryEvaluationResult | null;
+  /**
+   * Fase 9 — preliminary electrical checks block. Always present (even when
+   * the architecture is not yet loaded) so the report layout is stable; in
+   * that case `checks` is empty and the totals are zeroed.
+   */
+  preliminaryElectricalChecks: ReportPreliminaryElectricalBlock;
 
   assumptions: ProjectAssumption[];
   inconsistencies: DocumentInconsistency[];
   pendingData: PendingDataItem[];
   exclusions: ProjectExclusion[];
+  disclaimers: { id: string; title: string; text: string }[];
   engineeringChecklist: ReportEngineeringChecklist[];
+  infrastructure?: {
+    blocksCount: number;
+    cableRoutesCount: number;
+    accessRoadsCount: number;
+    totalCableLengthM: number;
+    warnings: string[];
+  };
 
   /** DocumentRegistry entries citados en cualquier parte del reporte. */
   documentReferences: DocumentRegistryEntry[];
@@ -183,87 +250,142 @@ export type TechnicalReportData = {
 // Defaults estáticos
 // ──────────────────────────────────────────────────────────────────
 
-const DISCLAIMER_EN =
-  "This report is a preliminary engineering evaluation. It does not replace detailed engineering, manufacturer manuals, protection coordination, short-circuit studies, ground grid design, fire protection engineering, environmental permitting, civil engineering, or final review by SEC, CNE, CEN, SEA or any authority having jurisdiction.";
-
-const DISCLAIMER_ES =
-  "Este reporte es una evaluación preliminar de ingeniería. No reemplaza ingeniería de detalle, manuales de fabricante, coordinación de protecciones, estudios de cortocircuito, diseño de malla a tierra, ingeniería contra incendios, permisos ambientales, ingeniería civil, ni revisión final por SEC, CNE, CEN, SEA o cualquier autoridad competente.";
-
 /** Lista de exclusiones explícitas del análisis técnico ancla (§6). */
-export const REPORT_DEFAULT_EXCLUSIONS: ProjectExclusion[] = [
-  {
-    id: "EXC-001",
-    scope: "Short-circuit studies and protection coordination",
-    reason: "Requires power-system simulation tools and validated network models.",
-    futureStage: "detail_engineering",
+const EXCLUSION_TRANSLATIONS_EN: Record<string, { scope: string; reason: string; reportText: string }> = {
+  "ex-load-flow": {
+    scope: "Load flow study",
+    reason: "Not calculated by the app",
+    reportText: "Power flow study with network model",
   },
-  {
-    id: "EXC-002",
-    scope: "Detailed load flow / RMS / EMT studies",
-    reason: "Outside the scope of preliminary layout sizing.",
-    futureStage: "detail_engineering",
+  "ex-short-circuit": {
+    scope: "Short-circuit study",
+    reason: "Not calculated by the app",
+    reportText: "Short-circuit study",
   },
-  {
-    id: "EXC-003",
-    scope: "Ground grid design",
-    reason: "Depends on soil resistivity, fault current studies and civil work.",
-    futureStage: "detail_engineering",
+  "ex-protections-coordination": {
+    scope: "Protections coordination",
+    reason: "No coordination or settings provided",
+    reportText: "Protections philosophy and settings report",
   },
-  {
-    id: "EXC-004",
-    scope: "Foundation and structural civil engineering",
-    reason: "Requires geotechnical studies and final loads.",
-    futureStage: "detail_engineering",
+  "ex-rms-emt-stability": {
+    scope: "RMS/EMT stability studies",
+    reason: "No RMS/EMT studies provided",
+    reportText: "Certified models and stability reports",
   },
-  {
-    id: "EXC-005",
-    scope: "Cable trench and ductbank engineering",
-    reason: "Requires ampacity, soil thermal, grouping and code-detailed routing.",
-    futureStage: "detail_engineering",
+  "ex-harmonics": {
+    scope: "Harmonics study",
+    reason: "No harmonics evaluation provided",
+    reportText: "Power quality supply report",
   },
-  {
-    id: "EXC-006",
-    scope: "Detailed thermal cable sizing",
-    reason: "Preliminary cross-sections are illustrative only.",
-    futureStage: "detail_engineering",
+  "ex-grounding-grid": {
+    scope: "Grounding grid engineering",
+    reason: "No grounding grid or step/touch voltage calculation",
+    reportText: "Soil resistivity and grounding grid report",
   },
-  {
-    id: "EXC-007",
-    scope: "Detailed fire suppression engineering",
-    reason: "Requires NFPA/IFC compliance, manufacturer test data and AHJ.",
-    futureStage: "detail_engineering",
+  "ex-geotechnical-civil": {
+    scope: "Geotechnical and civil engineering detail",
+    reason: "No geotechnical/foundation engineering provided",
+    reportText: "Civil/geotechnical reports",
   },
-  {
-    id: "EXC-008",
-    scope: "Detailed HVAC engineering",
-    reason: "Climate, container thermal profile and consumption to be specified.",
-    futureStage: "basic_engineering",
+  "ex-hydrology-drainage": {
+    scope: "Hydrology and drainage study",
+    reason: "No drainage calculation provided",
+    reportText: "Hydrological/topographical report",
   },
-  {
-    id: "EXC-009",
-    scope: "CCTV, lighting and telecom per cabinet",
-    reason: "Does not drive MW/MWh or major layout decisions.",
-    futureStage: "detail_engineering",
+  "ex-detailed-fire-safety": {
+    scope: "Detailed fire safety engineering",
+    reason: "No fire modeling or AHJ approval provided",
+    reportText: "HSE and fire safety report",
   },
-  {
-    id: "EXC-010",
-    scope: "HV substation engineering",
-    reason: "BESS scope ends at the 33 kV POI in the preset; main transformer is referential.",
-    futureStage: "basic_engineering",
+  "ex-environmental-permitting": {
+    scope: "Environmental permitting (DIA/EIA)",
+    reason: "No environmental permit filings provided",
+    reportText: "Project environmental evaluation",
   },
-  {
-    id: "EXC-011",
-    scope: "Permitting workflows (SEIA, DOM, SEC submission)",
-    reason: "Requires legal review; this report only flags applicable items.",
-    futureStage: "basic_engineering",
+  "ex-detailed-interconnection-hv": {
+    scope: "Detailed HV interconnection and POI",
+    reason: "No detailed substation/interconnection engineering",
+    reportText: "High voltage engineering and CEN studies",
   },
-  {
-    id: "EXC-012",
-    scope: "CAPEX / OPEX estimation",
-    reason: "Outside the preliminary sizing scope unless explicitly enabled.",
-    futureStage: "basic_engineering",
+  "ex-arc-flash": {
+    scope: "Arc flash hazard study",
+    reason: "The app does not compute incident energy or safe approach distances",
+    reportText: "IEEE 1584 arc flash study",
   },
-];
+  "ex-insulation-coordination": {
+    scope: "Insulation coordination (BIL)",
+    reason: "The app does not model switching or lightning overvoltages",
+    reportText: "Insulation coordination study",
+  },
+  "ex-power-quality-pcc": {
+    scope: "Power quality at PCC",
+    reason: "THD, unbalance and flicker require measurements and a network model",
+    reportText: "Power quality study at the PCC",
+  },
+};
+
+const DISCLAIMERS_EN: Record<string, { title: string; text: string }> = {
+  generalMvp: {
+    title: "General MVP Disclaimer",
+    text: "This report corresponds to a preliminary BESS predesign. Results are useful for early capacity, physical footprint, conceptual configuration, and alternative comparison. They do not constitute detailed engineering, or construction, interconnection, operation, or final regulatory compliance authorization.",
+  },
+  conceptualSizing: {
+    title: "Conceptual Sizing",
+    text: "Electrical calculations are preliminary. They do not replace load flow, short circuit, protection coordination, RMS/EMT stability, harmonics, power quality, grounding grid, arc flash, or interconnection studies required by the national grid operator (Coordinador Eléctrico Nacional) or other authorities.",
+  },
+  documentTraceability: {
+    title: "Document Traceability",
+    text: "Equipment data is sourced from manufacturer public datasheets, public project reports, and technical references. When no official source exists for the exact model, data is presented as an editable assumption, benchmark, or pending validation. No referential value should be used contractually without document validation.",
+  },
+  uncertifiedRules: {
+    title: "Uncertified Rules & Spacing",
+    text: "Spacing values and non-certified catalog criteria correspond to predesign assumptions and preliminary benchmarks. They must be validated using the manufacturer's contractual documentation and do not constitute final design rules.",
+  },
+  fireSafetyPending: {
+    title: "Fire Protection & UL 9540A Status",
+    text: "References to UL 9540, UL 9540A, and NFPA 855 are used as technical context and preliminary checklist only. The app does not certify fire separation distances. All final separation must be validated with the exact model's UL 9540A report, manufacturer criteria, AHJ guidelines, insurer requirements, and local codes.",
+  },
+  electricalCompatibility: {
+    title: "Preliminary Electrical Compatibility",
+    text: "Compatibility between BESS containers, PCS, transformers, MV stations, EMS/PPC, and auxiliary systems is only definitive when confirmed by the manufacturer/EPC datasheet, manual, or BOM. The app suggests preliminary configurations but does not certify contractual compatibility.",
+  },
+  conceptualLayout: {
+    title: "Conceptual Layout Limitations",
+    text: "The generated layout is conceptual. It requires validation using the manufacturer's layout guide, civil drawing, maintenance clearance criteria, emergency roads, turning radii, environmental restrictions, topography, drainage, geotech, and AHJ/insurer criteria.",
+  },
+  conceptualInfrastructure: {
+    title: "Trenching & Access Roads",
+    text: "Cabling, trenches, and cable corridors are shown as conceptual layers. Final sizing requires a cable schedule, routing calculations, thermal backfill, grouping factors, ampacity calculations, voltage drop, and civil details.",
+  },
+  internationalReferenceOnly: {
+    title: "International Standards Context",
+    text: "International standards (such as NFPA 855, UL 9540, UL 9540A, IEC 62933, or IEEE 2800) are cited solely as technical references and predesign guidelines where applicable. They do not replace mandatory codes and technical instructions issued by SEC or other local Chilean authorities.",
+  },
+  shortInterface: {
+    title: "Short Interface Disclaimer",
+    text: "Preliminary predesign. Requires manufacturer/EPC/AHJ validation and detailed engineering studies before being used for design, permitting, construction, or operation.",
+  },
+};
+
+export function getReportDefaultExclusions(locale: "en" | "es"): ProjectExclusion[] {
+  return exclusionRegistry.map((ex) => {
+    if (locale === "en") {
+      const trans = EXCLUSION_TRANSLATIONS_EN[ex.id];
+      return {
+        id: ex.id.replace("ex-", "EXC-").toUpperCase(),
+        scope: trans ? trans.scope : ex.label,
+        reason: trans ? `${trans.reason} — Requires: ${trans.reportText}` : `${ex.reason} — Requiere: ${ex.reportText}`,
+        futureStage: "detail_engineering" as const,
+      };
+    }
+    return {
+      id: ex.id.replace("ex-", "EXC-").toUpperCase(),
+      scope: ex.label,
+      reason: `${ex.reason} — Requiere: ${ex.reportText}`,
+      futureStage: "detail_engineering" as const,
+    };
+  });
+}
 
 /** Checklist de ingeniería de detalle que aparece siempre en el reporte. */
 export const REPORT_DEFAULT_CHECKLIST: ReportEngineeringChecklist[] = [
@@ -617,6 +739,79 @@ function collectDocReferences(args: {
   return documentRegistry.filter((d) => refs.has(d.id));
 }
 
+function buildPreliminaryElectricalBlock(
+  evaluation: RegulatoryEvaluationResult | null
+): ReportPreliminaryElectricalBlock {
+  const empty: ReportPreliminaryElectricalBlock = {
+    checks: [],
+    totals: { pass: 0, violation: 0, notEvaluable: 0, pendingValidation: 0, other: 0 },
+    hasSeverityCaps: false,
+  };
+  if (!evaluation) return empty;
+
+  const fase8 = evaluation.byCategory.electrical
+    .filter((e) => isPhase8ElectricalRuleId(e.ruleId))
+    .sort((a, b) => a.ruleId.localeCompare(b.ruleId));
+
+  const checks: ReportPreliminaryElectricalCheck[] = fase8.map((entry) => {
+    const cite = entry.evidence.find(
+      (e) => e.documentId && e.documentId !== "__none__"
+    );
+    let citation: string | null = null;
+    if (cite) {
+      const doc = findDocument(cite.documentId);
+      const title = doc?.title ?? cite.documentId;
+      const page = cite.page ? ` · p.${cite.page}` : "";
+      const section = cite.section ? ` · §${cite.section}` : "";
+      citation = `${title}${page}${section}`;
+    }
+    return {
+      ruleId: entry.ruleId,
+      title: entry.title,
+      description: entry.description,
+      effectiveSeverity: entry.severity,
+      declaredSeverity: entry.declaredSeverity,
+      documentLevel: strongestCitedLevel(entry.evidence),
+      outcome: entry.outcome,
+      severityCappedBy: entry.severityCappedBy,
+      citation,
+      violations: entry.violations.map((v) => ({
+        message: v.message,
+        affectedIds: v.affectedIds,
+      })),
+    };
+  });
+
+  const totals = checks.reduce(
+    (acc, c) => {
+      switch (c.outcome) {
+        case "pass":
+          acc.pass++;
+          break;
+        case "violation":
+          acc.violation++;
+          break;
+        case "not_evaluable":
+          acc.notEvaluable++;
+          break;
+        case "pending_validation":
+          acc.pendingValidation++;
+          break;
+        default:
+          acc.other++;
+      }
+      return acc;
+    },
+    { pass: 0, violation: 0, notEvaluable: 0, pendingValidation: 0, other: 0 }
+  );
+
+  return {
+    checks,
+    totals,
+    hasSeverityCaps: checks.some((c) => c.severityCappedBy !== null),
+  };
+}
+
 // ──────────────────────────────────────────────────────────────────
 // API pública
 // ──────────────────────────────────────────────────────────────────
@@ -660,6 +855,30 @@ export function buildReportData(args: BuildReportDataArgs): TechnicalReportData 
     anchor: args.anchor,
     placed: args.placed,
   });
+
+  const generatedInfra = generateConceptualPhysicalInfrastructure({
+    placed: args.placed,
+    anchor: args.anchor,
+    polygon: args.polygon,
+    hasPoi: !!args.poi,
+  });
+
+  const blockCount = new Set(
+    args.placed.map((item) => item.blockId).filter(Boolean)
+  ).size;
+
+  const totalCableLength = generatedInfra.cableRoutes.reduce(
+    (sum, route) => sum + (route.estimatedLength_m ?? 0),
+    0
+  );
+
+  const infrastructure = {
+    blocksCount: blockCount,
+    cableRoutesCount: generatedInfra.cableRoutes.length,
+    accessRoadsCount: generatedInfra.accessRoads.length,
+    totalCableLengthM: Math.round(totalCableLength),
+    warnings: generatedInfra.diagnostics.warnings ?? [],
+  };
 
   const derived = deriveKpisFromLayout({
     placed: args.placed,
@@ -720,12 +939,35 @@ export function buildReportData(args: BuildReportDataArgs): TechnicalReportData 
 
   // Si el caso de estudio existe, traer exclusiones específicas + las default.
   const exclusionsFromCase = args.caseStudy?.exclusions ?? [];
+  const defaultExclusions = getReportDefaultExclusions(args.locale);
   const exclusions: ProjectExclusion[] = [
-    ...REPORT_DEFAULT_EXCLUSIONS,
+    ...defaultExclusions,
     ...exclusionsFromCase,
   ].filter(
     (item, index, list) => list.findIndex((other) => other.scope === item.scope) === index
   );
+
+  const disclaimers = args.locale === "es" ? [
+    { id: "DISC-GEN", title: "Advertencia General del MVP", text: disclaimerTexts.generalMvp },
+    { id: "DISC-SIZ", title: "Predimensionamiento Conceptual", text: disclaimerTexts.conceptualSizing },
+    { id: "DISC-TRACE", title: "Trazabilidad Documental", text: disclaimerTexts.documentTraceability },
+    { id: "DISC-UNCERT", title: "Reglas no Certificadas", text: disclaimerTexts.uncertifiedRules },
+    { id: "DISC-FIRE", title: "Incendio y UL 9540A Pendiente", text: disclaimerTexts.fireSafetyPending },
+    { id: "DISC-COMPAT", title: "Compatibilidad Eléctrica Preliminar", text: disclaimerTexts.electricalCompatibility },
+    { id: "DISC-LAYOUT", title: "Layout Preliminar", text: disclaimerTexts.conceptualLayout },
+    { id: "DISC-INFRA", title: "Canalizaciones y Caminos Preliminares", text: disclaimerTexts.conceptualInfrastructure },
+    { id: "DISC-INT", title: "Normativa Internacional de Referencia", text: disclaimerTexts.internationalReferenceOnly }
+  ] : [
+    { id: "DISC-GEN", title: DISCLAIMERS_EN.generalMvp.title, text: DISCLAIMERS_EN.generalMvp.text },
+    { id: "DISC-SIZ", title: DISCLAIMERS_EN.conceptualSizing.title, text: DISCLAIMERS_EN.conceptualSizing.text },
+    { id: "DISC-TRACE", title: DISCLAIMERS_EN.documentTraceability.title, text: DISCLAIMERS_EN.documentTraceability.text },
+    { id: "DISC-UNCERT", title: DISCLAIMERS_EN.uncertifiedRules.title, text: DISCLAIMERS_EN.uncertifiedRules.text },
+    { id: "DISC-FIRE", title: DISCLAIMERS_EN.fireSafetyPending.title, text: DISCLAIMERS_EN.fireSafetyPending.text },
+    { id: "DISC-COMPAT", title: DISCLAIMERS_EN.electricalCompatibility.title, text: DISCLAIMERS_EN.electricalCompatibility.text },
+    { id: "DISC-LAYOUT", title: DISCLAIMERS_EN.conceptualLayout.title, text: DISCLAIMERS_EN.conceptualLayout.text },
+    { id: "DISC-INFRA", title: DISCLAIMERS_EN.conceptualInfrastructure.title, text: DISCLAIMERS_EN.conceptualInfrastructure.text },
+    { id: "DISC-INT", title: DISCLAIMERS_EN.internationalReferenceOnly.title, text: DISCLAIMERS_EN.internationalReferenceOnly.text }
+  ];
 
   return {
     metadata: {
@@ -741,7 +983,7 @@ export function buildReportData(args: BuildReportDataArgs): TechnicalReportData 
       appVersion: args.appVersion ?? "0.1.0",
       locale: args.locale,
       schemaVersion: "1.2",
-      disclaimer: args.locale === "es" ? DISCLAIMER_ES : DISCLAIMER_EN,
+      disclaimer: args.locale === "es" ? disclaimerTexts.generalMvp : DISCLAIMERS_EN.generalMvp.text,
       reportId,
     },
 
@@ -799,12 +1041,17 @@ export function buildReportData(args: BuildReportDataArgs): TechnicalReportData 
     },
 
     regulatoryEvaluation: args.regulatoryEvaluation,
+    preliminaryElectricalChecks: buildPreliminaryElectricalBlock(
+      args.regulatoryEvaluation
+    ),
 
     assumptions: args.assumptions,
     inconsistencies: args.inconsistencies,
     pendingData: args.pendingData,
     exclusions,
+    disclaimers,
     engineeringChecklist: REPORT_DEFAULT_CHECKLIST,
+    infrastructure,
 
     documentReferences,
   };

@@ -5,7 +5,8 @@ export type DataClassification =
   | "inferred_not_certified"
   | "preliminary_assumption"
   | "pending_validation"
-  | "engineering_judgement";
+  | "engineering_judgement"
+  | "reference_only";
 
 export type TechnicalSource = {
   classification: DataClassification;
@@ -249,6 +250,10 @@ export type ElectricalCompatibilityIssue = {
     | "reported_project_data"
     | "calculated"
     | "pending_validation"
-    | "engineering_judgement";
+    | "engineering_judgement"
+    | "certified_data"
+    | "preliminary_assumption"
+    | "reference_only"
+    | "engineering_detail_exclusion";
   affectedIds: string[];
 };

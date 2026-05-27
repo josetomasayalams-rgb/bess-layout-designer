@@ -130,6 +130,33 @@ describe("ReportPreview Component", () => {
     expect(screen.getByRole("button", { name: /2. Sitio y Ubicación/i })).toBeDefined();
   });
 
+  it("should render the Fase 9 preliminary electrical checks section in the index", async () => {
+    render(<ReportPreview isOpen={true} onClose={vi.fn()} includeGeocoding={false} />);
+
+    await waitFor(() => {
+      expect(screen.queryByText(/Assembling document preview/i)).toBeNull();
+    });
+
+    // Index entry is always rendered, regardless of preset load state.
+    expect(
+      screen.getByRole("button", { name: /5b\. Preliminary Electrical Checks/i })
+    ).toBeDefined();
+  });
+
+  it("should render the Fase 9 preliminary electrical heading in the document body", async () => {
+    render(<ReportPreview isOpen={true} onClose={vi.fn()} includeGeocoding={false} />);
+
+    await waitFor(() => {
+      expect(screen.queryByText(/Assembling document preview/i)).toBeNull();
+    });
+
+    // The h2 of section 5b is always rendered (the preset-empty branch shows
+    // an "evaluate the architecture" hint, but the heading is present).
+    expect(
+      screen.getByRole("heading", { name: /Preliminary Electrical Checks/i })
+    ).toBeDefined();
+  });
+
   it("should trigger Technical Report PDF download when download button is clicked", async () => {
     const { downloadTechnicalReportPdf } = await import("@/lib/report/downloadTechnicalReport");
 

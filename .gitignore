@@ -40,3 +40,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# private documentation
+/DOCUMENTACION_APP_BESS/
+/DIRECTRICES_APP_BESS/
+
+# Ruflo / Claude Flow runtime artifacts
+ruvector.db
+.claude-flow/
+

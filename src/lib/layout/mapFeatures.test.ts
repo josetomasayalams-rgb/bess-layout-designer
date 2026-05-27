@@ -11,7 +11,7 @@ import {
   regulatoryBufferFeatures,
   warningMarkerFeatures,
 } from "@/lib/layout/mapFeatures";
-import { getRegulatoryProfile } from "@/rules/bessRegulatoryProfiles";
+import { getRegulatoryProfile } from "@/rules/regulatoryProfileMetadata";
 import type { Feature, LineString } from "geojson";
 
 const anchor: ProjectAnchor = { lng0: -70, lat0: -33 };

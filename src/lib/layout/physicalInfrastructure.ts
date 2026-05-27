@@ -1,5 +1,6 @@
 import type { FeatureCollection, Point, Polygon } from "geojson";
-import { equipmentCatalog } from "@/data/equipmentCatalog";
+import { equipmentCatalog, type SourceReliability } from "@/data/equipmentCatalog";
+import { MARGIN_M } from "@/data/defaultConstraints";
 import type { CableRoute } from "@/types/cable";
 import type { PlacedEquipment } from "@/types/equipment";
 import type { LngLat, LocalPoint, ProjectAnchor } from "@/types/geometry";
@@ -27,6 +28,8 @@ export type ConceptualPhysicalInfrastructure = {
     accessRoadCount: number;
     generatedMvYard: boolean;
     generatedPoiYard: boolean;
+    blockCount: number;
+    warnings?: string[];
   };
 };
 
@@ -96,7 +99,7 @@ function placedStations(
 function defaultServiceRoadFromBBox(points: LocalPoint[]): AccessRoad | null {
   if (points.length === 0) return null;
   const bbox = localBBox(points);
-  const marginM = 24;
+  const marginM = MARGIN_M;
   return {
     id: "road-service-spine-01",
     type: "internal",
@@ -107,6 +110,7 @@ function defaultServiceRoadFromBBox(points: LocalPoint[]): AccessRoad | null {
     width_m: 6,
     turningRadius_m: 10,
     surface: "gravel",
+    classification: "preliminary_assumption",
     evidence: [
       {
         documentId: "__none__",
@@ -117,12 +121,52 @@ function defaultServiceRoadFromBBox(points: LocalPoint[]): AccessRoad | null {
   };
 }
 
+function closestPointOnPath(point: LocalPoint, path: LocalPoint[]): LocalPoint {
+  if (path.length === 0) return point;
+  let minDistance = Infinity;
+  let closest = path[0];
+
+  for (let i = 0; i < path.length; i++) {
+    const p = path[i];
+    const dist = Math.hypot(point.x_m - p.x_m, point.y_m - p.y_m);
+    if (dist < minDistance) {
+      minDistance = dist;
+      closest = p;
+    }
+  }
+
+  for (let i = 1; i < path.length; i++) {
+    const a = path[i - 1];
+    const b = path[i];
+    const dx = b.x_m - a.x_m;
+    const dy = b.y_m - a.y_m;
+    const segmentLenSq = dx * dx + dy * dy;
+    if (segmentLenSq < 1e-9) continue;
+
+    let t = ((point.x_m - a.x_m) * dx + (point.y_m - a.y_m) * dy) / segmentLenSq;
+    t = Math.max(0, Math.min(1, t));
+
+    const proj = {
+      x_m: a.x_m + t * dx,
+      y_m: a.y_m + t * dy,
+    };
+    const dist = Math.hypot(point.x_m - proj.x_m, point.y_m - proj.y_m);
+    if (dist < minDistance) {
+      minDistance = dist;
+      closest = proj;
+    }
+  }
+
+  return closest;
+}
+
 export function generateConceptualPhysicalInfrastructure(args: {
   placed: PlacedEquipment[];
   anchor: ProjectAnchor | null;
   polygon: LngLat[];
   cableCorridorWidthM?: number;
   accessRoadWidthM?: number;
+  hasPoi?: boolean;
 }): ConceptualPhysicalInfrastructure {
   if (!args.anchor) {
     return {
@@ -135,6 +179,8 @@ export function generateConceptualPhysicalInfrastructure(args: {
         accessRoadCount: 0,
         generatedMvYard: false,
         generatedPoiYard: false,
+        blockCount: 0,
+        warnings: [],
       },
     };
   }
@@ -145,19 +191,112 @@ export function generateConceptualPhysicalInfrastructure(args: {
   const cableRoutes: CableRoute[] = [];
   const accessRoads: AccessRoad[] = [];
 
+  // Group placed equipment by blockId
+  const blockGroups = new Map<string, PlacedEquipment[]>();
+  for (const item of args.placed) {
+    if (item.blockId) {
+      const list = blockGroups.get(item.blockId) ?? [];
+      list.push(item);
+      blockGroups.set(item.blockId, list);
+    }
+  }
+
+  // Find loose stations (those without blockId or whose blockId is empty)
+  const looseStations = stations.filter((station) => {
+    const item = args.placed.find((p) => p.id === station.id);
+    return !item?.blockId;
+  });
+
+  const blockConnectionPoints: Array<{
+    id: string; // stationId if station exists, or blockId
+    blockId: string;
+    center: LocalPoint;
+    blockIndex?: number;
+    templateId?: string;
+    classification?: SourceReliability;
+  }> = [];
+
+  for (const [blockId, items] of blockGroups.entries()) {
+    // Look for a station in this block
+    const stationItem = items.find((item) => {
+      const spec = equipmentCatalog.find((e) => e.id === item.equipmentSpecId);
+      return spec?.type === "pcs_mv_station";
+    });
+
+    const firstItem = items[0];
+    const blockIndex = firstItem?.blockIndex;
+    const templateId = firstItem?.templateId;
+    const classification = firstItem?.classification ?? "preliminary_assumption";
+
+    if (stationItem) {
+      blockConnectionPoints.push({
+        id: stationItem.id,
+        blockId,
+        center: toLocal(stationItem.anchor, args.anchor),
+        blockIndex,
+        templateId,
+        classification,
+      });
+    } else {
+      // Centroid fallback
+      let sumX = 0;
+      let sumY = 0;
+      for (const item of items) {
+        const pt = toLocal(item.anchor, args.anchor);
+        sumX += pt.x_m;
+        sumY += pt.y_m;
+      }
+      blockConnectionPoints.push({
+        id: blockId,
+        blockId,
+        center: { x_m: sumX / items.length, y_m: sumY / items.length },
+        blockIndex,
+        templateId,
+        classification,
+      });
+    }
+  }
+
+  const connectionPoints: Array<{
+    id: string;
+    center: LocalPoint;
+    blockId?: string;
+    blockIndex?: number;
+    templateId?: string;
+    classification?: SourceReliability;
+  }> = [];
+
+  for (const cp of blockConnectionPoints) {
+    connectionPoints.push(cp);
+  }
+  for (const ls of looseStations) {
+    connectionPoints.push({
+      id: ls.id,
+      center: ls.center,
+      classification: "pending_validation",
+    });
+  }
+
+  // Generate main access roads
   const perimeterRoad = createPerimeterAccessRoad({
     polygon: args.polygon,
     anchor: args.anchor,
     widthM: args.accessRoadWidthM ?? 6,
   });
   if (perimeterRoad) {
+    perimeterRoad.classification = "preliminary_assumption";
     accessRoads.push(perimeterRoad);
   } else {
     const serviceRoad = defaultServiceRoadFromBBox(placedPoints);
-    if (serviceRoad) accessRoads.push(serviceRoad);
+    if (serviceRoad) {
+      serviceRoad.classification = "preliminary_assumption";
+      accessRoads.push(serviceRoad);
+    }
   }
 
-  if (stations.length > 0) {
+  const mainRoad = perimeterRoad || (accessRoads.length > 0 ? accessRoads[0] : null);
+
+  if (connectionPoints.length > 0) {
     const bbox = localBBox(placedPoints);
     const centerY = (bbox.minY + bbox.maxY) / 2;
     const mvYardCenter = { x_m: bbox.maxX + 70, y_m: centerY };
@@ -180,42 +319,58 @@ export function generateConceptualPhysicalInfrastructure(args: {
     });
     layoutZones.push(mvYard, poiYard);
 
-    for (const [index, station] of stations.entries()) {
+    for (const [index, cp] of connectionPoints.entries()) {
       const routePath = [
-        station.center,
-        { x_m: mvYard.center.x_m, y_m: station.center.y_m },
+        cp.center,
+        { x_m: mvYard.center.x_m, y_m: cp.center.y_m },
         mvYard.center,
       ];
+      let totalLength = 0;
+      for (let i = 1; i < routePath.length; i++) {
+        totalLength += Math.hypot(routePath[i].x_m - routePath[i - 1].x_m, routePath[i].y_m - routePath[i - 1].y_m);
+      }
+
       cableRoutes.push({
         id: `route-mt-${String(index + 1).padStart(2, "0")}`,
         voltageLevel: "MT",
         voltageKv: 33,
-        fromEntityId: station.id,
+        fromEntityId: cp.id,
         toEntityId: mvYard.id,
         path: routePath,
         corridorWidth_m: args.cableCorridorWidthM ?? 3,
         cableType: "Conceptual 18/33 kV MV collector corridor",
         installMethod: "buried",
+        estimatedLength_m: Math.round(totalLength * 10) / 10,
+        classification: cp.classification ?? "preliminary_assumption",
+        blockId: cp.blockId,
+        blockIndex: cp.blockIndex,
+        templateId: cp.templateId,
         evidence: [
           {
             documentId: "__none__",
-            confidence: "assumption",
-            note: "Conceptual MV route generated from station position to sectioning center",
+            confidence: cp.blockId ? "inferred" : "assumption",
+            note: cp.blockId
+              ? `Conceptual MV route from block ${cp.blockId} connection point to sectioning center`
+              : "Conceptual MV route generated from loose station position to sectioning center",
           },
         ],
       });
     }
 
+    const poiPath = [mvYard.center, poiYard.center];
+    const poiLength = Math.hypot(poiYard.center.x_m - mvYard.center.x_m, poiYard.center.y_m - mvYard.center.y_m);
     cableRoutes.push({
       id: "route-mt-poi-01",
       voltageLevel: "MT",
       voltageKv: 33,
       fromEntityId: mvYard.id,
       toEntityId: poiYard.id,
-      path: [mvYard.center, poiYard.center],
+      path: poiPath,
       corridorWidth_m: args.cableCorridorWidthM ?? 3,
       cableType: "Conceptual 33 kV POI tie corridor",
       installMethod: "buried",
+      estimatedLength_m: Math.round(poiLength * 10) / 10,
+      classification: "preliminary_assumption",
       evidence: [
         {
           documentId: "__none__",
@@ -224,6 +379,51 @@ export function generateConceptualPhysicalInfrastructure(args: {
         },
       ],
     });
+
+    // Generate access road branches connecting blocks/stations to the main road
+    if (mainRoad) {
+      for (const [index, cp] of connectionPoints.entries()) {
+        const proj = closestPointOnPath(cp.center, mainRoad.centerLine);
+        accessRoads.push({
+          id: `road-access-cp-${String(index + 1).padStart(2, "0")}`,
+          type: "access",
+          centerLine: [cp.center, proj],
+          width_m: args.accessRoadWidthM ?? 6,
+          turningRadius_m: 10,
+          surface: "gravel",
+          classification: cp.classification ?? "preliminary_assumption",
+          evidence: [
+            {
+              documentId: "__none__",
+              confidence: "assumption",
+              note: "Conceptual access road connecting block/station to main circulation",
+            },
+          ],
+        });
+      }
+    }
+  }
+
+  // Warnings generation
+  const warnings: string[] = [];
+  warnings.push(
+    "El trazado de caminos de acceso y corredores de cableado MT es conceptual y sirve únicamente para predimensionamiento preliminar. No reemplaza planos IFC, estudios de canalización ni proyectos definitivos."
+  );
+  warnings.push(
+    "Falta validación detallada de canalizaciones, cruzamientos, radios de curvatura de cables MT y gálibos de caminos."
+  );
+
+  const blockCount = blockGroups.size;
+  if (blockCount === 0) {
+    warnings.push(
+      "No se detectaron bloques de equipos agrupados en el layout. Se recomienda utilizar el generador automático en bloques para optimizar el trazado MT."
+    );
+  }
+
+  if (!args.hasPoi) {
+    warnings.push(
+      "Falta validación del punto de conexión (PCC/POI). El layout conecta hacia un POI/Yard conceptual de referencia."
+    );
   }
 
   return {
@@ -236,6 +436,8 @@ export function generateConceptualPhysicalInfrastructure(args: {
       accessRoadCount: accessRoads.length,
       generatedMvYard: layoutZones.some((zone) => zone.type === "mv_yard"),
       generatedPoiYard: layoutZones.some((zone) => zone.type === "poi_yard"),
+      blockCount,
+      warnings,
     },
   };
 }

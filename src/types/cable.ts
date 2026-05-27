@@ -10,6 +10,7 @@
 
 import type { LocalPoint } from "@/types/geometry";
 import type { EvidenceRef } from "@/types/evidence";
+import type { SourceReliability } from "@/data/equipmentCatalog";
 
 export type CableVoltageLevel = "DC" | "BT" | "MT" | "AT";
 
@@ -42,4 +43,8 @@ export type CableRoute = {
   estimatedLength_m?: number;
   installMethod?: CableInstallMethod;
   evidence?: EvidenceRef[];
+  classification?: SourceReliability;
+  blockId?: string;
+  blockIndex?: number;
+  templateId?: string;
 };

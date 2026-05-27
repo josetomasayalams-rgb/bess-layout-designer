@@ -3,7 +3,7 @@ import type {
   RegulatoryDesignContext,
   RegulatoryProfileId,
 } from "@/types/bessLayoutTypes";
-import { DEFAULT_REGULATORY_CONTEXT } from "@/rules/bessRegulatoryProfiles";
+import { DEFAULT_REGULATORY_CONTEXT } from "@/rules/regulatoryProfileMetadata";
 import type { RegulatoryRuleProfileId } from "@/rules/types";
 
 type RegulatoryState = {
@@ -31,7 +31,7 @@ export const useRegulatoryStore = create<RegulatoryState>((set) => ({
       context: {
         ...state.context,
         jurisdiction:
-          profileId === "chile-sec-rgr-06-2021"
+          profileId === "chile-sec-rgr-06-2024"
             ? "chile"
             : profileId === "custom"
               ? "custom"

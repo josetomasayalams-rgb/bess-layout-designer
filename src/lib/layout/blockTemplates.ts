@@ -1,3 +1,6 @@
+import type { SourceReliability } from "@/data/equipmentCatalog";
+import type { EvidenceRef } from "@/types/evidence";
+
 export type BlockTemplateOrientation = "horizontal" | "vertical";
 export type BlockTemplateItemRole = "battery_container" | "conversion_station";
 
@@ -171,3 +174,67 @@ export function createBessBlockTemplate(
     items,
   };
 }
+
+export type BlockEquipmentRatio = {
+  containers: number;
+  pcs: number;
+  classification: SourceReliability;
+};
+
+export type BlockSpacing = {
+  bessSpacingM: number;
+  stationGapM: number;
+  blockGapXM: number;
+  blockGapYM: number;
+};
+
+export type BlockTemplateEvidence = {
+  templateId: string;
+  evidence: EvidenceRef[];
+};
+
+export type ExtendedBlockTemplate = BlockTemplate & {
+  id: string;
+  name: string;
+  ratio: BlockEquipmentRatio;
+  spacing: BlockSpacing;
+  evidence: EvidenceRef[];
+  warnings?: string[];
+};
+
+export const BESS_BLOCK_TEMPLATES: Record<string, ExtendedBlockTemplate> = {
+  "bess-del-desierto-reference-8x1": {
+    id: "bess-del-desierto-reference-8x1",
+    name: "BESS del Desierto Reference 8:1 Block Template",
+    ratio: {
+      containers: 8,
+      pcs: 1,
+      classification: "reference_only",
+    },
+    spacing: {
+      bessSpacingM: 3.0,
+      stationGapM: 6.0,
+      blockGapXM: 8.0,
+      blockGapYM: 8.0,
+    },
+    evidence: [
+      {
+        documentId: "PROJ-BESS-DESIERTO-1129",
+        confidence: "inferred",
+        note: "Configuración física de 8 contenedores por inversor basada en el informe de Mínimo Técnico de BESS del Desierto.",
+      },
+    ],
+    warnings: [
+      "La proporción 8:1 proviene del caso BESS del Desierto y sirve únicamente como referencia conceptual. Requiere validación del fabricante/EPC.",
+    ],
+    ...createBessBlockTemplate({
+      bessFootprint: { length_m: 9.34, width_m: 1.73 },
+      stationFootprint: { length_m: 6.058, width_m: 2.438 },
+      containersPerBlock: 8,
+      bessSpacingM: 3.0,
+      stationGapM: 6.0,
+      orientation: "horizontal",
+    }),
+  },
+};
+

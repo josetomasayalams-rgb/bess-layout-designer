@@ -7,7 +7,7 @@ import {
   bessDelDesiertoPendingDataV12,
   getProjectCaseStudy,
 } from "@/data/projectCaseStudies";
-import { getRegulatoryProfile } from "@/rules/bessRegulatoryProfiles";
+import { getRegulatoryProfile } from "@/rules/regulatoryProfileMetadata";
 import { validateBessLayout } from "@/rules/bessValidationEngine";
 import { runRegulatoryEvaluation } from "@/rules/regulatoryProfileEvaluator";
 import { validateElectricalTopology } from "@/lib/electrical/topologyValidation";

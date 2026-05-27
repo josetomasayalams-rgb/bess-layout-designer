@@ -45,6 +45,7 @@ import type {
 import type { DocumentInconsistency } from "@/types/project";
 import type { ElectricalCompatibilityIssue } from "@/types/technical";
 import type { EvidenceRef } from "@/types/evidence";
+import { effectiveSeverity } from "@/rules/severityCeiling";
 
 // ──────────────────────────────────────────────────────────────────
 // Tipos del resultado
@@ -61,7 +62,23 @@ export type RuleOutcome =
 export type EvaluatedRuleEntry = {
   ruleId: string;
   category: RuleCategory;
+  /**
+   * Effective severity after applying the evidence-level / confidence ceiling
+   * defined in `severityCeiling.ts`. Use `declaredSeverity` for the
+   * catalog-declared value.
+   */
   severity: RuleSeverity;
+  /** Severity as declared in the rule catalog, before the ceiling is applied. */
+  declaredSeverity: RuleSeverity;
+  /**
+   * When the declared severity was lowered by the matrix ceiling, this
+   * carries the reason; otherwise `null`.
+   */
+  severityCappedBy: null | {
+    from: RuleSeverity;
+    by: "document_level" | "confidence";
+    detail: string;
+  };
   title: string;
   description: string;
   appParameter?: string;
@@ -148,6 +165,16 @@ const ELEC_RULE_PREFIX: Record<string, string> = {
   "mvFeeders.uniformVoltage": "rule-elec-005-",
   // RULE-ELEC-006: Feeder preliminary rating not exceeded
   "mvFeeders.ratingCheck": "rule-elec-006-feeder-power-overload-",
+  // Fase 8 — preliminary electrical checks
+  // (see docs/phase8-electrical-scope.md §3)
+  "mvBuses.capacityCheck": "rule-elec-007-",
+  "cableRoutes.ampacityEstimate": "rule-elec-008-",
+  "losses.budget": "rule-elec-009-",
+  "poi.capacityFit": "rule-elec-013-",
+  "ssaa.budget": "rule-elec-014-",
+  "ppc.rampRate": "rule-elec-015-",
+  "ppc.controlCoverage": "rule-elec-016-",
+  "transformer.noLoadAnnual": "rule-elec-017-",
 };
 
 // ──────────────────────────────────────────────────────────────────
@@ -223,10 +250,13 @@ function evaluateRule(
   rule: RegulatoryRuleDefinition,
   input: RegulatoryEvaluationInput
 ): EvaluatedRuleEntry {
+  const { severity: effSeverity, cappedBy } = effectiveSeverity(rule);
   const base: EvaluatedRuleEntry = {
     ruleId: rule.id,
     category: rule.category,
-    severity: rule.severity,
+    severity: effSeverity,
+    declaredSeverity: rule.severity,
+    severityCappedBy: cappedBy,
     title: rule.title,
     description: rule.description,
     appParameter: rule.appParameter,

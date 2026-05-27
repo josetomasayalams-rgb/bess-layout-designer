@@ -92,6 +92,58 @@ describe("generatePreliminaryLayout", () => {
     const area = result.diagnostics.layoutAreaM2 ?? 0;
     expect(area).toBeGreaterThan(0);
   });
+
+  it("generates template-based layout and tags metadata", () => {
+    const result = generatePreliminaryLayout({
+      batteryContainerSpecId: "sungrow-st2752ux-us",
+      pcsSpecId: "sungrow-sc5000ud-mv-us-p3",
+      batteryContainerCount: 16,
+      pcsCount: 2,
+      containersPerPcs: 8,
+      anchor: { lng0: -70, lat0: -23 },
+      startPoint: { lng: -70, lat: -23 },
+      rules,
+      fitInsidePolygon: false,
+      templateId: "bess-del-desierto-reference-8x1",
+    });
+
+    expect(result.status).toBe("success");
+    expect(result.placed).toHaveLength(18);
+    expect(result.diagnostics.blockCount).toBe(2);
+    expect(result.diagnostics.templateId).toBe("bess-del-desierto-reference-8x1");
+    expect(result.diagnostics.classification).toBe("reference_only");
+    expect(result.diagnostics.warnings).toBeDefined();
+    expect(result.diagnostics.warnings?.[0]).toContain("referencia conceptual");
+
+    for (const item of result.placed) {
+      expect(item.templateId).toBe("bess-del-desierto-reference-8x1");
+      expect(item.classification).toBe("reference_only");
+      expect(item.blockId).toBeDefined();
+      expect(item.blockIndex).toBeDefined();
+      expect(item.blockIndex).toBeLessThan(2);
+    }
+  });
+
+  it("generates warnings for ratio mismatch and insufficient PCS", () => {
+    const result = generatePreliminaryLayout({
+      batteryContainerSpecId: "sungrow-st2752ux-us",
+      pcsSpecId: "sungrow-sc5000ud-mv-us-p3",
+      batteryContainerCount: 10,
+      pcsCount: 1,
+      containersPerPcs: 8,
+      anchor: { lng0: -70, lat0: -23 },
+      startPoint: { lng: -70, lat: -23 },
+      rules,
+      fitInsidePolygon: false,
+      templateId: "bess-del-desierto-reference-8x1",
+    });
+
+    expect(result.status).toBe("success");
+    expect(result.diagnostics.blockCount).toBe(2);
+    expect(result.diagnostics.warnings).toBeDefined();
+    expect(result.diagnostics.warnings?.some(w => w.includes("múltiplo"))).toBe(true);
+    expect(result.diagnostics.warnings?.some(w => w.includes("PCS solicitada"))).toBe(true);
+  });
 });
 
 describe("gridShapeOptions", () => {

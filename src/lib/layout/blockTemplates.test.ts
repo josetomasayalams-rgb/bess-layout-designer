@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createBessBlockTemplate } from "@/lib/layout/blockTemplates";
+import { createBessBlockTemplate, BESS_BLOCK_TEMPLATES } from "@/lib/layout/blockTemplates";
 
 const bessFootprint = { length_m: 9.34, width_m: 1.73 };
 const stationFootprint = { length_m: 6.058, width_m: 2.438 };
@@ -76,5 +76,18 @@ describe("createBessBlockTemplate", () => {
         stationGapM: 6,
       })
     ).toThrow("bessFootprint.length_m");
+  });
+});
+
+describe("BESS_BLOCK_TEMPLATES", () => {
+  it("defines the desierto 8x1 template with correct values and classification", () => {
+    const template = BESS_BLOCK_TEMPLATES["bess-del-desierto-reference-8x1"];
+    expect(template).toBeDefined();
+    expect(template.ratio.containers).toBe(8);
+    expect(template.ratio.pcs).toBe(1);
+    expect(template.ratio.classification).toBe("reference_only");
+    expect(template.spacing.bessSpacingM).toBe(3.0);
+    expect(template.spacing.stationGapM).toBe(6.0);
+    expect(template.evidence[0].documentId).toBe("PROJ-BESS-DESIERTO-1129");
   });
 });

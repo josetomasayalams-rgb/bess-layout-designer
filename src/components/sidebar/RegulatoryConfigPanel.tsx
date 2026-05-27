@@ -2,7 +2,7 @@
 
 import { ClipboardCheck } from "lucide-react";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
-import { REGULATORY_PROFILES } from "@/rules/bessRegulatoryProfiles";
+import { REGULATORY_PROFILES } from "@/rules/regulatoryProfileMetadata";
 import { useRegulatoryStore } from "@/store/regulatoryStore";
 import { useUiStore } from "@/store/uiStore";
 import type {

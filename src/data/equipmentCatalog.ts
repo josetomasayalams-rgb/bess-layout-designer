@@ -204,28 +204,30 @@ const baseEquipmentCatalog: EquipmentSpec[] = [
       interfaces: ["RS485", "Ethernet"],
       protocols: ["Modbus RTU", "Modbus TCP"],
     },
-    // Fase 2: clearances pendientes hasta manual de instalación oficial.
+    // Clearances per Sungrow ST2752UX System Manual Ver12 (figs 4-1, 4-2).
+    // Service/ventilation side (maintenance_m) and adjacent-unit side (sameType_m)
+    // are documented; fire separation still requires UL 9540A test report.
     clearances: {
       sameType_m: {
-        value: 0,
+        value: 0.15,
         unit: "m",
         evidence: [
           {
-            documentId: "__none__",
-            confidence: "missing",
-            note: "Pendiente de manual de instalación Sungrow ST2752UX",
+            documentId: "SUNGROW-ST2752UX-MANUAL-V12",
+            confidence: "documented",
+            note: "System Manual Ver12 figs 4-1/4-2: 150 mm between facing adjacent ST2752UX units. Manufacturer rule for ST2752UX-US, not a code-level requirement.",
           },
         ],
         mustVerifyBeforeIFC: true,
       },
       maintenance_m: {
-        value: 0,
+        value: 2.5,
         unit: "m",
         evidence: [
           {
-            documentId: "__none__",
-            confidence: "missing",
-            note: "Pendiente de layout guide Sungrow",
+            documentId: "SUNGROW-ST2752UX-MANUAL-V12",
+            confidence: "documented",
+            note: "System Manual Ver12 figs 4-1/4-2: 2500 mm on the service/ventilation side, required for maintenance access and air intake/outlet. Project layout guide still pending.",
           },
         ],
         mustVerifyBeforeIFC: true,
@@ -237,7 +239,7 @@ const baseEquipmentCatalog: EquipmentSpec[] = [
           {
             documentId: "__none__",
             confidence: "missing",
-            note: "Sungrow PT2 whitepaper declara extinción interna; separación externa requiere NFPA 855 + autoridad local",
+            note: "Sungrow PT2 whitepaper declara extinción interna; separación externa requiere NFPA 855 + autoridad local + reporte UL 9540A.",
           },
         ],
         mustVerifyBeforeIFC: true,

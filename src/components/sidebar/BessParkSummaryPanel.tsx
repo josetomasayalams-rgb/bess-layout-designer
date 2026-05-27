@@ -4,7 +4,7 @@ import { equipmentCatalog } from "@/data/equipmentCatalog";
 import { useProjectStore } from "@/store/projectStore";
 import { useRegulatoryStore } from "@/store/regulatoryStore";
 import { useUiStore } from "@/store/uiStore";
-import { getRegulatoryProfile } from "@/rules/bessRegulatoryProfiles";
+import { getRegulatoryProfile } from "@/rules/regulatoryProfileMetadata";
 import { computeBessParkSummary } from "@/lib/bessCalculations";
 import { formatNumber, getProjectMetrics } from "@/lib/layout/projectMetrics";
 import { copyFor, scenarioStatusLabel } from "@/lib/i18n";

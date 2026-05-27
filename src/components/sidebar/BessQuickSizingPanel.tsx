@@ -6,7 +6,7 @@ import { bessModels } from "@/data/bessModels";
 import { useProjectStore } from "@/store/projectStore";
 import { useRegulatoryStore } from "@/store/regulatoryStore";
 import { useUiStore } from "@/store/uiStore";
-import { getRegulatoryProfile } from "@/rules/bessRegulatoryProfiles";
+import { getRegulatoryProfile } from "@/rules/regulatoryProfileMetadata";
 import { calculateQuickSizing } from "@/lib/bessCalculations";
 import { computeArchitectureSizing } from "@/lib/sizing/architectureSizing";
 import {

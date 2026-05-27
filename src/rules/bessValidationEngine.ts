@@ -5,6 +5,10 @@ import {
   distanceBetweenRectangles,
   distanceRectToPolygonBoundary,
 } from "@/lib/geometry/distance";
+import {
+  rectanglesIntersect,
+  allCornersInsidePolygon,
+} from "@/lib/geometry/collision";
 import { generateConceptualPhysicalInfrastructure } from "@/lib/layout/physicalInfrastructure";
 import type { CableRoute } from "@/types/cable";
 import type { AccessRoad } from "@/types/road";
@@ -19,6 +23,10 @@ import type {
   ValidationResult,
   ValidationSeverity,
 } from "@/types/bessLayoutTypes";
+import {
+  VEHICLE_ACCESS_MAX_DISTANCE_M,
+  CABLE_TO_EQUIPMENT_CLEARANCE_M,
+} from "@/data/defaultConstraints";
 
 function technicalTypeFor(specId: string): TechnicalObjectType {
   const spec = equipmentCatalog.find((item) => item.id === specId);
@@ -86,8 +94,7 @@ function issue(args: {
   };
 }
 
-const VEHICLE_ACCESS_MAX_DISTANCE_M = 30;
-const CABLE_TO_EQUIPMENT_CLEARANCE_M = 1;
+// Constants imported from defaultConstraints
 
 function distancePointToSegment(
   point: LocalPoint,
@@ -183,6 +190,82 @@ export function validateBessLayout(args: {
     anchor,
     polygon,
   });
+
+  // Geometric containment check (RULE-PHYS-001)
+  if (localPolygon.length >= 3) {
+    for (const object of objects) {
+      checkedRules += 1;
+      if (!allCornersInsidePolygon(object.rect, localPolygon)) {
+        issues.push(
+          issue({
+            id: `phys-containment-${object.id}`,
+            severity: "critical",
+            ruleId: "equipment_inside_polygon",
+            ruleLabel: "Equipment inside site polygon",
+            objectAId: object.id,
+            source: "Geometric layout check",
+            basis: "user_defined",
+            message: `Equipment ${object.id.slice(0, 6)} extends outside the site polygon.`,
+            recommendation: "Reposition the equipment to keep it entirely within the property boundaries.",
+          })
+        );
+      } else {
+        compliantItems.push(
+          issue({
+            id: `ok-containment-${object.id}`,
+            severity: "compliant",
+            ruleId: "equipment_inside_polygon",
+            ruleLabel: "Equipment inside site polygon",
+            objectAId: object.id,
+            source: "Geometric layout check",
+            basis: "user_defined",
+            message: "Equipment is entirely within the site boundary.",
+            recommendation: "Keep the unit inside the polygon in final layouts.",
+          })
+        );
+      }
+    }
+  }
+
+  // Geometric footprint collision check (RULE-PHYS-002)
+  for (let i = 0; i < objects.length; i++) {
+    for (let j = i + 1; j < objects.length; j++) {
+      checkedRules += 1;
+      const a = objects[i];
+      const b = objects[j];
+      if (rectanglesIntersect(a.rect, b.rect)) {
+        issues.push(
+          issue({
+            id: `phys-collision-${a.id}-${b.id}`,
+            severity: "critical",
+            ruleId: "equipment_collision",
+            ruleLabel: "No equipment footprint collisions",
+            objectAId: a.id,
+            objectBId: b.id,
+            source: "Geometric layout check",
+            basis: "user_defined",
+            message: `Footprint collision detected between ${a.id.slice(0, 6)} and ${b.id.slice(0, 6)}.`,
+            recommendation: "Adjust the placement or rotation of units to avoid physical overlap.",
+          })
+        );
+      } else {
+        compliantItems.push(
+          issue({
+            id: `ok-collision-${a.id}-${b.id}`,
+            severity: "compliant",
+            ruleId: "equipment_collision",
+            ruleLabel: "No equipment footprint collisions",
+            objectAId: a.id,
+            objectBId: b.id,
+            source: "Geometric layout check",
+            basis: "user_defined",
+            message: "Footprints do not overlap.",
+            recommendation: "Maintain zero overlap in detail layouts.",
+          })
+        );
+      }
+    }
+  }
 
   for (let i = 0; i < bessObjects.length; i++) {
     for (let j = i + 1; j < bessObjects.length; j++) {

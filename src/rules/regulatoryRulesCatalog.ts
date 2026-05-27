@@ -74,12 +74,19 @@ export const regulatoryRulesCatalog = [
     category: "physical_layout",
     severity: "warning",
     title: "Container-to-container clearance from manufacturer source",
-    description: "Container spacing should use manufacturer installation or system manual data when available.",
+    description:
+      "Container spacing should use the manufacturer installation/system manual values. For ST2752UX-US the manual gives 150 mm between facing adjacent units and 2500 mm on the service/ventilation side; fire separation remains pending UL 9540A.",
     appParameter: "EquipmentSpec.clearances.sameType_m",
     priority: "P1",
     status: "implemented",
     evidence: [
-      ev("SUNGROW-ST2752UX-MANUAL-V12", "documented", "System Manual Ver 1.2 requires 3m spacing when placed face-to-face.", 28, "clearance"),
+      ev(
+        "SUNGROW-ST2752UX-MANUAL-V12",
+        "documented",
+        "System Manual Ver12 figs 4-1/4-2: 150 mm between facing adjacent ST2752UX units and 2500 mm on the service/ventilation side. Manufacturer rule for ST2752UX-US, not a code-level requirement.",
+        undefined,
+        "Section 4 — Installation"
+      ),
     ],
   }),
   rule({
@@ -87,12 +94,17 @@ export const regulatoryRulesCatalog = [
     category: "physical_layout",
     severity: "warning",
     title: "Container-to-PCS station clearance from manufacturer source",
-    description: "Spacing between BESS containers and PCS/MV stations should remain a preliminary assumption until sourced.",
+    description:
+      "Spacing between BESS containers and PCS/MV stations is evaluated geometrically, but the underlying clearance value remains a preliminary assumption: the SC5000UD-MV installation manual is pending (PEND-SC5000-MANUAL). The 0.9 m front working space applied by the validator is a conservative electrical working clearance, not a vendor-cited value.",
     appParameter: "EquipmentSpec.clearances.otherType_m",
     priority: "P1",
     status: "implemented",
     evidence: [
-      ev("SUNGROW-SC5000UD-MV-US", "documented", "PCS station installation clearance requires 0.9m front working space.", 14),
+      ev(
+        "SUNGROW-SC5000UD-MV-US",
+        "inferred",
+        "PCS datasheet does not document a project-specific clearance. 0.9 m working space is a conservative electrical screening criterion until the official SC5000UD-MV installation manual is obtained."
+      ),
     ],
   }),
   rule({
@@ -195,7 +207,7 @@ export const regulatoryRulesCatalog = [
     status: "implemented",
     priority: "P2",
     evidence: [ev("PROJ-BESS-DESIERTO-1129", "documented", "Case-study architecture basis.", 6)],
-    appliesToProfiles: ["bess-del-desierto-reference", "chile-utility-predesign"],
+    appliesToProfiles: ["bess-del-desierto-reference"],
   }),
   rule({
     id: "RULE-ELEC-002",
@@ -208,7 +220,7 @@ export const regulatoryRulesCatalog = [
     status: "implemented",
     priority: "P2",
     evidence: [ev("PROJ-BESS-DESIERTO-1129", "inferred", "Pattern inferred from single-line diagram.", 13)],
-    appliesToProfiles: ["bess-del-desierto-reference", "chile-utility-predesign"],
+    appliesToProfiles: ["bess-del-desierto-reference"],
   }),
   rule({
     id: "RULE-ELEC-003",
@@ -266,30 +278,182 @@ export const regulatoryRulesCatalog = [
     category: "electrical",
     severity: "warning",
     title: "MV bus capacity screening",
-    description: "Aggregated feeder loading should be checked against the preliminary MV bus capacity when known.",
+    description:
+      "Aggregated feeder loading should not exceed the preliminary MV bus rating. Final rating depends on the actual switchgear datasheet.",
     appParameter: "mvBuses.capacityCheck",
-    priority: "P3",
-    evidence: [derived("Calculated preliminary MVA aggregation; bus rating data may be missing.")],
+    automation: "yes",
+    status: "implemented",
+    priority: "P2",
+    evidence: [
+      ev(
+        "SIEMENS-8DA-8DB-40p5",
+        "inferred",
+        "Referential switchgear family (Siemens 8DA/8DB 40.5 kV). Project-specific busbar rating must be confirmed."
+      ),
+    ],
+    appliesToProfiles: [
+      "chile-utility-predesign",
+      "chile-pmgd-predesign",
+      "bess-del-desierto-reference",
+    ],
   }),
   rule({
     id: "RULE-ELEC-008",
     category: "electrical",
     severity: "info",
-    title: "Cable ampacity estimate",
-    description: "Cable section can be screened against conceptual current, but final ampacity requires installation conditions.",
+    title: "Cable ampacity screening",
+    description:
+      "Conceptual feeder current is screened against a reference cable ampacity. Final ampacity depends on installation conditions, grouping factor, soil thermal resistivity and ambient temperature.",
     appParameter: "cableRoutes.ampacityEstimate",
-    automation: "partial",
-    evidence: [ev("NEXANS-NA2XS2Y-19-33", "inferred", "Reference cable datasheet, not a project-specific design basis.")],
+    automation: "yes",
+    status: "implemented",
+    priority: "P3",
+    evidence: [
+      ev(
+        "NEXANS-NA2XS2Y-19-33",
+        "inferred",
+        "Reference cable datasheet (Nexans 33 kV Al XLPE), not project-specific design basis."
+      ),
+    ],
+    appliesToProfiles: [
+      "chile-utility-predesign",
+      "chile-pmgd-predesign",
+      "bess-del-desierto-reference",
+    ],
   }),
   rule({
     id: "RULE-ELEC-009",
     category: "electrical",
     severity: "warning",
     title: "Conceptual loss budget",
-    description: "MV and equipment losses should remain within an editable conceptual budget.",
+    description:
+      "MV, transformer and PCS losses are summed for a discharge-nominal scenario and compared against an editable conceptual budget. Not a substitute for a detailed loss study.",
     appParameter: "losses.budget",
+    automation: "yes",
+    status: "implemented",
+    priority: "P2",
+    evidence: [
+      ev(
+        "SUNGROW-SC5000UD-MV-US",
+        "documented",
+        "PCS converter efficiency from datasheet."
+      ),
+      derived("MV losses aggregated from feeder ratings."),
+    ],
+    appliesToProfiles: [
+      "chile-utility-predesign",
+      "chile-pmgd-predesign",
+      "bess-del-desierto-reference",
+    ],
+  }),
+  // Fase 8 — nuevas reglas eléctricas preliminares (docs/phase8-electrical-scope.md §1)
+  rule({
+    id: "RULE-ELEC-013",
+    category: "electrical",
+    severity: "warning",
+    title: "Plant MVA fits POI declared capacity",
+    description:
+      "Aggregated plant power should not exceed the POI declared capacity. When the POI capacity is missing, the rule is downgraded to checklist by the severity ceiling.",
+    appParameter: "poi.capacityFit",
+    automation: "yes",
+    status: "implemented",
+    priority: "P1",
+    evidence: [
+      ev(
+        EVIDENCE_NONE,
+        "missing",
+        "Project-specific POI capacity comes from the CEN/CNE interconnection study."
+      ),
+    ],
+    appliesToProfiles: ["chile-utility-predesign", "chile-pmgd-predesign"],
+  }),
+  rule({
+    id: "RULE-ELEC-014",
+    category: "electrical",
+    severity: "info",
+    title: "Auxiliary services budget",
+    description:
+      "Aggregated auxiliary services (fixed + per-station + per-container) should remain within an editable budget as a percentage of POI power.",
+    appParameter: "ssaa.budget",
+    automation: "yes",
+    status: "implemented",
     priority: "P3",
-    evidence: [inferred("Screening criterion; not a detailed load-flow result.")],
+    evidence: [
+      ev(
+        "SUNGROW-ST2752UX-V15",
+        "inferred",
+        "Per-container auxiliary draw inferred from container datasheet HVAC and pumping data."
+      ),
+    ],
+    appliesToProfiles: [
+      "chile-utility-predesign",
+      "chile-pmgd-predesign",
+      "bess-del-desierto-reference",
+    ],
+  }),
+  rule({
+    id: "RULE-ELEC-015",
+    category: "electrical",
+    severity: "warning",
+    title: "Plant ramp rate declared for NTSyCS",
+    description:
+      "The plant must declare a preliminary ramp rate so NTSyCS compliance can be verified later by dynamic study.",
+    appParameter: "ppc.rampRate",
+    automation: "yes",
+    status: "implemented",
+    priority: "P2",
+    evidence: [
+      ev(
+        "CNE-NTSyCS-RES45-2026",
+        "documented",
+        "Norma Técnica de Seguridad y Calidad de Servicio (NTSyCS) RES 45/2026."
+      ),
+    ],
+    appliesToProfiles: ["chile-utility-predesign"],
+  }),
+  rule({
+    id: "RULE-ELEC-016",
+    category: "electrical",
+    severity: "checklist",
+    title: "Declared PPC control modes coverage",
+    description:
+      "PPC must declare at minimum active power, reactive power, voltage and frequency control modes per NTSyCS. The app does not execute the controls; it only inspects the declared coverage.",
+    appParameter: "ppc.controlCoverage",
+    automation: "yes",
+    status: "implemented",
+    priority: "P2",
+    evidence: [
+      ev(
+        "CNE-NTSyCS-RES45-2026",
+        "documented",
+        "NTSyCS requires at least P/Q/V/f control at the POI."
+      ),
+    ],
+    appliesToProfiles: ["chile-utility-predesign", "chile-pmgd-predesign"],
+  }),
+  rule({
+    id: "RULE-ELEC-017",
+    category: "electrical",
+    severity: "info",
+    title: "Transformer no-load losses 24x7 estimate",
+    description:
+      "Annual no-load losses of the block transformer bank are estimated as a planning input for SSAA and availability. Refines with the final datasheet and operational mode.",
+    appParameter: "transformer.noLoadAnnual",
+    automation: "yes",
+    status: "implemented",
+    priority: "P3",
+    evidence: [
+      ev(
+        EVIDENCE_NONE,
+        "derived",
+        "Calculated from noLoadLossKw × 8760 h × number of stations."
+      ),
+    ],
+    appliesToProfiles: [
+      "chile-utility-predesign",
+      "chile-pmgd-predesign",
+      "bess-del-desierto-reference",
+    ],
   }),
   ...[
     ["RULE-ELEC-010", "Protection coordination study"],
@@ -634,7 +798,11 @@ export const regulatoryRulesCatalog = [
     automation: "no",
     status: "manual_check",
     evidence: [
-      ev("SUNGROW-PT2-WP-2024", "documented", "Manufacturer whitepaper references thermal propagation testing context."),
+      ev(
+        "SUNGROW-PT2-WP-2024",
+        "inferred",
+        "Manufacturer whitepaper references thermal propagation testing context. Whitepapers are level-5 commercial references in the matrix; the UL 9540A test report by equipment is still pending (PEND-ST2752-UL9540A-REPORT)."
+      ),
     ],
   }),
   rule({
@@ -678,6 +846,31 @@ export const regulatoryRulesCatalog = [
     ],
   }),
 ] satisfies readonly RegulatoryRuleDefinition[];
+
+/**
+ * Phase 8 preliminary electrical rule ids — the 8 checks added in
+ * `docs/phase8-electrical-scope.md`. Exported so UI and the report can render
+ * them as a single "preliminary electrical" group without re-listing IDs in
+ * multiple call sites. This is an identifier list, not an engineering
+ * constant, so it stays here next to the catalog rather than in
+ * `defaultConstraints.ts`.
+ */
+export const PHASE_8_ELECTRICAL_RULE_IDS = [
+  "RULE-ELEC-007",
+  "RULE-ELEC-008",
+  "RULE-ELEC-009",
+  "RULE-ELEC-013",
+  "RULE-ELEC-014",
+  "RULE-ELEC-015",
+  "RULE-ELEC-016",
+  "RULE-ELEC-017",
+] as const;
+
+export type Phase8ElectricalRuleId = (typeof PHASE_8_ELECTRICAL_RULE_IDS)[number];
+
+export function isPhase8ElectricalRuleId(id: string): id is Phase8ElectricalRuleId {
+  return (PHASE_8_ELECTRICAL_RULE_IDS as readonly string[]).includes(id);
+}
 
 export function getRegulatoryRule(id: string): RegulatoryRuleDefinition | undefined {
   return regulatoryRulesCatalog.find((ruleItem) => ruleItem.id === id);

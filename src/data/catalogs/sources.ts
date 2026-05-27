@@ -11,6 +11,16 @@ export const sungrowSt2752DatasheetSource: TechnicalSource = {
   extractedAt: EXTRACTION_DATE,
 };
 
+export const sungrowSt2752SystemManualSource: TechnicalSource = {
+  classification: "certified_data",
+  title: "Sungrow ST2752UX System Manual Ver12 (2022-04)",
+  document:
+    "DIRECTRICES_APP_BESS/05_DATASHEETS_EQUIPOS_BESS/11_DOCUMENTOS_FABRICANTE_MANUALES/SUNGROW_ST2752UX_System_Manual_Ver12_202204_OFICIAL.pdf",
+  notes:
+    "Manufacturer system manual. Installation clearances from figures 4-1 (single unit) and 4-2 (multiple units). Manufacturer rule for ST2752UX-US, not a universal code.",
+  extractedAt: EXTRACTION_DATE,
+};
+
 export const sungrowSc5000DatasheetSource: TechnicalSource = {
   classification: "certified_data",
   title: "Sungrow SC5000UD-MV-US-P3 Datasheet",
@@ -34,7 +44,7 @@ export const bessDelDesiertoMtSource: TechnicalSource = {
   title: "EE-EN-2025-1129-RB Informe Final MT BESS del Desierto",
   document: "INFO BESS DEL DESIERTO/EE-EN-2025-1129-RB_Informe_Final_MT_BESS_del_Desierto.pdf",
   notes:
-    "Project technical report with minimum technical data and block transformer values.",
+    "Project technical report (Level 4 in the source-hierarchy matrix). Values extracted here — block-transformer reactance, losses, winding configuration, collector voltage — apply to the BESS del Desierto case study only. Do not reuse them as a hard rule for other projects without obtaining the equipment-specific nameplate/FAT (see PEND-SC5000-TRAFO-DATA).",
   extractedAt: EXTRACTION_DATE,
 };
 
