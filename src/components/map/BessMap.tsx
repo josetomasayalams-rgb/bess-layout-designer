@@ -73,35 +73,8 @@ import {
   regulatoryBufferFeatures,
   warningMarkerFeatures,
 } from "@/lib/layout/mapFeatures";
-
-const INITIAL_VIEW = {
-  longitude: -70.6483,
-  latitude: -33.4569,
-  zoom: 4.5,
-};
-
-const BLANK_BASE_MAP_STYLE: StyleSpecification = {
-  version: 8,
-  sources: {},
-  layers: [
-    {
-      id: "blank-background",
-      type: "background",
-      paint: { "background-color": "#020617" },
-    },
-  ],
-};
-
-/** Distance (metres) the layout-edit nudge buttons move the selection. */
-const LAYOUT_MOVE_STEP_M = 1;
-
-function normalizeRotation(deg: number): number {
-  return ((deg % 360) + 360) % 360;
-}
-
-function shortestDeltaDeg(fromDeg: number, toDeg: number): number {
-  return ((toDeg - fromDeg + 540) % 360) - 180;
-}
+import { INITIAL_VIEW, BLANK_BASE_MAP_STYLE, LAYOUT_MOVE_STEP_M } from "./BessMap.constants";
+import { normalizeRotation, shortestDeltaDeg } from "./BessMap.geometry";
 
 export function BessMap() {
   const mapRef = useRef<MapRef | null>(null);
