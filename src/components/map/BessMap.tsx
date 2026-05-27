@@ -31,6 +31,8 @@ import { useRepairZoneFeatures } from "./hooks/useRepairZoneFeatures";
 import { usePreviewTerrainFeatures } from "./hooks/usePreviewTerrainFeatures";
 import { useEquipmentFeatures } from "./hooks/useEquipmentFeatures";
 import { useSelectionFeatures } from "./hooks/useSelectionFeatures";
+import { useLayoutInfrastructureFeatures } from "./hooks/useLayoutInfrastructureFeatures";
+import { useOverlayFeatures } from "./hooks/useOverlayFeatures";
 import { getProjectMetrics } from "@/lib/layout/projectMetrics";
 import { copyFor } from "@/lib/i18n";
 import {
@@ -41,30 +43,13 @@ import {
 } from "@/lib/units/formatUnits";
 import { getRegulatoryProfile } from "@/rules/regulatoryProfileMetadata";
 import { toLocal } from "@/lib/geometry/projection";
-import {
-  accessRoadCorridorFeatures,
-  accessRoadLineFeatures,
-} from "@/lib/layout/accessRoads";
-import {
-  cableRouteCorridorFeatures,
-  cableRouteLineFeatures,
-} from "@/lib/layout/cableRoutes";
-import {
-  generateConceptualPhysicalInfrastructure,
-  layoutZoneFeatures,
-  layoutZoneLabelFeatures,
-} from "@/lib/layout/physicalInfrastructure";
 import { CoordinateSearch } from "@/components/map/CoordinateSearch";
 import { BaseMapSelector } from "@/components/map/BaseMapSelector";
 import { LayerManagerPanel } from "@/components/map/LayerManagerPanel";
 import { LayoutEditToolbar } from "@/components/map/LayoutEditToolbar";
 import { OrientationCube } from "@/components/map/OrientationCube";
 import { selectEquipmentWithinPolygon } from "@/lib/layout/layoutEditing";
-import {
-  gridLineFeatures,
-  regulatoryBufferFeatures,
-  warningMarkerFeatures,
-} from "@/lib/layout/mapFeatures";
+
 import { INITIAL_VIEW, BLANK_BASE_MAP_STYLE, LAYOUT_MOVE_STEP_M } from "./BessMap.constants";
 import { normalizeRotation, shortestDeltaDeg } from "./BessMap.geometry";
 
@@ -124,6 +109,8 @@ export function BessMap() {
   const hasLayoutDraft = layoutEdit.draftPlacedEquipment !== null;
   const hasTerrainFitDraft = terrainFitPreview.draftPlacedEquipment !== null;
 
+  const metrics = getProjectMetrics(polygon, displayedPlaced, anchor);
+
   const {
     baseMapStyleId,
     setBaseMapStyleId,
@@ -181,6 +168,35 @@ export function BessMap() {
 
   const { selectionFc, selectionLineFc, selectionVerticesFc } =
     useSelectionFeatures(layoutEdit.selectionPolygon);
+
+  const {
+    bufferFc,
+    layoutZoneFc,
+    layoutZoneLabelFc,
+    cableRouteCorridorFc,
+    cableRouteLineFc,
+    accessRoadCorridorFc,
+    accessRoadLineFc,
+  } = useLayoutInfrastructureFeatures({
+    displayedPlaced,
+    anchor,
+    polygon,
+    poi,
+    hasTerrainFitDraft,
+    previewCableRoutes: terrainFitPreview.result?.cableRoutes ?? [],
+    previewAccessRoads: terrainFitPreview.result?.accessRoads ?? [],
+    storedCableRoutes,
+    storedAccessRoads,
+    profile,
+  });
+
+  const { gridFc, warningMarkerFc, searchedPointFc } = useOverlayFeatures({
+    polygon,
+    displayedPlaced,
+    anchor,
+    warnings: metrics.warnings,
+    searchedPoint,
+  });
   const [previewTerrainDrag, setPreviewTerrainDrag] = useState<{
     last: { lng: number; lat: number };
     moved: boolean;
@@ -255,87 +271,7 @@ export function BessMap() {
 
 
 
-  const metrics = getProjectMetrics(polygon, displayedPlaced, anchor);
-  const bufferFc = useMemo(
-    () => regulatoryBufferFeatures(displayedPlaced, anchor, profile),
-    [displayedPlaced, anchor, profile]
-  );
-  const conceptualInfrastructure = useMemo(
-    () =>
-      generateConceptualPhysicalInfrastructure({
-        placed: displayedPlaced,
-        anchor,
-        polygon,
-        hasPoi: !!poi,
-      }),
-    [displayedPlaced, anchor, polygon, poi]
-  );
-  const previewCableRoutes = terrainFitPreview.result?.cableRoutes ?? [];
-  const previewAccessRoads = terrainFitPreview.result?.accessRoads ?? [];
-  const renderedCableRoutes =
-    hasTerrainFitDraft && previewCableRoutes.length > 0
-      ? previewCableRoutes
-      : storedCableRoutes.length > 0
-      ? storedCableRoutes
-      : conceptualInfrastructure.cableRoutes;
-  const renderedAccessRoads =
-    hasTerrainFitDraft && previewAccessRoads.length > 0
-      ? previewAccessRoads
-      : storedAccessRoads.length > 0
-      ? storedAccessRoads
-      : conceptualInfrastructure.accessRoads;
-  const layoutZoneFc = useMemo(
-    () => layoutZoneFeatures(conceptualInfrastructure.layoutZones, anchor),
-    [conceptualInfrastructure.layoutZones, anchor]
-  );
-  const layoutZoneLabelFc = useMemo(
-    () => layoutZoneLabelFeatures(conceptualInfrastructure.layoutZones, anchor),
-    [conceptualInfrastructure.layoutZones, anchor]
-  );
-  const cableRouteCorridorFc = useMemo(
-    () => cableRouteCorridorFeatures(renderedCableRoutes, anchor),
-    [renderedCableRoutes, anchor]
-  );
-  const cableRouteLineFc = useMemo(
-    () => cableRouteLineFeatures(renderedCableRoutes, anchor),
-    [renderedCableRoutes, anchor]
-  );
-  const accessRoadCorridorFc = useMemo(
-    () => accessRoadCorridorFeatures(renderedAccessRoads, anchor),
-    [renderedAccessRoads, anchor]
-  );
-  const accessRoadLineFc = useMemo(
-    () => accessRoadLineFeatures(renderedAccessRoads, anchor),
-    [renderedAccessRoads, anchor]
-  );
-  const gridFc = useMemo(
-    () => gridLineFeatures({ polygon, placed: displayedPlaced, anchor }),
-    [polygon, displayedPlaced, anchor]
-  );
-  const warningMarkerFc = useMemo(
-    () => warningMarkerFeatures(metrics.warnings, displayedPlaced),
-    [metrics.warnings, displayedPlaced]
-  );
 
-
-  const searchedPointFc = useMemo(
-    () => ({
-      type: "FeatureCollection" as const,
-      features: searchedPoint
-        ? [
-            {
-              type: "Feature" as const,
-              properties: {},
-              geometry: {
-                type: "Point" as const,
-                coordinates: [searchedPoint.lng, searchedPoint.lat],
-              },
-            },
-          ]
-        : [],
-    }),
-    [searchedPoint]
-  );
   const t = copyFor(locale);
   const mapStyle = layerVisibility.baseMap
     ? resolvedBaseMap.style
