@@ -7,7 +7,6 @@
 
 import {
   Document,
-  Rect,
 } from "@react-pdf/renderer";
 import type { TechnicalReportData } from "@/lib/report/buildReportData";
 import { CoverPage } from "./pdfChrome";
@@ -56,7 +55,3 @@ export function ReportDocument({ data }: Props) {
     </Document>
   );
 }
-
-// Re-export the unused-but-imported Rect so we don't accidentally drop it from
-// the bundle and to keep the imports list explicit for future sections.
-export const __unused_rect_ref = Rect;
