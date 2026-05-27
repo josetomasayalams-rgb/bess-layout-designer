@@ -31,6 +31,7 @@ import { useEquipmentFeatures } from "./hooks/useEquipmentFeatures";
 import { useSelectionFeatures } from "./hooks/useSelectionFeatures";
 import { useLayoutInfrastructureFeatures } from "./hooks/useLayoutInfrastructureFeatures";
 import { useOverlayFeatures } from "./hooks/useOverlayFeatures";
+import { useMapCamera } from "./hooks/useMapCamera";
 import { PolygonTerrainLayers } from "./layers/PolygonTerrainLayers";
 import { EquipmentSelectionOverlayLayers } from "./layers/EquipmentSelectionOverlayLayers";
 import { getProjectMetrics } from "@/lib/layout/projectMetrics";
@@ -197,6 +198,14 @@ export function BessMap() {
     warnings: metrics.warnings,
     searchedPoint,
   });
+
+  const { centerMap, searchCoordinates } = useMapCamera({
+    mapRef,
+    polygon,
+    isMapLoaded,
+    interactionMode,
+    setSearchedPoint,
+  });
   const [previewTerrainDrag, setPreviewTerrainDrag] = useState<{
     last: { lng: number; lat: number };
     moved: boolean;
@@ -278,50 +287,7 @@ export function BessMap() {
     : BLANK_BASE_MAP_STYLE;
 
 
-  const fitToPolygon = (duration = 600) => {
-    if (!isMapLoaded) return;
-    if (polygon.length < 3) return;
-    const map = mapRef.current?.getMap();
-    if (!map) return;
 
-    const lngs = polygon.map((p) => p.lng);
-    const lats = polygon.map((p) => p.lat);
-    map.fitBounds(
-      [
-        [Math.min(...lngs), Math.min(...lats)],
-        [Math.max(...lngs), Math.max(...lats)],
-      ],
-      { padding: 90, duration }
-    );
-  };
-
-  useEffect(() => {
-    if (interactionMode === "draw-site" || interactionMode === "draw-repair-zone")
-      return;
-    fitToPolygon();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [interactionMode, isMapLoaded, polygon]);
-
-  const centerMap = () => {
-    if (polygon.length >= 3) {
-      fitToPolygon(500);
-      return;
-    }
-    mapRef.current?.getMap().flyTo({
-      center: [INITIAL_VIEW.longitude, INITIAL_VIEW.latitude],
-      zoom: INITIAL_VIEW.zoom,
-      duration: 500,
-    });
-  };
-
-  const searchCoordinates = (coordinates: { lat: number; lng: number }) => {
-    setSearchedPoint(coordinates);
-    mapRef.current?.getMap().flyTo({
-      center: [coordinates.lng, coordinates.lat],
-      zoom: 17,
-      duration: 700,
-    });
-  };
 
   const handleClick = (e: MapMouseEvent) => {
     if (suppressPreviewTerrainClickRef.current) {
