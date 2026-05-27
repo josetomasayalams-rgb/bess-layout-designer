@@ -18,6 +18,10 @@ const eslintConfig = defineConfig([
     // the warning surface. They are intentionally excluded from app
     // linting; their own tooling owns their quality.
     ".claude/**",
+    // Phase 14.0 — Coverage reports are generated artifacts (HTML +
+    // istanbul JS helpers). They are gitignored but ESLint walks them
+    // anyway; ignore explicitly so `npm run lint` stays at 0/0.
+    "coverage/**",
   ]),
 ]);
 
