@@ -34,6 +34,7 @@ import { useOverlayFeatures } from "./hooks/useOverlayFeatures";
 import { useMapCamera } from "./hooks/useMapCamera";
 import { useDrawModeHandlers } from "./hooks/useDrawModeHandlers";
 import { usePreviewTerrainGestures } from "./hooks/usePreviewTerrainGestures";
+import { useLayoutEditGestures } from "./hooks/useLayoutEditGestures";
 import { PolygonTerrainLayers } from "./layers/PolygonTerrainLayers";
 import { EquipmentSelectionOverlayLayers } from "./layers/EquipmentSelectionOverlayLayers";
 import { getProjectMetrics } from "@/lib/layout/projectMetrics";
@@ -45,7 +46,7 @@ import {
   formatMassTonnes,
 } from "@/lib/units/formatUnits";
 import { getRegulatoryProfile } from "@/rules/regulatoryProfileMetadata";
-import { toLocal } from "@/lib/geometry/projection";
+
 import { CoordinateSearch } from "@/components/map/CoordinateSearch";
 import { BaseMapSelector } from "@/components/map/BaseMapSelector";
 import { LayerManagerPanel } from "@/components/map/LayerManagerPanel";
@@ -225,11 +226,19 @@ export function BessMap() {
     movePreviewTerrainBy,
   });
 
-  const suppressLayoutEditClickRef = useRef(false);
-  const [layoutMoveDrag, setLayoutMoveDrag] = useState<{
-    lng: number;
-    lat: number;
-  } | null>(null);
+  const {
+    layoutMoveDrag,
+    suppressLayoutEditClickRef,
+    handleLayoutEditMouseDown,
+    handleLayoutEditMouseMove,
+    handleLayoutEditMouseUp,
+  } = useLayoutEditGestures({
+    isLayoutEditMode,
+    layoutEditSelectedIds: layoutEdit.selectedIds,
+    mapRef,
+    anchor,
+    previewMoveSelection,
+  });
 
   const lockedSelectedCount = useMemo(() => {
     const ids = new Set(layoutEdit.selectedIds);
@@ -359,47 +368,17 @@ export function BessMap() {
 
   const handleMouseDown = (event: MapMouseEvent) => {
     if (handlePreviewTerrainMouseDown(event)) return;
-    if (isLayoutEditMode) {
-      if (event.originalEvent.button !== 0) return;
-      if (layoutEdit.selectedIds.length === 0) return;
-      const map = mapRef.current?.getMap();
-      if (!map) return;
-      const features = map.queryRenderedFeatures(event.point, {
-        layers: ["equipment-fill"],
-      });
-      const hitId = features[0]?.properties?.id as string | undefined;
-      if (hitId && layoutEdit.selectedIds.includes(hitId)) {
-        setLayoutMoveDrag({ lng: event.lngLat.lng, lat: event.lngLat.lat });
-      }
-      return;
-    }
+    handleLayoutEditMouseDown(event);
   };
 
   const handleMouseMove = (event: MapMouseEvent) => {
     if (handlePreviewTerrainMouseMove(event)) return;
-    if (layoutMoveDrag) {
-      if (!anchor) return;
-      const previous = toLocal(layoutMoveDrag, anchor);
-      const next = toLocal(
-        { lng: event.lngLat.lng, lat: event.lngLat.lat },
-        anchor
-      );
-      previewMoveSelection({
-        x_m: next.x_m - previous.x_m,
-        y_m: next.y_m - previous.y_m,
-      });
-      setLayoutMoveDrag({ lng: event.lngLat.lng, lat: event.lngLat.lat });
-      return;
-    }
+    handleLayoutEditMouseMove(event);
   };
 
   const handleMouseUp = () => {
     if (handlePreviewTerrainMouseUp()) return;
-    if (layoutMoveDrag) {
-      suppressLayoutEditClickRef.current = true;
-      setLayoutMoveDrag(null);
-      return;
-    }
+    handleLayoutEditMouseUp();
   };
 
   const cursor = layoutMoveDrag
