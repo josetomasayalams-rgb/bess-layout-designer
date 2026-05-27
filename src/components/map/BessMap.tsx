@@ -15,7 +15,6 @@ import {
 import {
   Map,
   type MapRef,
-  type MapMouseEvent,
 } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { equipmentCatalog, is3DCapable } from "@/data/equipmentCatalog";
@@ -31,6 +30,8 @@ import { useEquipmentFeatures } from "./hooks/useEquipmentFeatures";
 import { useSelectionFeatures } from "./hooks/useSelectionFeatures";
 import { useLayoutInfrastructureFeatures } from "./hooks/useLayoutInfrastructureFeatures";
 import { useOverlayFeatures } from "./hooks/useOverlayFeatures";
+import { useMapCamera } from "./hooks/useMapCamera";
+import { useMapInteractionRouter } from "./hooks/useMapInteractionRouter";
 import { PolygonTerrainLayers } from "./layers/PolygonTerrainLayers";
 import { EquipmentSelectionOverlayLayers } from "./layers/EquipmentSelectionOverlayLayers";
 import { getProjectMetrics } from "@/lib/layout/projectMetrics";
@@ -42,16 +43,16 @@ import {
   formatMassTonnes,
 } from "@/lib/units/formatUnits";
 import { getRegulatoryProfile } from "@/rules/regulatoryProfileMetadata";
-import { toLocal } from "@/lib/geometry/projection";
+
 import { CoordinateSearch } from "@/components/map/CoordinateSearch";
 import { BaseMapSelector } from "@/components/map/BaseMapSelector";
 import { LayerManagerPanel } from "@/components/map/LayerManagerPanel";
 import { LayoutEditToolbar } from "@/components/map/LayoutEditToolbar";
 import { OrientationCube } from "@/components/map/OrientationCube";
-import { selectEquipmentWithinPolygon } from "@/lib/layout/layoutEditing";
+
 
 import { INITIAL_VIEW, BLANK_BASE_MAP_STYLE, LAYOUT_MOVE_STEP_M } from "./BessMap.constants";
-import { normalizeRotation, shortestDeltaDeg } from "./BessMap.geometry";
+
 
 export function BessMap() {
   const mapRef = useRef<MapRef | null>(null);
@@ -74,9 +75,7 @@ export function BessMap() {
   const storedAccessRoads = useProjectStore((s) => s.accessRoads);
   const poi = useProjectStore((s) => s.poi);
 
-  const addPolygonVertex = useProjectStore((s) => s.addPolygonVertex);
-  const addRepairZoneVertex = useProjectStore((s) => s.addRepairZoneVertex);
-  const placeEquipmentAt = useProjectStore((s) => s.placeEquipmentAt);
+
   const selectEquipment = useProjectStore((s) => s.selectEquipment);
   const setMapViewCenter = useProjectStore((s) => s.setMapViewCenter);
   const movePreviewTerrainBy = useProjectStore((s) => s.movePreviewTerrainBy);
@@ -197,21 +196,35 @@ export function BessMap() {
     warnings: metrics.warnings,
     searchedPoint,
   });
-  const [previewTerrainDrag, setPreviewTerrainDrag] = useState<{
-    last: { lng: number; lat: number };
-    moved: boolean;
-  } | null>(null);
-  const [previewTerrainRotate, setPreviewTerrainRotate] = useState<{
-    startAngleDeg: number;
-    startRotationDeg: number;
-    moved: boolean;
-  } | null>(null);
-  const suppressPreviewTerrainClickRef = useRef(false);
-  const suppressLayoutEditClickRef = useRef(false);
-  const [layoutMoveDrag, setLayoutMoveDrag] = useState<{
-    lng: number;
-    lat: number;
-  } | null>(null);
+
+  const { centerMap, searchCoordinates } = useMapCamera({
+    mapRef,
+    polygon,
+    isMapLoaded,
+    interactionMode,
+    setSearchedPoint,
+  });
+
+  const {
+    handleClick,
+    handleMouseDown,
+    handleMouseMove,
+    handleMouseUp,
+    cursor,
+  } = useMapInteractionRouter({
+    mapRef,
+    interactionMode,
+    isLayoutEditMode,
+    layoutEdit,
+    displayedPlaced,
+    anchor,
+    previewTerrain,
+    updatePreviewTerrain,
+    movePreviewTerrainBy,
+    previewMoveSelection,
+    setLayoutEditSelection,
+    selectEquipment,
+  });
 
   const lockedSelectedCount = useMemo(() => {
     const ids = new Set(layoutEdit.selectedIds);
@@ -278,268 +291,9 @@ export function BessMap() {
     : BLANK_BASE_MAP_STYLE;
 
 
-  const fitToPolygon = (duration = 600) => {
-    if (!isMapLoaded) return;
-    if (polygon.length < 3) return;
-    const map = mapRef.current?.getMap();
-    if (!map) return;
 
-    const lngs = polygon.map((p) => p.lng);
-    const lats = polygon.map((p) => p.lat);
-    map.fitBounds(
-      [
-        [Math.min(...lngs), Math.min(...lats)],
-        [Math.max(...lngs), Math.max(...lats)],
-      ],
-      { padding: 90, duration }
-    );
-  };
 
-  useEffect(() => {
-    if (interactionMode === "draw-site" || interactionMode === "draw-repair-zone")
-      return;
-    fitToPolygon();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [interactionMode, isMapLoaded, polygon]);
 
-  const centerMap = () => {
-    if (polygon.length >= 3) {
-      fitToPolygon(500);
-      return;
-    }
-    mapRef.current?.getMap().flyTo({
-      center: [INITIAL_VIEW.longitude, INITIAL_VIEW.latitude],
-      zoom: INITIAL_VIEW.zoom,
-      duration: 500,
-    });
-  };
-
-  const searchCoordinates = (coordinates: { lat: number; lng: number }) => {
-    setSearchedPoint(coordinates);
-    mapRef.current?.getMap().flyTo({
-      center: [coordinates.lng, coordinates.lat],
-      zoom: 17,
-      duration: 700,
-    });
-  };
-
-  const handleClick = (e: MapMouseEvent) => {
-    if (suppressPreviewTerrainClickRef.current) {
-      suppressPreviewTerrainClickRef.current = false;
-      return;
-    }
-    if (suppressLayoutEditClickRef.current) {
-      suppressLayoutEditClickRef.current = false;
-      return;
-    }
-    const { lng, lat } = e.lngLat;
-    if (interactionMode === "draw-site") {
-      addPolygonVertex({ lng, lat });
-      return;
-    }
-    if (interactionMode === "draw-repair-zone") {
-      addRepairZoneVertex({ lng, lat });
-      return;
-    }
-    if (interactionMode === "place-equipment") {
-      placeEquipmentAt({ lng, lat });
-      return;
-    }
-    if (isLayoutEditMode) {
-      // Direct click-select on an equipment hit: bypass the lasso entirely.
-      // Shift toggles the id in the selection; a plain click replaces it.
-      const map = mapRef.current?.getMap();
-      const hit = map
-        ? (map.queryRenderedFeatures(e.point, { layers: ["equipment-fill"] })[0]
-            ?.properties?.id as string | undefined)
-        : undefined;
-      if (hit) {
-        const shiftHeld = e.originalEvent.shiftKey;
-        let nextIds: string[];
-        if (shiftHeld) {
-          const set = new Set(layoutEdit.selectedIds);
-          if (set.has(hit)) set.delete(hit);
-          else set.add(hit);
-          nextIds = Array.from(set);
-        } else {
-          nextIds = [hit];
-        }
-        setLayoutEditSelection(nextIds, []);
-        return;
-      }
-      // Click on empty space: lasso vertex (existing behaviour).
-      const nextPolygon = [...layoutEdit.selectionPolygon, { lng, lat }];
-      const selectedIds =
-        nextPolygon.length >= 3
-          ? selectEquipmentWithinPolygon({
-              placed: displayedPlaced,
-              anchor,
-              polygon: nextPolygon,
-            })
-          : [];
-      setLayoutEditSelection(selectedIds, nextPolygon);
-      return;
-    }
-    const map = mapRef.current?.getMap();
-    if (!map) return;
-    const features = map.queryRenderedFeatures(e.point, {
-      layers: ["equipment-fill"],
-    });
-    if (features.length > 0) {
-      const id = features[0].properties?.id as string | undefined;
-      if (id) selectEquipment(id);
-    } else {
-      selectEquipment(null);
-    }
-  };
-
-  const handleMouseDown = (event: MapMouseEvent) => {
-    if (isLayoutEditMode) {
-      if (event.originalEvent.button !== 0) return;
-      if (layoutEdit.selectedIds.length === 0) return;
-      const map = mapRef.current?.getMap();
-      if (!map) return;
-      const features = map.queryRenderedFeatures(event.point, {
-        layers: ["equipment-fill"],
-      });
-      const hitId = features[0]?.properties?.id as string | undefined;
-      if (hitId && layoutEdit.selectedIds.includes(hitId)) {
-        setLayoutMoveDrag({ lng: event.lngLat.lng, lat: event.lngLat.lat });
-      }
-      return;
-    }
-    if (!previewTerrain) return;
-    if (
-      interactionMode === "draw-site" ||
-      interactionMode === "draw-repair-zone" ||
-      interactionMode === "place-equipment" ||
-      isLayoutEditMode
-    ) {
-      return;
-    }
-    if (event.originalEvent.button !== 0) return;
-    const map = mapRef.current?.getMap();
-    if (!map) return;
-    const handleFeatures = map.queryRenderedFeatures(event.point, {
-      layers: ["terrain-preview-rotation-handle"],
-    });
-    if (handleFeatures.length > 0) {
-      const terrainAnchor = {
-        lng0: previewTerrain.center.lng,
-        lat0: previewTerrain.center.lat,
-      };
-      const local = toLocal(
-        { lng: event.lngLat.lng, lat: event.lngLat.lat },
-        terrainAnchor
-      );
-      setPreviewTerrainRotate({
-        startAngleDeg: (Math.atan2(local.y_m, local.x_m) * 180) / Math.PI,
-        startRotationDeg: previewTerrain.rotationDeg,
-        moved: false,
-      });
-      return;
-    }
-
-    const features = map.queryRenderedFeatures(event.point, {
-      layers: ["terrain-preview-fill"],
-    });
-    if (features.length === 0) return;
-    setPreviewTerrainDrag({
-      last: { lng: event.lngLat.lng, lat: event.lngLat.lat },
-      moved: false,
-    });
-  };
-
-  const handleMouseMove = (event: MapMouseEvent) => {
-    if (layoutMoveDrag) {
-      if (!anchor) return;
-      const previous = toLocal(layoutMoveDrag, anchor);
-      const next = toLocal(
-        { lng: event.lngLat.lng, lat: event.lngLat.lat },
-        anchor
-      );
-      previewMoveSelection({
-        x_m: next.x_m - previous.x_m,
-        y_m: next.y_m - previous.y_m,
-      });
-      setLayoutMoveDrag({ lng: event.lngLat.lng, lat: event.lngLat.lat });
-      return;
-    }
-    if (previewTerrainRotate && previewTerrain) {
-      const terrainAnchor = {
-        lng0: previewTerrain.center.lng,
-        lat0: previewTerrain.center.lat,
-      };
-      const local = toLocal(
-        { lng: event.lngLat.lng, lat: event.lngLat.lat },
-        terrainAnchor
-      );
-      const currentAngleDeg = (Math.atan2(local.y_m, local.x_m) * 180) / Math.PI;
-      const deltaDeg = shortestDeltaDeg(
-        previewTerrainRotate.startAngleDeg,
-        currentAngleDeg
-      );
-      updatePreviewTerrain({
-        rotationDeg: normalizeRotation(
-          previewTerrainRotate.startRotationDeg + deltaDeg
-        ),
-      });
-      setPreviewTerrainRotate((current) =>
-        current ? { ...current, moved: true } : current
-      );
-      return;
-    }
-
-    if (!previewTerrainDrag || !previewTerrain) return;
-    const terrainAnchor = {
-      lng0: previewTerrain.center.lng,
-      lat0: previewTerrain.center.lat,
-    };
-    const previous = toLocal(previewTerrainDrag.last, terrainAnchor);
-    const next = toLocal(
-      { lng: event.lngLat.lng, lat: event.lngLat.lat },
-      terrainAnchor
-    );
-    movePreviewTerrainBy({
-      x_m: next.x_m - previous.x_m,
-      y_m: next.y_m - previous.y_m,
-    });
-    setPreviewTerrainDrag({
-      last: { lng: event.lngLat.lng, lat: event.lngLat.lat },
-      moved: true,
-    });
-  };
-
-  const handleMouseUp = () => {
-    if (layoutMoveDrag) {
-      suppressLayoutEditClickRef.current = true;
-      setLayoutMoveDrag(null);
-      return;
-    }
-    if (previewTerrainRotate) {
-      suppressPreviewTerrainClickRef.current = previewTerrainRotate.moved;
-      setPreviewTerrainRotate(null);
-      return;
-    }
-    if (!previewTerrainDrag) return;
-    suppressPreviewTerrainClickRef.current = previewTerrainDrag.moved;
-    setPreviewTerrainDrag(null);
-  };
-
-  const cursor = layoutMoveDrag
-    ? "grabbing"
-    : interactionMode === "draw-site" ||
-    interactionMode === "place-equipment" ||
-    interactionMode === "draw-repair-zone" ||
-    isLayoutEditMode
-      ? "crosshair"
-      : previewTerrainDrag
-        ? "grabbing"
-        : previewTerrainRotate
-          ? "grabbing"
-        : previewTerrain
-          ? "grab"
-          : "grab";
 
   const floatingButton =
     "inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-700 bg-slate-950/90 text-slate-200 shadow-lg backdrop-blur transition hover:border-cyan-400 hover:text-cyan-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-400 disabled:cursor-not-allowed disabled:opacity-40";
