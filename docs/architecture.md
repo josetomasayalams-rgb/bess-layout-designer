@@ -1,6 +1,6 @@
 # Arquitectura del Sistema - BESS Layout Designer
 
-Este documento detalla la arquitectura real de software implementada en el repositorio del predimensionador de sistemas de almacenamiento de energía en baterías (BESS) a gran escala. Su propósito es servir de guía técnica para desarrolladores, revisores y auditorías de código, garantizando la mantenibilidad y delimitación de responsabilidades en futuras expansiones del sistema.
+Este documento detalla la arquitectura de software implementada en el repositorio del predimensionador de sistemas de almacenamiento de energía en baterías (BESS) a gran escala. Su propósito es servir de guía técnica para desarrolladores, revisores y auditorías de código, garantizando la mantenibilidad y delimitación de responsabilidades en futuras expansiones del sistema.
 
 ---
 
@@ -34,7 +34,7 @@ La base de código está estrictamente dividida en capas para separar las preocu
                              │ (Eventos y Props)
                              ▼
 ┌──────────────────────────────────────────────────────────┐
-│              STORES ZUSTAND (Estado Global)              │
+│         STORES ZUSTAND (Estado Global - Slices)          │
 │   useProjectStore ──► useRegulatoryStore ──► useUiStore  │
 └────────────────────────────┬─────────────────────────────┘
                              │ (Entradas de datos)
@@ -47,13 +47,13 @@ La base de código está estrictamente dividida en capas para separar las preocu
                              │ (Salidas estructuradas)
                              ▼
 ┌──────────────────────────────────────────────────────────┐
-│              REPORTABILIDAD (Salida Técnica)             │
-│   buildReportData.ts ──► ReportDocument.tsx (PDF)        │
+│        REPORTABILIDAD MODULAR (Reporte Técnico PDF)       │
+│   buildReportData ──► ReportDocument (Modular PDF)       │
 └──────────────────────────────────────────────────────────┘
 ```
 
 1. **Capa UI (React / Next.js)**: Componentes declarativos ubicados en `src/components/`. Su función es renderizar la interfaz y emitir eventos mediante callbacks.
-2. **Capa de Estado (Zustand)**: Stores globales ubicados en `src/store/` que actúan como la única fuente de verdad reactiva para el layout y los perfiles seleccionados.
+2. **Capa de Estado (Zustand Slices)**: Stores globales ubicados en `src/store/` que actúan como la única fuente de verdad reactiva para el layout y los perfiles seleccionados. El store principal utiliza un patrón modular de slices.
 3. **Capa de Negocio y Motores Puros (`src/lib/` y `src/rules/`)**: Funciones puras libres de React y de dependencias del framework que contienen la lógica de cálculo espacial, colisiones, fits de terreno, topología eléctrica y validación normativa.
 4. **Capa de Catálogos y Datos Estáticos (`src/data/`)**: Constantes geométricas globales, catálogos de equipamiento real de fabricantes y registros de evidencias documentales del sistema.
 5. **Capa de Reportabilidad (`src/components/report/` y `src/lib/report/`)**: Ensambladores de datos de auditoría y plantillas de renderizado de reportes PDF.
@@ -75,9 +75,81 @@ El procesamiento de datos en la aplicación opera bajo un flujo unidireccional y
 
 ---
 
-## 5. Arquitectura UI (Fase 11)
+## 5. Descomposición y Detalle de Módulos (Refactor Post-Fase 12)
 
-El shell de la interfaz de usuario ha sido rediseñado para estructurar un espacio de trabajo limpio dividido en 5 secciones de navegación:
+La Fase 12 descompuso los tres grandes monolitos originales del sistema en estructuras altamente modulares y cohesivas:
+
+### A. Capa de Estado (Zustand)
+
+El store global `projectStore.ts` ha sido reducido a un "Composition Root" de **32 líneas de código**. Toda la lógica de negocio y acciones asociadas ha sido extraída a slices dedicadas en `src/store/slices/`, utilizando invariantes históricos y un modelo de datos estrictamente tipado:
+
+```
+[src/store/]
+├── projectStore.ts           <-- Composition Root (32 LOC)
+├── projectStore.types.ts     <-- Tipos compartidos e interfaces de acciones
+├── projectStore.history.ts   <-- Invariantes y helpers del stack de Undo/Redo
+└── slices/
+    ├── polygonSlice.ts       <-- Gestión geométrica del polígono del terreno
+    ├── terrainSlice.ts       <-- Gestión del preview y parametrización de terreno
+    ├── repairZoneSlice.ts    <-- Herramientas de zona de reparación física
+    ├── equipmentSlice.ts     <-- Catálogos activos y equipamiento colocado
+    ├── layoutEditSlice.ts    <-- Herramientas de selección, drag, y preview del layout
+    ├── comparisonSlice.ts    <-- Comparación de alternativas de diseño (A/B)
+    └── lifecycleSlice.ts     <-- Carga y restauración de presets (BESS del Desierto)
+```
+
+### B. Capa de Mapa (Map Shell, Layers y Interaction Hooks)
+
+El monolito geográfico `BessMap.tsx` fue reducido de ~1827 líneas a un shell limpio de **614 líneas** mediante dos estrategias de extracción:
+1. **Extracción de Capas y Presentaciones (`src/components/map/layers/`)**: Las definiciones y configuraciones estéticas de las capas MapLibre se dividieron en componentes funcionales declarativos.
+2. **Extracción de Comportamiento e Interacciones (`src/components/map/hooks/`)**: Se aislaron las acciones de cámara, handlers de clics y gestos de arrastre en custom hooks dedicados y sin tipos `any`.
+
+```
+[src/components/map/]
+├── BessMap.tsx                   <-- Shell principal del mapa (614 LOC)
+├── BessMap.constants.ts          <-- Constantes, estilos base y viewports iniciales
+├── BessMap.geometry.ts           <-- Funciones geométricas locales auxiliares
+├── layers/
+│   ├── PolygonTerrainLayers.tsx              <-- Renderizado de polígonos, mediciones y terreno
+│   └── EquipmentSelectionOverlayLayers.tsx  <-- Renderizado de BESS,PCS,caminos,cables y alertas
+└── hooks/
+    ├── useBaseMapStyle.ts        <-- Carga y alternancia de estilos de mapa base
+    ├── useMapLifecycle.ts        <-- Controladores de montaje, carga y errores del mapa
+    ├── useMapCamera.ts           <-- Encuadres y flyTo (fitToPolygon, centerMap)
+    ├── useDrawModeHandlers.ts    <-- Gestión de clicks de inserción de vértices y equipos
+    ├── usePreviewTerrainGestures.ts <-- Control de arrastre y rotación del terreno paramétrico
+    ├── useLayoutEditGestures.ts  <-- Drag y traducción física del equipamiento colocado
+    ├── useMapInteractionRouter.ts <-- Enrutador centralizado de eventos del mouse
+    ├── usePolygonFeatures.ts     <-- GeoJSON preparador para el polígono de sitio
+    ├── useRepairZoneFeatures.ts  <-- GeoJSON preparador para zonas de reparación
+    ├── usePreviewTerrainFeatures.ts <-- GeoJSON preparador para terreno paramétrico
+    ├── useEquipmentFeatures.ts   <-- GeoJSON preparador y filtros de equipos BESS
+    ├── useSelectionFeatures.ts   <-- GeoJSON preparador para selección de layout
+    ├── useLayoutInfrastructureFeatures.ts <-- GeoJSON preparador para caminos y cables MT
+    └── useOverlayFeatures.ts     <-- GeoJSON preparador de grids y marcadores de alerta
+```
+
+### C. Capa de Reportabilidad Modular (Phase 12A)
+
+El monolito del PDF de ~1480 líneas (`ReportDocument.tsx`) fue subdividido en componentes de sección desacoplados, facilitando el mantenimiento y las auditorías de diseño independientes:
+
+```
+[src/components/report/]
+├── ReportPreview.tsx             <-- Previsualización en pantalla del reporte
+└── document/
+    ├── ReportDocument.tsx        <-- Composición raíz del documento PDF
+    ├── ReportCoverPage.tsx       <-- Portada y metadatos generales
+    ├── ReportExclusionsPage.tsx  <-- Tabla de exclusiones técnicas y disclaimers legales
+    ├── ReportTraceabilityPage.tsx <-- Listado de evidencias y documentos normativos
+    ├── ReportElectricalArchitecturePage.tsx <-- Resumen de Single Line Diagram y topología
+    └── ReportLayoutPage.tsx      <-- Polígono de sitio, coordenadas y captura de mapa
+```
+
+---
+
+## 6. Arquitectura UI (Fase 11)
+
+El shell de la interfaz de usuario estructura un espacio de trabajo limpio dividido en 5 secciones de navegación:
 
 * **`AppShell`**: Componente contenedor raíz que monta el mapa interactivo `BessMap`, la barra de herramientas `Toolbar`, el indicador `KPIBar` y la barra de navegación `SectionRail`.
 * **`SectionRail`**: Menú lateral izquierdo ultra-reducido que permite conmutar la sección activa de la aplicación:
@@ -92,7 +164,7 @@ El shell de la interfaz de usuario ha sido rediseñado para estructurar un espac
 
 ---
 
-## 6. Patrón de Paneles Orquestadores y Componentes Presentacionales
+## 7. Patrón de Paneles Orquestadores y Componentes Presentacionales
 
 Con el fin de evitar el acoplamiento directo de Zustand y lógica computacional en componentes UI hoja, la Fase 11B introdujo el patrón **Orquestador-Presentador**:
 
@@ -112,81 +184,35 @@ Con el fin de evitar el acoplamiento directo de Zustand y lógica computacional 
 
 ---
 
-## 7. Capa de Mapa y Geometría
+## 8. Where to Put New Code (Dónde agregar nuevo código)
 
-La representación espacial utiliza un sistema de coordenadas locales bidimensionales expresado en metros:
-* **Project Anchor (Origen ENU)**: El primer vértice trazado del polígono del terreno establece el origen local (0, 0) de coordenadas en metros.
-* **Proyección Bidireccional**: La biblioteca utiliza funciones de proyección cosine-corrected equirectangular para realizar la conversión bidireccional entre coordenadas geográficas `LngLat` (usadas por el motor de Mapbox/OpenStreetMap) y coordenadas planas cartesianas `LocalPoint` (usadas por los motores de colisión y espaciamiento).
-* **BessMap.tsx (1827 líneas)**: Componente monolítico remanente que renderiza las capas geográficas, lee los eventos de arrastre y rotación del mouse, gestiona el estado de herramientas de dibujo de polígonos y dibuja las geometrías proyectadas de los contenedores BESS, PCS y zonas de exclusión.
-
----
-
-## 8. Capa de Motores Puros (`src/lib/`)
-
-Contiene algoritmos geométricos y aritméticos libres de efectos secundarios:
-* **`/geometry/`**: Algoritmos de intersección de rectángulos orientados, detección de colisiones de footprints (`collision.ts`), y cálculo de áreas planas (`area.ts`).
-* **`/layout/`**: Generador conceptual de grids paramétricos, regularizador de filas y columnas, ruteo de cables y alineación espacial (`layoutRepair.ts` y `fitLayoutToTerrain.ts`).
-* **`/sizing/`**: Cálculos estáticos de dimensionamiento energético de bloques y estaciones BESS/PCS.
-* **`/electrical/`**: Lógica de chequeo de capacidades de barra MT, ampacidad conceptual y consistencia de voltajes de transformadores de poder (`topologyValidation.ts`).
+| Tipo de Lógica / Preocupación | Ubicación en el Repositorio | Directrices de Diseño |
+|---|---|---|
+| **Constantes de Ingeniería / Fórmulas** | `src/data/` (o un perfil regulatorio en `src/rules/profiles/`) | Deben estar tipadas y etiquetadas según su clasificación de evidencia. |
+| **Geometría, Colisiones, Áreas** | `src/lib/geometry/` | Funciones puras e independientes de React. Testeables con Vitest. |
+| **Cables, Caminos, Generación de Layouts** | `src/lib/layout/` | Estructuras de layout abstractas. Sin dependencias geográficas del mapa. |
+| **Cálculos de Dimensionamiento Eléctrico** | `src/lib/sizing/` | Operaciones matemáticas puras de conversión kVA/MWh. |
+| **Consistencia Eléctrica de Red / Feeders** | `src/lib/electrical/` | Funciones puras de compatibilidad de voltajes e impedancias. |
+| **Acciones y Mutaciones de Estado** | `src/store/slices/` | Slices cohesivos. No sobrepasar ~150-200 líneas por slice. |
+| **Componentes Visuales del Mapa** | `src/components/map/layers/` | Capas declarativas MapLibre reactivas a props. Sin lógica de estado. |
+| **Controladores e Interacciones de Mapa** | `src/components/map/hooks/` | Custom hooks especializados. Mantener firmas y retornos estrictamente tipados. |
+| **Bloques de Reportabilidad (PDF)** | `src/components/report/document/` | Un componente de React-PDF por sección del documento. |
 
 ---
 
-## 9. Capa Regulatoria (`src/rules/`)
-
-El motor de reglas regulatorias evalúa las restricciones físicas del pre-diseño y ajusta su severidad basándose en la trazabilidad documental:
-* **`regulatoryRulesCatalog.ts`**: Define las reglas de setbacks y seguridad de manera declarativa vinculándolas a un documento de respaldo de `documentRegistry.ts`.
-* **`severityCeiling.ts`**: Módulo puro encargado de calcular el tope de severidad efectiva de una alerta basándose en el nivel del documento citado (L1 a L7) y la confianza declarada.
-* **`regulatoryProfileMetadata.ts`**: Shim de compatibilidad que mapea las constantes de diseño paramétricas de `defaultConstraints.ts` hacia los perfiles Utility y PMGD.
-
-*Para un desglose detallado de la trazabilidad regulatoria de evidencias y la lógica del ceiling, consultar [docs/regulatory-traceability.md](file:///Users/josetomasayala/Desktop/App%20BESS/bess-layout-designer/docs/regulatory-traceability.md).*
-
----
-
-## 10. Capa de Reportabilidad
-
-La salida técnica consolidada en PDF se divide en dos fases:
-1. **Ensamblado de Datos (`buildReportData.ts`)**: Recopila la información de configuración, mediciones del polígono, alertas regulatorias y la matriz de exclusiones de `exclusionRegistry.ts`, dando formato y trazabilidad documental a la salida.
-2. **Renderizado (`ReportDocument.tsx`)**: Genera el documento PDF conceptual inyectando marcas de agua `"PRELIMINARY / BORRADOR CONCEPTUAL"` y disclaimers explícitos para garantizar la defensibilidad técnica y legal de la salida técnica (ver especificación completa en [docs/report-spec.md](file:///Users/josetomasayala/Desktop/App%20BESS/bess-layout-designer/docs/report-spec.md)).
-
----
-
-## 11. Defensibilidad Técnica
-
-La arquitectura implementa de forma nativa principios defensivos para evitar que la herramienta sea clasificada como ingeniería definitiva:
-* **defaultConstraints editable**: Los setbacks normativos se cargan como supuestos preliminares paramétricos editables y no como límites absolutos de código rígido.
-* **Exclusiones Mandatorias**: Las disciplinas complejas no ejecutadas por la app se leen del registro estático `exclusionRegistry.ts` y se imprimen obligatoriamente en el reporte sin posibilidad de ocultamiento.
-* **Citas Referenciales**: Los estándares NFPA 855 y UL 9540 son catalogados como referencias internacionales complementarias y no como leyes de cumplimiento local chileno.
-
-*Para una descripción extendida sobre defensibilidad legal y técnica, consultar [docs/defensibility.md](file:///Users/josetomasayala/Desktop/App%20BESS/bess-layout-designer/docs/defensibility.md).*
-
----
-
-## 12. Invariantes Arquitectónicas (Architectural Invariants)
+## 9. Invariantes Arquitectónicas (Architectural Invariants)
 
 Para prevenir la degradación de la arquitectura del proyecto, se deben cumplir estrictamente las siguientes reglas:
 1. **Hojas sin Zustand**: Ningún componente presentacional bajo `src/components/sidebar/compliance/` o `src/components/sidebar/design-tools/` debe importar o consumir Zustand de forma directa.
 2. **Motores sin React**: Ningún módulo puro dentro de `src/lib/` o `src/rules/` debe importar componentes React, JSX o hooks del framework.
 3. **No rigidizar defaultConstraints**: Las holguras paramétricas de distancias de seguridad no deben insertarse directamente en el código de cálculo geométrico; deben consumirse de los stores alimentados por `defaultConstraints.ts`.
 4. **Visibilidad Obligatoria de Exclusiones**: No se permite agregar interruptores de ocultamiento para el bloque de exclusiones técnicas en el reporte.
-5. **Fase 12 Safe-Guard**: Antes de modificar `BessMap.tsx` o `projectStore.ts` para las capas de ruteo de cables y caminos de Fase 12, se debe realizar un snapshot completo y aislar la lógica geográfica en submódulos especializados.
+5. **No imports circulares desde el Mapa**: Ningún hook, capa o utilitario ubicado en `src/components/map/hooks/` o `src/components/map/layers/` debe importar símbolos del archivo visual `BessMap.tsx`.
+6. **Reporte Dividido**: Las modificaciones al formato PDF de reporte deben realizarse en los componentes modulares de sección bajo `src/components/report/document/`, manteniendo `ReportDocument.tsx` únicamente como ensamblador raíz.
 
 ---
 
-## 13. Deuda Técnica Remanente
+## 10. Deuda Técnica Remanente
 
-El repositorio arrastra los siguientes puntos de deuda técnica y áreas de mejora:
-* **Monolito BessMap.tsx (1827 líneas)**: Concentra la lógica de renderizado geográfico de Mapbox, dibujo de vectores cartesianos en metros, administración de herramientas de edición de polígonos y cajas de diálogo flotantes. Debe ser refactorizado en submódulos separados antes de agregar las capas de caminos y cables de Fase 12.
-* **God-Store projectStore.ts (1185 líneas)**: Controla estados mixtos de interacción de mapa, coordenadas del polígono, colocado de equipos, carga de presets, herramientas de reparación espacial y drafts temporales de previews de fit.
-* **ReportDocument.tsx (1480 líneas)**: Monolito de renderizado PDF con estilos y estructuración rígida mezclada.
-* **Warnings de Lint (123 warnings)**: Advertencias preexistentes concentradas en scripts heredados y lógicas de validación sin usar que deben ser resueltas.
-* **Cobertura de Tests Visuales**: Falta de suites de pruebas visuales integradas para asegurar alineamiento de interfaces tras cambios de layout CSS globales.
-
----
-
-## 14. Roadmap Técnico Posterior
-
-Para abordar las siguientes fases de desarrollo se recomienda el siguiente orden de ejecución:
-1. **Validación y Cierre**: Scope guard documental del commit de arquitectura.
-2. **Lint Cleanup**: Sprint de limpieza dedicado para eliminar las 123 advertencias de linter y estabilizar la compilación en cero advertencias.
-3. **Refactorización de BessMap y projectStore**: Extraer los manejadores de eventos geográficos de `BessMap.tsx` y subdividir el store `projectStore.ts` en slices modulares e independientes antes de iniciar el código productivo de Fase 12.
-4. **Fase 12 Architect**: Definición de la especificación técnica de la arquitectura de caminos internos y ruteo de canalizaciones de cables de media tensión.
+* **warnings de lint transitorios:** Mantener el objetivo de cero advertencias ESLint en el código nuevo.
+* **Cobertura de Tests Visuales / UI:** Falta de suites de pruebas visuales integradas para asegurar alineamiento de interfaces tras cambios de layout CSS globales.
