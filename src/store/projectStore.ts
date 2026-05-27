@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import { nanoid } from "nanoid";
-import { equipmentCatalog } from "@/data/equipmentCatalog";
 import {
   bessDelDesiertoPresetV12,
   getProjectCaseStudy,
@@ -35,6 +34,7 @@ import {
   recordHistory,
   snapshotOf,
 } from "./projectStore.history";
+import { createEquipmentSlice } from "./slices/equipmentSlice";
 import { createPolygonSlice } from "./slices/polygonSlice";
 import { createRepairZoneSlice } from "./slices/repairZoneSlice";
 import { createTerrainSlice } from "./slices/terrainSlice";
@@ -55,13 +55,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   ...createPolygonSlice(set),
   ...createTerrainSlice(set),
   ...createRepairZoneSlice(set),
-  placedEquipment: [],
+  ...createEquipmentSlice(set, get),
   interactionMode: "select",
-  pendingPlacementSpecId: null,
-  selectedEquipmentId: null,
-  selectedCaseStudyId: null,
-  lastToolResult: null,
-  lastRepairResult: null,
   layoutEdit: emptyLayoutEditState,
   comparison: emptyComparison,
   past: [],
@@ -84,41 +79,6 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   fireSafetyZones: [],
   assumptionsV2: [],
   inconsistencies: [],
-
-  setPlacementSpec: (specId) =>
-    set({
-      pendingPlacementSpecId: specId,
-      interactionMode: specId ? "place-equipment" : "select",
-      previewTerrain: null,
-      layoutEdit: emptyLayoutEditState,
-      terrainFitPreview: emptyTerrainFitPreviewState,
-    }),
-
-  placeEquipmentAt: (p) => {
-    const { pendingPlacementSpecId, anchor } = get();
-    if (!pendingPlacementSpecId) return;
-    const spec = equipmentCatalog.find((e) => e.id === pendingPlacementSpecId);
-    if (!spec) return;
-    set((state) => ({
-      ...recordHistory(state),
-      placedEquipment: [
-        ...state.placedEquipment,
-        {
-          id: nanoid(8),
-          equipmentSpecId: pendingPlacementSpecId,
-          anchor: p,
-          rotation_deg: 0,
-          sourceReliability: spec.source.reliability,
-        },
-      ],
-      anchor: anchor ?? { lng0: p.lng, lat0: p.lat },
-      cableRoutes: [],
-      accessRoads: [],
-      previewTerrain: null,
-      layoutEdit: emptyLayoutEditState,
-      terrainFitPreview: emptyTerrainFitPreviewState,
-    }));
-  },
 
   insertBessArray: (input) => {
     const { anchor, polygon } = get();
@@ -364,46 +324,6 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       lastRepairResult: result,
     }));
   },
-
-  clearToolResult: () => set({ lastToolResult: null }),
-
-  clearRepairResult: () => set({ lastRepairResult: null }),
-
-  removeEquipment: (id) =>
-    set((state) => ({
-      ...recordHistory(state),
-      placedEquipment: state.placedEquipment.filter((e) => e.id !== id),
-      cableRoutes: [],
-      accessRoads: [],
-      selectedEquipmentId:
-        state.selectedEquipmentId === id ? null : state.selectedEquipmentId,
-      layoutEdit: {
-        ...state.layoutEdit,
-        selectedIds: state.layoutEdit.selectedIds.filter((item) => item !== id),
-        draftPlacedEquipment: state.layoutEdit.draftPlacedEquipment?.filter(
-          (item) => item.id !== id
-        ) ?? null,
-      },
-      terrainFitPreview: emptyTerrainFitPreviewState,
-      previewTerrain: null,
-    })),
-
-  rotateEquipment: (id, deltaDeg) =>
-    set((state) => ({
-      ...recordHistory(state),
-      placedEquipment: state.placedEquipment.map((e) =>
-        e.id === id ? { ...e, rotation_deg: (e.rotation_deg + deltaDeg) % 360 } : e
-      ),
-      cableRoutes: [],
-      accessRoads: [],
-      previewTerrain: null,
-      layoutEdit: emptyLayoutEditState,
-      terrainFitPreview: emptyTerrainFitPreviewState,
-    })),
-
-  selectEquipment: (id) => set({ selectedEquipmentId: id }),
-
-  selectCaseStudy: (id) => set({ selectedCaseStudyId: id }),
 
   startLayoutEdit: () =>
     set({
