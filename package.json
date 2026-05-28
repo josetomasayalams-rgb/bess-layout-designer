@@ -1,6 +1,6 @@
 {
   "name": "bess-layout-designer",
-  "version": "0.1.0",
+  "version": "1.0.0-rc.1",
   "private": true,
   "description": "Preliminary BESS (Battery Energy Storage System) layout designer — draw site polygons, place equipment at real scale, compute KPIs, detect spacing/collision/out-of-bound issues, generate conceptual cable routes and access roads, and export a technical PDF report. Not a substitute for detailed electrical, civil, fire-protection or permitting engineering.",
   "license": "UNLICENSED",
