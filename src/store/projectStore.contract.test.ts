@@ -113,6 +113,13 @@ const EXPECTED_ACTIONS = [
   "captureAlternative",
   "clearAlternative",
   "restoreAlternative",
+  // smartSiteFit
+  "runSmartSiteFitAnalysis",
+  "selectSmartSiteFitAlternative",
+  "updateSmartSiteFitOverrides",
+  "recalculateSmartSiteFitPreview",
+  "applySmartSiteFitAlternative",
+  "discardSmartSiteFit",
   // lifecycle
   "setMode",
   "loadDemoProject",
@@ -145,6 +152,8 @@ const EXPECTED_STATE_FIELDS = [
   "layoutEdit",
   "terrainFitPreview",
   "comparison",
+  "smartSiteFit",
+  "smartSiteFitApplied",
   "past",
   "future",
   // v1.2 slices (Fase 1 read-only + Fase 10 mutators)
@@ -190,7 +199,7 @@ type _TypeExportProbe = {
 void (null as unknown as _TypeExportProbe);
 
 describe("useProjectStore — Phase 12B public contract", () => {
-  it("exposes exactly the expected set of action names (55 actions)", () => {
+  it("exposes exactly the expected set of action names (61 actions)", () => {
     const state = useProjectStore.getState();
     const observedActions = Object.keys(state)
       .filter((key) => typeof (state as Record<string, unknown>)[key] === "function")
@@ -206,7 +215,7 @@ describe("useProjectStore — Phase 12B public contract", () => {
     }
   });
 
-  it("exposes exactly the expected set of state field names (33 fields)", () => {
+  it("exposes exactly the expected set of state field names (35 fields)", () => {
     const state = useProjectStore.getState();
     const observedFields = Object.keys(state)
       .filter((key) => typeof (state as Record<string, unknown>)[key] !== "function")

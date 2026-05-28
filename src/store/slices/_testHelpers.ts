@@ -6,7 +6,10 @@
  */
 
 import { useProjectStore } from "@/store/projectStore";
-import { DEFAULT_CONCEPTUAL_LAYOUT_POINT } from "@/store/projectStore.types";
+import {
+  DEFAULT_CONCEPTUAL_LAYOUT_POINT,
+  emptySmartSiteFitPreviewState,
+} from "@/store/projectStore.types";
 
 /**
  * Reset `useProjectStore` to the documented empty baseline. Mirrors the
@@ -41,6 +44,8 @@ export function resetProjectStore(): void {
       result: null,
     },
     comparison: { A: null, B: null },
+    smartSiteFit: emptySmartSiteFitPreviewState,
+    smartSiteFitApplied: null,
     cableRoutes: [],
     accessRoads: [],
     fireSafetyZones: [],
