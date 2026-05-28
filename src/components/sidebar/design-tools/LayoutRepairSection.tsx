@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, CheckCircle2, Compass, SquarePen, Wrench } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Compass, Move, SquarePen, Wrench } from "lucide-react";
 import { formatLength, formatNumber } from "@/lib/units/formatUnits";
 import type { Locale } from "@/lib/i18n";
 import type { TerrainFitResult } from "@/lib/layout/repairLayoutToSite";
@@ -36,9 +36,13 @@ export interface LayoutRepairSectionProps {
   onPreviewFit: () => void;
   onApplyFit: () => void;
   onRevertFit: () => void;
+  onShiftLayout: (dxM: number, dyM: number) => void;
+  onCenterLayout: () => void;
   isEs: boolean;
   locale: Locale;
 }
+
+const SHIFT_STEP_M = 10;
 
 function repairStatusClass(status: "success" | "partial" | "error") {
   if (status === "success") return "border-emerald-500/30 bg-emerald-500/10 text-emerald-100";
@@ -74,6 +78,8 @@ export function LayoutRepairSection({
   onPreviewFit,
   onApplyFit,
   onRevertFit,
+  onShiftLayout,
+  onCenterLayout,
   isEs,
   locale,
 }: LayoutRepairSectionProps) {
@@ -356,6 +362,79 @@ export function LayoutRepairSection({
             ) : null}
           </div>
         ) : null}
+      </div>
+
+      {/* ── Layout shift controls ──────────────────────────────── */}
+      <div className="space-y-2 rounded-lg border border-slate-700/50 bg-slate-900/50 p-2">
+        <div className="flex items-center gap-1.5">
+          <Move className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+            {isEs ? "Ajuste fino de posición" : "Fine position adjustment"}
+          </span>
+        </div>
+        <p className="text-[10px] leading-snug text-slate-600">
+          {isEs
+            ? `Mueve el layout completo paso a paso (${SHIFT_STEP_M} m). Verifica advertencias tras mover.`
+            : `Move the whole layout step by step (${SHIFT_STEP_M} m). Check warnings after repositioning.`}
+        </p>
+        {/* Directional pad */}
+        <div className="grid grid-cols-3 gap-1">
+          <div />
+          <button
+            type="button"
+            aria-label={isEs ? "Mover norte" : "Move north"}
+            disabled={placedCount === 0}
+            onClick={() => onShiftLayout(0, SHIFT_STEP_M)}
+            className="flex items-center justify-center rounded border border-slate-700 bg-slate-900 py-1.5 text-[11px] text-slate-300 hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            ↑
+          </button>
+          <div />
+          <button
+            type="button"
+            aria-label={isEs ? "Mover oeste" : "Move west"}
+            disabled={placedCount === 0}
+            onClick={() => onShiftLayout(-SHIFT_STEP_M, 0)}
+            className="flex items-center justify-center rounded border border-slate-700 bg-slate-900 py-1.5 text-[11px] text-slate-300 hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            ←
+          </button>
+          <button
+            type="button"
+            aria-label={isEs ? "Centrar layout en sitio" : "Center layout in site"}
+            disabled={placedCount === 0 || polygonLength < 3}
+            onClick={onCenterLayout}
+            title={isEs ? "Centrar layout en el polígono" : "Center layout on polygon"}
+            className="flex items-center justify-center rounded border border-cyan-600/40 bg-cyan-600/10 py-1.5 text-[11px] font-medium text-cyan-300 hover:border-cyan-400 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            ⌖
+          </button>
+          <button
+            type="button"
+            aria-label={isEs ? "Mover este" : "Move east"}
+            disabled={placedCount === 0}
+            onClick={() => onShiftLayout(SHIFT_STEP_M, 0)}
+            className="flex items-center justify-center rounded border border-slate-700 bg-slate-900 py-1.5 text-[11px] text-slate-300 hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            →
+          </button>
+          <div />
+          <button
+            type="button"
+            aria-label={isEs ? "Mover sur" : "Move south"}
+            disabled={placedCount === 0}
+            onClick={() => onShiftLayout(0, -SHIFT_STEP_M)}
+            className="flex items-center justify-center rounded border border-slate-700 bg-slate-900 py-1.5 text-[11px] text-slate-300 hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            ↓
+          </button>
+          <div />
+        </div>
+        <p className="text-[9px] leading-snug text-slate-700">
+          {isEs
+            ? "↑ N  ↓ S  ← O  → E  ⌖ Centrar  · Paso: 10 m"
+            : "↑ N  ↓ S  ← W  → E  ⌖ Center  · Step: 10 m"}
+        </p>
       </div>
     </div>
   );

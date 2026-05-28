@@ -258,6 +258,10 @@ export type ProjectState = {
     input: Omit<PreliminaryLayoutRequest, "anchor" | "startPoint" | "polygon" | "fitInsidePolygon">
   ) => void;
   repairLayout: (rules: LayoutRepairRules) => void;
+  /** Shifts all non-locked placed equipment by (dxM, dyM) meters in local ENU coords. */
+  shiftLayout: (dxM: number, dyM: number) => void;
+  /** Centers all non-locked placed equipment on the polygon centroid. Requires polygon >= 3 vertices. */
+  centerLayoutInSite: () => void;
   clearToolResult: () => void;
   clearRepairResult: () => void;
   removeEquipment: (id: string) => void;

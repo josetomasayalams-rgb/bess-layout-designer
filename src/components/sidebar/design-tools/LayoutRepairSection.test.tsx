@@ -20,6 +20,8 @@ describe("LayoutRepairSection", () => {
     onPreviewFit: vi.fn(),
     onApplyFit: vi.fn(),
     onRevertFit: vi.fn(),
+    onShiftLayout: vi.fn(),
+    onCenterLayout: vi.fn(),
     isEs: true,
     locale: "es" as const,
   };
@@ -186,5 +188,68 @@ describe("LayoutRepairSection", () => {
     );
 
     expect(screen.getByText("No hay equipos colocados para reparar. Coloca o genera equipos primero.")).toBeDefined();
+  });
+
+  it("renders directional shift buttons and center button", () => {
+    render(<LayoutRepairSection {...defaultProps} />);
+
+    expect(screen.getByRole("button", { name: /Mover norte/i })).toBeDefined();
+    expect(screen.getByRole("button", { name: /Mover sur/i })).toBeDefined();
+    expect(screen.getByRole("button", { name: /Mover oeste/i })).toBeDefined();
+    expect(screen.getByRole("button", { name: /Mover este/i })).toBeDefined();
+    expect(screen.getByRole("button", { name: /Centrar layout/i })).toBeDefined();
+  });
+
+  it("calls onShiftLayout with correct delta when north button clicked", () => {
+    const onShiftLayout = vi.fn();
+    render(<LayoutRepairSection {...defaultProps} onShiftLayout={onShiftLayout} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Mover norte/i }));
+    expect(onShiftLayout).toHaveBeenCalledWith(0, 10);
+  });
+
+  it("calls onShiftLayout with correct delta when south button clicked", () => {
+    const onShiftLayout = vi.fn();
+    render(<LayoutRepairSection {...defaultProps} onShiftLayout={onShiftLayout} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Mover sur/i }));
+    expect(onShiftLayout).toHaveBeenCalledWith(0, -10);
+  });
+
+  it("calls onShiftLayout with correct delta when east button clicked", () => {
+    const onShiftLayout = vi.fn();
+    render(<LayoutRepairSection {...defaultProps} onShiftLayout={onShiftLayout} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Mover este/i }));
+    expect(onShiftLayout).toHaveBeenCalledWith(10, 0);
+  });
+
+  it("calls onShiftLayout with correct delta when west button clicked", () => {
+    const onShiftLayout = vi.fn();
+    render(<LayoutRepairSection {...defaultProps} onShiftLayout={onShiftLayout} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Mover oeste/i }));
+    expect(onShiftLayout).toHaveBeenCalledWith(-10, 0);
+  });
+
+  it("calls onCenterLayout when center button clicked", () => {
+    const onCenterLayout = vi.fn();
+    render(<LayoutRepairSection {...defaultProps} onCenterLayout={onCenterLayout} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Centrar layout/i }));
+    expect(onCenterLayout).toHaveBeenCalled();
+  });
+
+  it("disables shift buttons when placedCount is 0", () => {
+    render(<LayoutRepairSection {...defaultProps} placedCount={0} />);
+
+    expect(screen.getByRole("button", { name: /Mover norte/i }).getAttribute("disabled")).toBe("");
+    expect(screen.getByRole("button", { name: /Mover sur/i }).getAttribute("disabled")).toBe("");
+  });
+
+  it("disables center button when polygon is not defined", () => {
+    render(<LayoutRepairSection {...defaultProps} polygonLength={0} />);
+
+    expect(screen.getByRole("button", { name: /Centrar layout/i }).getAttribute("disabled")).toBe("");
   });
 });

@@ -4,7 +4,7 @@
  * Why this exists
  * ---------------
  * Phase 12B slices `projectStore.ts` (1,185 LOC, 33 state fields,
- * 53 actions) into per-domain Zustand slices under `src/store/slices/`,
+ * 55 actions) into per-domain Zustand slices under `src/store/slices/`,
  * with `projectStore.ts` becoming a thin ~100-LOC composition root.
  *
  * Guardrail G2 of `docs/phase-12-architect-plan.md` declares the public
@@ -25,7 +25,7 @@
  *
  * Source of truth
  * ---------------
- * The 33 state fields and 53 actions enumerated below were extracted by
+ * The 33 state fields and 55 actions enumerated below were extracted by
  * reading `src/store/projectStore.ts` lines 134–247 (the `ProjectState`
  * type declaration) on commit `bc9d7e3`. They are NOT copied from the
  * architecture plan, which contains an off-by-one for state fields (34
@@ -83,6 +83,8 @@ const EXPECTED_ACTIONS = [
   "insertPreliminaryToolLayout",
   "regularizePreliminaryToolLayout",
   "repairLayout",
+  "shiftLayout",
+  "centerLayoutInSite",
   "clearToolResult",
   "clearRepairResult",
   "removeEquipment",
@@ -188,7 +190,7 @@ type _TypeExportProbe = {
 void (null as unknown as _TypeExportProbe);
 
 describe("useProjectStore — Phase 12B public contract", () => {
-  it("exposes exactly the expected set of action names (53 actions)", () => {
+  it("exposes exactly the expected set of action names (55 actions)", () => {
     const state = useProjectStore.getState();
     const observedActions = Object.keys(state)
       .filter((key) => typeof (state as Record<string, unknown>)[key] === "function")
