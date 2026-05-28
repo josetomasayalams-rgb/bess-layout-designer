@@ -108,7 +108,10 @@ export function AppShell() {
             <button
               type="button"
               onClick={() => setTopCollapsed(!topCollapsed)}
-              className="absolute right-[140px] top-4 z-20 flex h-9 w-9 items-center justify-center rounded-md border border-slate-700 bg-slate-950/90 text-slate-200 shadow-lg backdrop-blur transition hover:border-cyan-400 hover:text-cyan-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-400"
+              className={cn(
+                TAB_BUTTON,
+                "top-0 right-[140px] -translate-y-4 rounded-b-md border-t-0"
+              )}
               title={topLabel}
               aria-label={topLabel}
               aria-expanded={!topCollapsed}
