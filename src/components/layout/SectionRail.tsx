@@ -57,7 +57,7 @@ const SECTIONS: readonly SectionDef[] = [
   {
     id: "compliance",
     icon: ShieldCheck,
-    labelEs: "Cumplimiento",
+    labelEs: "Reglas",
     labelEn: "Compliance",
     hintEs: "Revisa validaciones regulatorias, físicas y eléctricas preliminares.",
     hintEn: "Review regulatory, physical and preliminary electrical checks.",

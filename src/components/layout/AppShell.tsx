@@ -87,7 +87,7 @@ export function AppShell() {
       <div
         className={cn(
           "transition-[max-height] duration-300 ease-in-out overflow-hidden flex flex-col shrink-0",
-          topCollapsed ? "max-h-0" : "max-h-[100px]"
+          topCollapsed ? "max-h-0" : "max-h-[200px]"
         )}
       >
         <div className="border-b border-slate-800 bg-slate-950 px-2 py-2 sm:px-3">
