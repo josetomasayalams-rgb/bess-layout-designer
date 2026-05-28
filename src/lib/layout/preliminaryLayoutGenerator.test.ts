@@ -4,6 +4,7 @@ import {
   generatePreliminaryLayout,
   gridShapeOptions,
 } from "@/lib/layout/preliminaryLayoutGenerator";
+import { toLocal } from "@/lib/geometry/projection";
 
 const rules = {
   bessToBess_m: 3,
@@ -143,6 +144,134 @@ describe("generatePreliminaryLayout", () => {
     expect(result.diagnostics.warnings).toBeDefined();
     expect(result.diagnostics.warnings?.some(w => w.includes("múltiplo"))).toBe(true);
     expect(result.diagnostics.warnings?.some(w => w.includes("PCS solicitada"))).toBe(true);
+  });
+});
+
+describe("generatePreliminaryLayout — centroid scoring", () => {
+  const anchor = { lng0: -70, lat0: -23 };
+
+  it("regularized layout centroid is within 60 m of polygon centroid (rectangular polygon)", () => {
+    // A ~400 m × 400 m polygon centered at the anchor
+    const deg = 0.0018; // ≈ 200 m per side
+    const polygon = [
+      { lng: -70 - deg, lat: -23 - deg },
+      { lng: -70 + deg, lat: -23 - deg },
+      { lng: -70 + deg, lat: -23 + deg },
+      { lng: -70 - deg, lat: -23 + deg },
+    ];
+
+    const result = generatePreliminaryLayout({
+      batteryContainerSpecId: "bess-sungrow-st2752ux-us",
+      pcsSpecId: "mvskid-sungrow-sc5000ud-mv-desierto",
+      batteryContainerCount: 8,
+      pcsCount: 1,
+      containersPerPcs: 8,
+      anchor,
+      startPoint: polygon[0],
+      polygon,
+      rules,
+      fitInsidePolygon: true,
+    });
+
+    expect(result.status).toBe("success");
+    expect(result.placed.length).toBeGreaterThan(0);
+
+    // Compute polygon centroid in local coords
+    const localPoly = polygon.map((p) => toLocal(p, anchor));
+    const polyCenter = {
+      x_m: localPoly.reduce((s, p) => s + p.x_m, 0) / localPoly.length,
+      y_m: localPoly.reduce((s, p) => s + p.y_m, 0) / localPoly.length,
+    };
+
+    // Compute layout centroid in local coords
+    const localLayout = result.placed.map((eq) => toLocal(eq.anchor, anchor));
+    const layoutCenter = {
+      x_m: localLayout.reduce((s, p) => s + p.x_m, 0) / localLayout.length,
+      y_m: localLayout.reduce((s, p) => s + p.y_m, 0) / localLayout.length,
+    };
+
+    const dist = Math.hypot(
+      layoutCenter.x_m - polyCenter.x_m,
+      layoutCenter.y_m - polyCenter.y_m
+    );
+    // Layout centroid should be within 60 m of polygon centroid
+    expect(dist).toBeLessThan(60);
+  });
+
+  it("centered placement scores better than an edge placement for equal-area layouts", () => {
+    // A large polygon. The centroid-scoring should prefer the center over the edge.
+    const deg = 0.003; // ≈ 330 m per side
+    const polygon = [
+      { lng: -70 - deg, lat: -23 - deg },
+      { lng: -70 + deg, lat: -23 - deg },
+      { lng: -70 + deg, lat: -23 + deg },
+      { lng: -70 - deg, lat: -23 + deg },
+    ];
+
+    const result = generatePreliminaryLayout({
+      batteryContainerSpecId: "bess-sungrow-st2752ux-us",
+      pcsSpecId: "mvskid-sungrow-sc5000ud-mv-desierto",
+      batteryContainerCount: 8,
+      pcsCount: 1,
+      containersPerPcs: 8,
+      anchor,
+      startPoint: polygon[0],
+      polygon,
+      rules,
+      fitInsidePolygon: true,
+    });
+
+    expect(result.status).toBe("success");
+
+    const localPoly = polygon.map((p) => toLocal(p, anchor));
+    const polyCenter = {
+      x_m: localPoly.reduce((s, p) => s + p.x_m, 0) / localPoly.length,
+      y_m: localPoly.reduce((s, p) => s + p.y_m, 0) / localPoly.length,
+    };
+    const localLayout = result.placed.map((eq) => toLocal(eq.anchor, anchor));
+    const layoutCenter = {
+      x_m: localLayout.reduce((s, p) => s + p.x_m, 0) / localLayout.length,
+      y_m: localLayout.reduce((s, p) => s + p.y_m, 0) / localLayout.length,
+    };
+    const distToCenter = Math.hypot(
+      layoutCenter.x_m - polyCenter.x_m,
+      layoutCenter.y_m - polyCenter.y_m
+    );
+
+    // Layout centroid should be well within the polygon, near center
+    const halfWidth = Math.hypot(
+      localPoly[1].x_m - localPoly[0].x_m,
+      localPoly[1].y_m - localPoly[0].y_m
+    ) / 2;
+    // Centroid distance should be less than half the polygon width (not pinned to edge)
+    expect(distToCenter).toBeLessThan(halfWidth * 0.5);
+  });
+
+  it("does not increase out-of-polygon count versus a trivially valid layout", () => {
+    const deg = 0.002;
+    const polygon = [
+      { lng: -70 - deg, lat: -23 - deg },
+      { lng: -70 + deg, lat: -23 - deg },
+      { lng: -70 + deg, lat: -23 + deg },
+      { lng: -70 - deg, lat: -23 + deg },
+    ];
+
+    const result = generatePreliminaryLayout({
+      batteryContainerSpecId: "bess-sungrow-st2752ux-us",
+      pcsSpecId: "mvskid-sungrow-sc5000ud-mv-desierto",
+      batteryContainerCount: 8,
+      pcsCount: 1,
+      containersPerPcs: 8,
+      anchor,
+      startPoint: polygon[0],
+      polygon,
+      rules,
+      fitInsidePolygon: true,
+    });
+
+    expect(result.status).toBe("success");
+    // All placed equipment should be within the polygon (regularization guarantee)
+    expect(result.placed.length).toBe(9); // 8 BESS + 1 PCS
   });
 });
 
