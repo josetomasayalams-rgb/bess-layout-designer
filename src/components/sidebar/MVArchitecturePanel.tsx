@@ -1,11 +1,12 @@
 "use client";
 
-import { Network } from "lucide-react";
+import { Network, Info } from "lucide-react";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import { useProjectStore } from "@/store/projectStore";
 import { useUiStore } from "@/store/uiStore";
 import { generateConceptualPhysicalInfrastructure } from "@/lib/layout/physicalInfrastructure";
 import { formatLength } from "@/lib/units/formatUnits";
+import { copyFor } from "@/lib/i18n";
 
 import { SingleLineDiagram } from "@/components/electrical/SingleLineDiagram";
 
@@ -18,6 +19,7 @@ export function MVArchitecturePanel() {
   const poi = useProjectStore((state) => state.poi);
   const locale = useUiStore((state) => state.locale);
   const isEs = locale === "es";
+  const t = copyFor(locale);
 
   const generated = generateConceptualPhysicalInfrastructure({
     placed,
@@ -130,8 +132,39 @@ export function MVArchitecturePanel() {
             POI: {poi.busName} · {poi.voltageKv} kV
           </p>
         ) : null}
+
+        <ConceptualElectricalNotes t={t.mvArchitecture} />
       </div>
     </CollapsibleSection>
+  );
+}
+
+type MvArchitectureCopy = ReturnType<typeof copyFor>["mvArchitecture"];
+
+function ConceptualElectricalNotes({ t }: { t: MvArchitectureCopy }) {
+  return (
+    <details className="group rounded-md border border-slate-700/60 bg-slate-900/60">
+      <summary className="flex cursor-pointer items-center gap-1.5 px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400 hover:text-slate-200">
+        <Info className="h-3 w-3 shrink-0" aria-hidden="true" />
+        {t.conceptualNoteTitle}
+      </summary>
+      <div className="space-y-2 px-2 pb-2 pt-1">
+        <NoteRow title={t.pcsIntegratedTitle} body={t.pcsIntegratedBody} />
+        <NoteRow title={t.bessRatioTitle} body={t.bessRatioBody} />
+        <NoteRow title={t.sectioningCenterTitle} body={t.sectioningCenterBody} />
+        <NoteRow title={t.poiTitle} body={t.poiBody} />
+        <NoteRow title={t.mvCorridorsTitle} body={t.mvCorridorsBody} />
+      </div>
+    </details>
+  );
+}
+
+function NoteRow({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="rounded border border-slate-700/40 bg-slate-800/40 px-2 py-1.5">
+      <div className="text-[10px] font-semibold text-slate-300">{title}</div>
+      <div className="mt-0.5 text-[9px] leading-snug text-slate-500">{body}</div>
+    </div>
   );
 }
 
