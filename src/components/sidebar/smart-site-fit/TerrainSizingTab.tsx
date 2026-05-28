@@ -88,31 +88,68 @@ export function TerrainSizingTab({
             <span className="block text-[11px] text-slate-400">
               {isEs ? "Duración de diseño" : "Design Duration"}
             </span>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-4 gap-1">
               <button
                 type="button"
                 onClick={() => setDuration(2)}
-                className={`rounded-md py-1.5 text-xs font-semibold ${
+                className={`rounded-md py-1.5 text-[10px] font-semibold ${
                   duration === 2
                     ? "bg-cyan-600 text-white"
                     : "bg-slate-900 text-slate-400 border border-slate-800 hover:border-slate-700"
                 }`}
               >
-                2h (Ratio 4:1)
+                2h (4:1)
               </button>
               <button
                 type="button"
                 onClick={() => setDuration(4)}
-                className={`rounded-md py-1.5 text-xs font-semibold ${
+                className={`rounded-md py-1.5 text-[10px] font-semibold ${
                   duration === 4
                     ? "bg-cyan-600 text-white"
                     : "bg-slate-900 text-slate-400 border border-slate-800 hover:border-slate-700"
                 }`}
               >
-                4h (Ratio 8:1)
+                4h (8:1)
+              </button>
+              <button
+                type="button"
+                onClick={() => setDuration(8)}
+                className={`rounded-md py-1.5 text-[10px] font-semibold ${
+                  duration === 8
+                    ? "bg-cyan-600 text-white"
+                    : "bg-slate-900 text-slate-400 border border-slate-800 hover:border-slate-700"
+                }`}
+              >
+                8h (16:1)
+              </button>
+              <button
+                type="button"
+                onClick={() => setDuration(16)}
+                className={`rounded-md py-1.5 text-[10px] font-semibold ${
+                  duration === 16
+                    ? "bg-cyan-600 text-white"
+                    : "bg-slate-900 text-slate-400 border border-slate-800 hover:border-slate-700"
+                }`}
+              >
+                16h (32:1)
               </button>
             </div>
           </div>
+
+          {(duration === 8 || duration === 16) && (
+            <div className="rounded-md border border-slate-800 bg-slate-950 p-2 text-[10px] text-slate-400 leading-tight space-y-1">
+              <p>
+                {isEs
+                  ? "Las configuraciones de 8h y 16h se calculan por extensión proporcional del patrón BESS/PCS. Deben validarse con fabricante o EPC antes de uso de ingeniería."
+                  : "The 8h and 16h configurations are calculated by proportional extension of the BESS/PCS pattern. They must be validated with the manufacturer or EPC before engineering use."}
+              </p>
+              <p className="text-slate-500 font-medium">
+                {isEs
+                  ? "El resultado es un predimensionamiento preliminar. No representa ingeniería de detalle."
+                  : "The result is a preliminary pre-dimensioning. It does not represent detailed engineering."}
+              </p>
+            </div>
+          )}
 
           <button
             onClick={handleAnalyze}

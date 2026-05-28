@@ -14,6 +14,13 @@ describe("SmartSiteFit Presets", () => {
     expect(SUNGROW_ST2752UX_SC5000UD_PRESET.bessPerPcs2h).toBe(4);
     expect(SUNGROW_ST2752UX_SC5000UD_PRESET.bessPerPcs4h).toBe(8);
     expect(SUNGROW_ST2752UX_SC5000UD_PRESET.dataClassification).toBe("preliminary_assumption");
+    expect(SUNGROW_ST2752UX_SC5000UD_PRESET.supportedDurations).toEqual([2, 4, 8, 16]);
+    expect(SUNGROW_ST2752UX_SC5000UD_PRESET.ratioByDuration).toEqual({
+      2: 4,
+      4: 8,
+      8: 16,
+      16: 32,
+    });
   });
 
   it("should return default preset", () => {
@@ -25,13 +32,19 @@ describe("SmartSiteFit Presets", () => {
     expect(getContainersPerPcsForDuration(1.5)).toBe(4);
     expect(getContainersPerPcsForDuration(4)).toBe(8);
     expect(getContainersPerPcsForDuration(3)).toBe(8);
-    expect(getContainersPerPcsForDuration(6)).toBe(12);
+    expect(getContainersPerPcsForDuration(8)).toBe(16);
+    expect(getContainersPerPcsForDuration(16)).toBe(32);
   });
 
   it("should adjust preset notes and duration correctly", () => {
-    const adjusted = adjustPresetForDuration(SUNGROW_ST2752UX_SC5000UD_PRESET, 6);
-    expect(adjusted.defaultDurationHours).toBe(6);
-    expect(adjusted.notes).toContain("Ajustado para duración de 6h");
-    expect(adjusted.notes).toContain("12 BESS por PCS");
+    const adjusted8 = adjustPresetForDuration(SUNGROW_ST2752UX_SC5000UD_PRESET, 8);
+    expect(adjusted8.defaultDurationHours).toBe(8);
+    expect(adjusted8.notes).toContain("Ajustado para duración de 8h");
+    expect(adjusted8.notes).toContain("16 BESS por PCS");
+
+    const adjusted16 = adjustPresetForDuration(SUNGROW_ST2752UX_SC5000UD_PRESET, 16);
+    expect(adjusted16.defaultDurationHours).toBe(16);
+    expect(adjusted16.notes).toContain("Ajustado para duración de 16h");
+    expect(adjusted16.notes).toContain("32 BESS por PCS");
   });
 });

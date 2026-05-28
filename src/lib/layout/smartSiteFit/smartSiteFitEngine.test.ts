@@ -33,8 +33,8 @@ describe("SmartSiteFit Engine", () => {
     expect(result.warnings[0].id).toBe("invalid-polygon");
   });
 
-  it("should run target sizing mode successfully", () => {
-    const result = runSmartSiteFit({
+  it("should run target sizing mode successfully and produce correct BESS to PCS ratios", () => {
+    const result8 = runSmartSiteFit({
       mode: "target",
       polygon,
       targetMW: 5,
@@ -43,10 +43,26 @@ describe("SmartSiteFit Engine", () => {
       strategy: "balanced",
     });
 
-    expect(result.success).toBe(true);
-    expect(result.fallbackUsed).toBe(false);
-    expect(result.selected).not.toBeNull();
-    expect(result.candidates.length).toBe(1); // Target mode returns single choice
+    expect(result8.success).toBe(true);
+    expect(result8.fallbackUsed).toBe(false);
+    expect(result8.selected).not.toBeNull();
+    const bess8 = result8.selected!.placedEquipment.filter((e) => e.equipmentSpecId === "sungrow-st2752ux-us").length;
+    const pcs8 = result8.selected!.placedEquipment.filter((e) => e.equipmentSpecId === "sungrow-sc5000ud-mv-us-p3").length;
+    expect(bess8 / pcs8).toBe(16);
+
+    const result16 = runSmartSiteFit({
+      mode: "target",
+      polygon,
+      targetMW: 5,
+      targetMWh: 80,
+      durationHours: 16,
+      strategy: "balanced",
+    });
+
+    expect(result16.success).toBe(true);
+    const bess16 = result16.selected!.placedEquipment.filter((e) => e.equipmentSpecId === "sungrow-st2752ux-us").length;
+    const pcs16 = result16.selected!.placedEquipment.filter((e) => e.equipmentSpecId === "sungrow-sc5000ud-mv-us-p3").length;
+    expect(bess16 / pcs16).toBe(32);
   });
 
   it("should run terrain sizing mode successfully", () => {

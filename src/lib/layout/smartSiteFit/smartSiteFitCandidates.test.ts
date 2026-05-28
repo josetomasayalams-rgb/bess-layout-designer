@@ -42,6 +42,32 @@ describe("SmartSiteFit Candidates Generation", () => {
     expect(bessCount / pcsCount).toBe(4);
   });
 
+  it("should respect correct BESS-to-PCS ratio based on duration (8h -> 16:1)", () => {
+    const candidates = generateCandidates(largeSquare, anchor, 8, "balanced", undefined, 10, 160);
+    expect(candidates.length).toBeGreaterThan(0);
+    const candidate = candidates[0];
+    const bessCount = candidate.placedEquipment.filter(
+      (e) => e.equipmentSpecId === "sungrow-st2752ux-us"
+    ).length;
+    const pcsCount = candidate.placedEquipment.filter(
+      (e) => e.equipmentSpecId === "sungrow-sc5000ud-mv-us-p3"
+    ).length;
+    expect(bessCount / pcsCount).toBe(16);
+  });
+
+  it("should respect correct BESS-to-PCS ratio based on duration (16h -> 32:1)", () => {
+    const candidates = generateCandidates(largeSquare, anchor, 16, "balanced", undefined, 10, 320);
+    expect(candidates.length).toBeGreaterThan(0);
+    const candidate = candidates[0];
+    const bessCount = candidate.placedEquipment.filter(
+      (e) => e.equipmentSpecId === "sungrow-st2752ux-us"
+    ).length;
+    const pcsCount = candidate.placedEquipment.filter(
+      (e) => e.equipmentSpecId === "sungrow-sc5000ud-mv-us-p3"
+    ).length;
+    expect(bessCount / pcsCount).toBe(32);
+  });
+
   it("should not exceed the 500 candidate generation limit", () => {
     const candidates = generateCandidates(largeSquare, anchor, 4, "max_capacity");
     expect(candidates.length).toBeLessThanOrEqual(500);

@@ -120,4 +120,24 @@ describe("AlternativeCard", () => {
 
     expect(screen.queryByRole("button", { name: /Apply alternative/i })).toBeNull();
   });
+
+  it("renders ratio and duration correctly for 16h (32:1 ratio) candidate", () => {
+    const highRatioCandidate: SmartSiteFitCandidate = {
+      ...mockCandidate,
+      placedEquipment: [
+        { id: "p1", equipmentSpecId: "sungrow-sc5000ud-mv-us-p3", anchor: { lng: -70.6, lat: -33.4 }, rotation_deg: 0, sourceReliability: "preliminary_assumption" },
+        ...Array.from({ length: 32 }).map((_, idx) => ({
+          id: `b-${idx}`,
+          equipmentSpecId: "sungrow-st2752ux-us",
+          anchor: { lng: -70.6 + 0.0001 * idx, lat: -33.4 },
+          rotation_deg: 0,
+          sourceReliability: "preliminary_assumption" as const,
+        })),
+      ],
+    };
+
+    render(<AlternativeCard {...defaultProps} candidate={highRatioCandidate} />);
+
+    expect(screen.getByText("32:1")).toBeDefined();
+  });
 });

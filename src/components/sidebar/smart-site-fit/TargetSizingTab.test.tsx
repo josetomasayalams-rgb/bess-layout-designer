@@ -90,4 +90,18 @@ describe("TargetSizingTab", () => {
     expect(screen.getAllByText(/Balanced/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/Setbacks and Spacing Adjustments/i)).toBeDefined();
   });
+
+  it("supports choosing 8h and 16h durations and shows corresponding ratios and warnings", () => {
+    render(<TargetSizingTab {...defaultProps} />);
+
+    const button8 = screen.getByRole("button", { name: /8h \(16:1\)/i });
+    const button16 = screen.getByRole("button", { name: /16h \(32:1\)/i });
+
+    expect(button8).toBeDefined();
+    expect(button16).toBeDefined();
+
+    // Select 8h and verify warning note is shown
+    fireEvent.click(button8);
+    expect(screen.getByText(/The 8h and 16h configurations are calculated/i)).toBeDefined();
+  });
 });

@@ -15,6 +15,8 @@ export interface SmartSiteFitPreset {
   defaultDurationHours: number;
   dataClassification: "certified_data" | "preliminary_assumption" | "pending_validation";
   notes: string;
+  supportedDurations?: number[];
+  ratioByDuration?: Record<number, number>;
 }
 
 export type SmartSiteFitShapeKind =
