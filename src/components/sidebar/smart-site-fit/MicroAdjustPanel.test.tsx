@@ -36,6 +36,7 @@ describe("MicroAdjustPanel", () => {
     // Verify values display
     expect(screen.getAllByText("3m").length).toBe(3); // bessToBess, bessToPcs, pcsToPcs
     expect(screen.getByText("4m")).toBeDefined(); // boundaryMargin
+    expect(screen.getByText("Layout shape")).toBeDefined();
   });
 
   it("triggers onUpdateOverrides when sliders change", () => {
@@ -53,6 +54,15 @@ describe("MicroAdjustPanel", () => {
     // Change Boundary Margin slider
     fireEvent.change(sliders[2], { target: { value: "8.5" } });
     expect(onUpdateOverrides).toHaveBeenCalledWith({ boundaryMargin_m: 8.5 });
+  });
+
+  it("triggers onUpdateOverrides when shape select changes", () => {
+    const onUpdateOverrides = vi.fn();
+    render(<MicroAdjustPanel {...defaultProps} onUpdateOverrides={onUpdateOverrides} />);
+
+    const select = screen.getByRole("combobox");
+    fireEvent.change(select, { target: { value: "two_row_block" } });
+    expect(onUpdateOverrides).toHaveBeenCalledWith({ preferredShapeKind: "two_row_block" });
   });
 
   it("disables recalculate button if not dirty, enables it and triggers onRecalculate when dirty", () => {
@@ -96,3 +106,4 @@ describe("MicroAdjustPanel", () => {
     expect(onDiscard).toHaveBeenCalled();
   });
 });
+

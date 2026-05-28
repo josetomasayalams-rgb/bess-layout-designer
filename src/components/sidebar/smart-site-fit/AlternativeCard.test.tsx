@@ -37,6 +37,7 @@ describe("AlternativeCard", () => {
       rowRegularity: 10,
       corridorEfficiency: 5,
       ratioCompliance: 5,
+      shapeCompactness: 10,
     },
     warnings: [
       { id: "w1", severity: "warning", message: "Warning 1" },
@@ -45,6 +46,16 @@ describe("AlternativeCard", () => {
     assumptions: [
       { id: "a1", description: "Assumption 1", value: true, classification: "preliminary_assumption" }
     ],
+    shape: {
+      id: "compact_grid",
+      kind: "compact_grid",
+      label: "Matriz Compacta",
+      description: "Matriz compacta",
+      rows: 4,
+      columns: 8,
+      blocks: 1,
+      pcsPlacement: "side",
+    },
   };
 
   const defaultProps = {
@@ -74,6 +85,9 @@ describe("AlternativeCard", () => {
     expect(screen.getByText("5 MW")).toBeDefined(); // 1 PCS * 5 MW
     expect(screen.getByText("2.75 MWh")).toBeDefined(); // 1 BESS * 2.752 MWh rounded
     expect(screen.getByText("0.6h")).toBeDefined(); // 2.752 / 5 rounded
+
+    // Renders shape info
+    expect(screen.getByText("Matriz Compacta")).toBeDefined();
 
     // Renders warnings/assumptions counters
     expect(screen.getByText(/2 warnings/i)).toBeDefined();

@@ -39,6 +39,31 @@ export function MicroAdjustPanel({
       </div>
 
       <div className="space-y-3">
+        {/* Layout Shape Selector */}
+        <div className="space-y-1">
+          <label className="block text-[11px] text-slate-400">
+            {isEs ? "Forma del layout" : "Layout shape"}
+          </label>
+          <select
+            value={overrides.preferredShapeKind ?? "auto"}
+            onChange={(e) =>
+              onUpdateOverrides({
+                preferredShapeKind: e.target.value as any,
+              })
+            }
+            className="w-full rounded border border-slate-800 bg-slate-950 p-1 text-[11px] text-slate-350 focus:border-cyan-500 focus:outline-none"
+          >
+            <option value="auto">{isEs ? "Automática" : "Automatic"}</option>
+            <option value="single_row">{isEs ? "Fila Única" : "Single Row"}</option>
+            <option value="two_row_block">{isEs ? "Dos Hileras" : "Two Rows"}</option>
+            <option value="compact_grid">{isEs ? "Compacta" : "Compact Grid"}</option>
+            <option value="wide_grid">{isEs ? "Ancha" : "Wide Grid"}</option>
+            <option value="deep_grid">{isEs ? "Profunda" : "Deep Grid"}</option>
+            <option value="multi_block">{isEs ? "Multibloque" : "Multi-block"}</option>
+            <option value="split_blocks">{isEs ? "Bloques Separados" : "Split Blocks"}</option>
+          </select>
+        </div>
+
         {/* BESS to BESS */}
         <div className="space-y-1">
           <div className="flex justify-between text-[11px]">

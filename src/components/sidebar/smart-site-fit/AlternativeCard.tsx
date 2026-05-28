@@ -99,7 +99,16 @@ export function AlternativeCard({
         </div>
       </div>
 
-      <p className="mt-2 text-[10px] leading-relaxed text-slate-400">
+      {candidate.shape && (
+        <div className="mt-2 text-[10px]">
+          <span className="text-slate-500">{isEs ? "Forma: " : "Shape: "}</span>
+          <span className="rounded bg-slate-850 px-1.5 py-0.5 text-cyan-300 font-medium font-mono text-[9.5px]">
+            {candidate.shape.label}
+          </span>
+        </div>
+      )}
+
+      <p className="mt-2 text-[10px] leading-relaxed text-slate-400 font-sans">
         {explanation}
       </p>
 
