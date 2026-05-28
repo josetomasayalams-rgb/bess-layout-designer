@@ -201,14 +201,74 @@ export function scoreCandidate(
     ratioComplianceScore = 10;
   }
 
-  const total =
+  // --- shapeCompactness (10 pts) ---
+  let shapeCompactnessScore = 10;
+  if (placed.length > 1) {
+    let minX = Infinity, maxX = -Infinity;
+    let minY = Infinity, maxY = -Infinity;
+    for (const { rect } of rectsWithSpec) {
+      const { center } = rect;
+      if (center.x_m < minX) minX = center.x_m;
+      if (center.x_m > maxX) maxX = center.x_m;
+      if (center.y_m < minY) minY = center.y_m;
+      if (center.y_m > maxY) maxY = center.y_m;
+    }
+    const dx = maxX - minX + 9.34;
+    const dy = maxY - minY + 2.438;
+    const aspectRatio = Math.max(dx, dy) / Math.max(0.1, Math.min(dx, dy));
+
+    // Penalize extreme aspect ratio (elongated row)
+    let aspectPenalty = 0;
+    if (aspectRatio > 3.0) {
+      aspectPenalty = Math.min(8.0, ((aspectRatio - 3.0) / 5.0) * 8.0);
+    }
+
+    // Penalize single row layout when there are many containers
+    let rowPenalty = 0;
+    const isSingleRow = candidate.shape?.kind === "single_row";
+    if (isSingleRow && bessCount >= 8) {
+      rowPenalty = 2.0;
+    }
+
+    // Proximity to centroid
+    let avgX = 0, avgY = 0;
+    for (const { rect } of rectsWithSpec) {
+      avgX += rect.center.x_m;
+      avgY += rect.center.y_m;
+    }
+    avgX /= rectsWithSpec.length;
+    avgY /= rectsWithSpec.length;
+
+    let polyCentroid = { x_m: 0, y_m: 0 };
+    if (polygon.length > 0) {
+      let sumX = 0, sumY = 0;
+      for (const p of polygon) {
+        sumX += p.x_m;
+        sumY += p.y_m;
+      }
+      polyCentroid = { x_m: sumX / polygon.length, y_m: sumY / polygon.length };
+    }
+    const distToCentroid = Math.sqrt((avgX - polyCentroid.x_m) ** 2 + (avgY - polyCentroid.y_m) ** 2);
+    let centroidPenalty = 0;
+    if (distToCentroid >= 10.0) {
+      centroidPenalty = Math.min(2.0, (distToCentroid - 10.0) / 20.0);
+    }
+
+    shapeCompactnessScore = Math.max(0, 10 - aspectPenalty - rowPenalty - centroidPenalty);
+  }
+
+  const sum =
     insidePolygonScore +
     noCollisionsScore +
     boundaryMarginScore +
     siteUtilizationScore +
     rowRegularityScore +
     corridorEfficiencyScore +
-    ratioComplianceScore;
+    ratioComplianceScore +
+    shapeCompactnessScore;
+
+  // Scale back to 100 max
+  const total = (sum / 110) * 100;
 
   return {
     total: parseFloat(total.toFixed(2)),
@@ -219,6 +279,7 @@ export function scoreCandidate(
     rowRegularity: parseFloat(rowRegularityScore.toFixed(2)),
     corridorEfficiency: parseFloat(corridorEfficiencyScore.toFixed(2)),
     ratioCompliance: parseFloat(ratioComplianceScore.toFixed(2)),
+    shapeCompactness: parseFloat(shapeCompactnessScore.toFixed(2)),
   };
 }
 

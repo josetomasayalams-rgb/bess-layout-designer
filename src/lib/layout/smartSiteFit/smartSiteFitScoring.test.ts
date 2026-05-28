@@ -95,4 +95,73 @@ describe("SmartSiteFit Scoring", () => {
     const top = selectTopSmartSiteFitAlternatives(candidates, 2);
     expect(top.length).toBe(2);
   });
+
+  it("should score compact_grid better than single_row on a square terrain due to shapeCompactness", () => {
+    // Generate candidates for 32 BESS and 4 PCS
+    const bessCount = 32;
+    const pcsCount = 4;
+    
+    // We mock a single_row candidate and a compact_grid candidate
+    // Place all equipment within a large square so insidePolygon is 25 for both
+    const singleRowCandidate: SmartSiteFitCandidate = {
+      ...emptyCandidate,
+      id: "single-row",
+      shape: {
+        id: "single_row",
+        kind: "single_row",
+        label: "Fila Única",
+        description: "Fila única de contenedores",
+        rows: pcsCount,
+        columns: 8,
+        blocks: pcsCount,
+        pcsPlacement: "end",
+      },
+      placedEquipment: [
+        // Placed in a single extremely long row along X
+        { id: "pcs1", equipmentSpecId: "sungrow-sc5000ud-mv-us-p3", anchor: { lng: -70.0001, lat: -33 }, rotation_deg: 0, sourceReliability: "preliminary_assumption" },
+        ...Array.from({ length: 8 }).map((_, i) => ({
+          id: `bess-${i}`,
+          equipmentSpecId: "sungrow-st2752ux-us",
+          anchor: { lng: -70.0001 + 0.0001 * (i + 1), lat: -33 },
+          rotation_deg: 0,
+          sourceReliability: "preliminary_assumption",
+        }))
+      ]
+    };
+
+    const compactGridCandidate: SmartSiteFitCandidate = {
+      ...emptyCandidate,
+      id: "compact-grid",
+      shape: {
+        id: "compact_grid",
+        kind: "compact_grid",
+        label: "Matriz Compacta",
+        description: "Matriz compacta",
+        rows: 4,
+        columns: 8,
+        blocks: 1,
+        pcsPlacement: "side",
+      },
+      placedEquipment: [
+        // Placed in 4 rows of 8 BESS
+        { id: "pcs1", equipmentSpecId: "sungrow-sc5000ud-mv-us-p3", anchor: { lng: -70, lat: -33.0001 }, rotation_deg: 0, sourceReliability: "preliminary_assumption" },
+        ...Array.from({ length: 8 }).map((_, i) => ({
+          id: `bess-${i}`,
+          equipmentSpecId: "sungrow-st2752ux-us",
+          anchor: { lng: -70 + 0.00002 * (i % 4), lat: -33 + 0.00002 * Math.floor(i / 4) },
+          rotation_deg: 0,
+          sourceReliability: "preliminary_assumption",
+        }))
+      ]
+    };
+
+    // Calculate score
+    const scoreSingle = scoreCandidate(singleRowCandidate, square, anchor, 4);
+    const scoreCompact = scoreCandidate(compactGridCandidate, square, anchor, 4);
+
+    expect(scoreCompact.shapeCompactness).toBeDefined();
+    expect(scoreSingle.shapeCompactness).toBeDefined();
+    expect(scoreCompact.shapeCompactness).toBeGreaterThan(scoreSingle.shapeCompactness!);
+  });
 });
+

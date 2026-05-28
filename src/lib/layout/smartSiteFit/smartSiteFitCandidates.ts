@@ -11,6 +11,7 @@ import type {
 import { getContainersPerPcsForDuration } from "./smartSiteFitPresets";
 import { toLngLat } from "@/lib/geometry/projection";
 import { analyzePolygon } from "./smartSiteFitGeometry";
+import { generateSmartSiteFitShapes, buildShapeLayout } from "./smartSiteFitShapes";
 
 export function generateCandidates(
   polygon: LocalPoint[],
@@ -57,7 +58,7 @@ export function generateCandidates(
   const pcsLength = 6.058;
   const pcsWidth = 2.438;
 
-  // Block length along row: PCS + spacing + N * (BESS + spacing) - spacing
+  // Block length along row for target block counting
   const blockLength = pcsLength + bessToPcs + bessPerPcs * (bessLength + bessToBess) - bessToBess;
   const blockWidth = Math.max(pcsWidth, bessWidth);
 
@@ -74,7 +75,6 @@ export function generateCandidates(
     targetBlockCount = Math.max(1, Math.max(pcsFromPower, pcsFromEnergy));
   } else {
     // Terrain mode: calculate max blocks based on polygon area
-    // Approximate block footprint area including spacing
     const blockArea = (blockLength + pcsToPcs) * (blockWidth + bessToBess);
     const maxTheoreticalBlocks = Math.max(1, Math.floor(analysis.area_m2 / blockArea));
     targetBlockCount = Math.min(100, maxTheoreticalBlocks);
@@ -130,7 +130,7 @@ export function generateCandidates(
         const startCenterX = centroid.x_m + dx;
         const startCenterY = centroid.y_m + dy;
 
-        // Try different capacity levels to speed up candidate generation
+        // Try different capacity levels
         const blockCountsToTry = isTargetMode
           ? [targetBlockCount]
           : Array.from(new Set([targetBlockCount, Math.floor(targetBlockCount * 0.75), Math.floor(targetBlockCount * 0.5)]))
@@ -140,96 +140,76 @@ export function generateCandidates(
         for (const blocks of blockCountsToTry) {
           if (candidateCount >= maxCandidatesToEvaluate) break;
 
-          // Determine grid rows and columns
-          const maxCols = Math.max(1, Math.floor(Math.sqrt(blocks)));
-          const cols = Math.min(blocks, maxCols);
-          const rows = Math.ceil(blocks / cols);
-
-          const placedEquipment: PlacedEquipment[] = [];
-
-          // Helper to place item and rotate it
-          const addEquipment = (
-            specId: string,
-            localBlockX: number,
-            localBlockY: number,
-            blockIndex: number
-          ) => {
-            const rx = startCenterX + localBlockX * cos - localBlockY * sin;
-            const ry = startCenterY + localBlockX * sin + localBlockY * cos;
-            const lngLat = toLngLat({ x_m: rx, y_m: ry }, anchor);
-
-            placedEquipment.push({
-              id: nanoid(8),
-              equipmentSpecId: specId,
-              anchor: lngLat,
-              rotation_deg: rotationDeg,
-              groupId: `block-${blockIndex}`,
-              blockId: `block-${blockIndex}`,
-              classification: "preliminary_assumption",
-              sourceReliability: "preliminary_assumption",
-            });
-          };
-
-          let placedBlocks = 0;
-          for (let r = 0; r < rows; r++) {
-            if (placedBlocks >= blocks) break;
-            for (let c = 0; c < cols; c++) {
-              if (placedBlocks >= blocks) break;
-
-              const blockIndex = placedBlocks;
-              placedBlocks++;
-
-              // Offset of this block center relative to the grid center
-              // Row index gives Y offset, Column index gives X offset
-              const gridOffsetBlockX = (c - (cols - 1) / 2) * (blockLength + pcsToPcs);
-              const gridOffsetBlockY = (r - (rows - 1) / 2) * (blockWidth + bessToBess);
-
-              // Inside the block, PCS at x = -blockLength / 2 + pcsLength / 2
-              const pcsBlockLocalX = -blockLength / 2 + pcsLength / 2;
-              addEquipment(
-                "sungrow-sc5000ud-mv-us-p3",
-                gridOffsetBlockX + pcsBlockLocalX,
-                gridOffsetBlockY,
-                blockIndex
-              );
-
-              // BESS units starting after PCS
-              for (let b = 0; b < bessPerPcs; b++) {
-                const bessBlockLocalX =
-                  -blockLength / 2 +
-                  pcsLength +
-                  bessToPcs +
-                  b * (bessLength + bessToBess) +
-                  bessLength / 2;
-                addEquipment(
-                  "sungrow-st2752ux-us",
-                  gridOffsetBlockX + bessBlockLocalX,
-                  gridOffsetBlockY,
-                  blockIndex
-                );
-              }
-            }
-          }
-
-          candidates.push({
-            id: nanoid(8),
+          const shapes = generateSmartSiteFitShapes({
+            bessCount: blocks * bessPerPcs,
+            pcsCount: blocks,
+            containersPerPcs: bessPerPcs,
             strategy,
-            placedEquipment,
-            score: {
-              total: 0,
-              insidePolygon: 0,
-              noCollisions: 0,
-              boundaryMargin: 0,
-              siteUtilization: 0,
-              rowRegularity: 0,
-              corridorEfficiency: 0,
-              ratioCompliance: 0,
-            },
-            warnings,
-            assumptions,
           });
 
-          candidateCount++;
+          const filteredShapes = overrides?.preferredShapeKind && overrides.preferredShapeKind !== "auto"
+            ? shapes.filter((s) => s.kind === overrides.preferredShapeKind)
+            : shapes;
+          const shapesToTry = filteredShapes.length > 0 ? filteredShapes : shapes;
+
+          for (const shape of shapesToTry) {
+            if (candidateCount >= maxCandidatesToEvaluate) break;
+
+            const placedEquipment: PlacedEquipment[] = [];
+            const shapeLayoutItems = buildShapeLayout(shape, blocks, bessPerPcs, {
+              bessToBess,
+              bessToPcs,
+              pcsToPcs,
+            });
+
+            for (const item of shapeLayoutItems) {
+              const rx = startCenterX + item.x_m * cos - item.y_m * sin;
+              const ry = startCenterY + item.x_m * sin + item.y_m * cos;
+              const lngLat = toLngLat({ x_m: rx, y_m: ry }, anchor);
+
+              placedEquipment.push({
+                id: nanoid(8),
+                equipmentSpecId: item.equipmentSpecId,
+                anchor: lngLat,
+                rotation_deg: rotationDeg,
+                groupId: `block-${item.blockIndex}`,
+                blockId: `block-${item.blockIndex}`,
+                classification: "preliminary_assumption",
+                sourceReliability: "preliminary_assumption",
+              });
+            }
+
+            candidates.push({
+              id: nanoid(8),
+              strategy,
+              placedEquipment,
+              score: {
+                total: 0,
+                insidePolygon: 0,
+                noCollisions: 0,
+                boundaryMargin: 0,
+                siteUtilization: 0,
+                rowRegularity: 0,
+                corridorEfficiency: 0,
+                ratioCompliance: 0,
+                shapeCompactness: 0,
+              },
+              warnings,
+              assumptions,
+              shape: {
+                id: shape.id,
+                kind: shape.kind,
+                label: shape.label,
+                description: shape.description,
+                rows: shape.rows,
+                columns: shape.columns,
+                blocks: shape.blocks,
+                pcsPlacement: shape.pcsPlacement,
+              },
+            });
+
+            candidateCount++;
+          }
         }
       }
     }
@@ -237,3 +217,4 @@ export function generateCandidates(
 
   return candidates;
 }
+

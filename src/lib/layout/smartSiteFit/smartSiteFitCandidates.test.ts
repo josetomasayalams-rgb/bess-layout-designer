@@ -55,4 +55,22 @@ describe("SmartSiteFit Candidates Generation", () => {
     );
     expect(hasTransformer).toBe(false);
   });
+
+  it("should generate shape metadata on candidates", () => {
+    const candidates = generateCandidates(largeSquare, anchor, 4, "balanced", undefined, 5, 40);
+    expect(candidates.length).toBeGreaterThan(0);
+    expect(candidates[0].shape).toBeDefined();
+    expect(candidates[0].shape?.kind).toBeDefined();
+  });
+
+  it("should respect preferredShapeKind override if specified", () => {
+    const candidates = generateCandidates(largeSquare, anchor, 4, "balanced", {
+      preferredShapeKind: "two_row_block",
+    }, 5, 40);
+    expect(candidates.length).toBeGreaterThan(0);
+    const kinds = new Set(candidates.map((c) => c.shape?.kind));
+    expect(kinds.size).toBe(1);
+    expect(kinds.has("two_row_block")).toBe(true);
+  });
 });
+

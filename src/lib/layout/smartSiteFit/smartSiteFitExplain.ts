@@ -28,6 +28,7 @@ export function strategyLabel(strategy: SmartSiteFitStrategy, locale: "es" | "en
 }
 
 export function explainScore(score: SmartSiteFitScore, locale: "es" | "en"): string {
+  const shapeCompactnessVal = score.shapeCompactness ?? 10.0;
   if (locale === "es") {
     return [
       `Evaluación de distribución (Total: ${score.total}/100):`,
@@ -38,6 +39,7 @@ export function explainScore(score: SmartSiteFitScore, locale: "es" | "en"): str
       `- Regularidad y alineación de filas: ${score.rowRegularity}/10`,
       `- Eficiencia en distanciamiento de pasillos: ${score.corridorEfficiency}/10`,
       `- Proporción BESS / PCS según diseño: ${score.ratioCompliance}/10`,
+      `- Compacidad de la forma del bloque: ${shapeCompactnessVal}/10`,
     ].join("\n");
   } else {
     return [
@@ -49,6 +51,7 @@ export function explainScore(score: SmartSiteFitScore, locale: "es" | "en"): str
       `- Regularity and alignment of rows: ${score.rowRegularity}/10`,
       `- Corridor spacing efficiency: ${score.corridorEfficiency}/10`,
       `- BESS / PCS spec ratio compliance: ${score.ratioCompliance}/10`,
+      `- Block shape compactness: ${shapeCompactnessVal}/10`,
     ].join("\n");
   }
 }
@@ -66,18 +69,26 @@ export function explainAlternative(candidate: SmartSiteFitCandidate, locale: "es
   }
 
   const stratLabel = strategyLabel(candidate.strategy, locale);
+  const shapeInfo = candidate.shape;
 
   if (locale === "es") {
+    const shapeDesc = shapeInfo
+      ? ` Forma del bloque: ${shapeInfo.label} (${shapeInfo.description.toLowerCase()})`
+      : "";
     return [
-      `Configuración sugerida bajo la estrategia "${stratLabel}".`,
+      `Configuración sugerida bajo la estrategia "${stratLabel}".${shapeDesc}`,
       `Contiene un total de ${bessCount} contenedores de batería BESS y ${pcsCount} estaciones de conversión de potencia PCS.`,
       `La puntuación técnica obtenida es de ${candidate.score.total} puntos basándose en criterios de separación perimetral, distanciamientos normativos de pasillos y utilización eficiente de la superficie disponible.`,
     ].join(" ");
   } else {
+    const shapeDesc = shapeInfo
+      ? ` Block shape: ${shapeInfo.label} (${shapeInfo.description.toLowerCase()})`
+      : "";
     return [
-      `Suggested configuration under the "${stratLabel}" strategy.`,
+      `Suggested configuration under the "${stratLabel}" strategy.${shapeDesc}`,
       `Includes a total of ${bessCount} BESS battery containers and ${pcsCount} PCS power conversion stations.`,
       `The layout achieves a technical score of ${candidate.score.total} points based on setback margins, regulatory corridor spacing, and efficient surface utilization.`,
     ].join(" ");
   }
 }
+
