@@ -1,0 +1,90 @@
+name: Release (manual dispatch)
+
+# Phase 15.1 — manual-only release workflow.
+#
+# This workflow NEVER publishes anything automatically. It only runs
+# the same validation pipeline as CI plus a tag-format sanity check.
+# Actual tagging, GitHub release creation, and npm publishing (we do
+# NOT publish to npm — `private: true`) remain manual steps performed
+# by the maintainer per `docs/phases/phase15-release-candidate.md`.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to validate (e.g. v1.0.0-rc.1). Do NOT include the leading 'v' in package.json."
+        required: true
+        type: string
+      dry_run:
+        description: "Dry run only — never create the GitHub release."
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+jobs:
+  validate-release:
+    name: Validate release candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Tests
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+
+      - name: Coverage
+        run: npm run test:coverage
+        continue-on-error: true
+
+      - name: Check tag format
+        run: |
+          TAG="${{ inputs.tag }}"
+          echo "Validating tag: $TAG"
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$ ]]; then
+            echo "::error::Tag must match 'vX.Y.Z' or 'vX.Y.Z-rc.N'. Got: $TAG"
+            exit 1
+          fi
+
+      - name: Check package.json version matches tag
+        run: |
+          TAG="${{ inputs.tag }}"
+          PKG_VERSION="$(node -p "require('./package.json').version")"
+          EXPECTED="${TAG#v}"
+          if [ "$PKG_VERSION" != "$EXPECTED" ]; then
+            echo "::error::package.json version ($PKG_VERSION) does not match tag ($TAG). Bump package.json first."
+            exit 1
+          fi
+
+      - name: Refuse to publish automatically
+        run: |
+          echo "Validation complete."
+          echo "This workflow does NOT publish to npm (project is private)."
+          echo "This workflow does NOT create a GitHub release."
+          echo "Follow docs/phases/phase15-release-candidate.md for human-only release steps."
+          if [ "${{ inputs.dry_run }}" != "true" ]; then
+            echo "::warning::dry_run was set to false but this workflow still refuses to publish."
+            echo "::warning::Update docs/phases/phase15-release-candidate.md if release automation policy changes."
+          fi

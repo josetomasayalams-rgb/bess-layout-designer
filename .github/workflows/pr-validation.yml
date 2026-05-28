@@ -1,0 +1,61 @@
+name: PR validation (lightweight)
+
+# Phase 15.1 — lightweight PR validation.
+#
+# This workflow complements ci.yml (Phase 14.0) with cheap, fast
+# checks that do not require installing dependencies — designed to
+# fail in seconds when basic hygiene is missing.
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  pr-hygiene:
+    name: PR hygiene
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Reject large binary blobs
+        run: |
+          set -e
+          MAX_BYTES=1048576 # 1 MB
+          BIG_FILES=$(git diff --name-only origin/main...HEAD | while read f; do
+            [ -f "$f" ] || continue
+            size=$(wc -c < "$f")
+            if [ "$size" -gt "$MAX_BYTES" ]; then
+              echo "$f ($size bytes)"
+            fi
+          done)
+          if [ -n "$BIG_FILES" ]; then
+            echo "::error::PR contains files > 1 MB:"
+            echo "$BIG_FILES"
+            exit 1
+          fi
+
+      - name: Forbid committed .env files
+        run: |
+          OFFENDERS=$(git diff --name-only origin/main...HEAD \
+            | grep -E '^\.env(\..+)?$' \
+            | grep -vE '^\.env\.example$' || true)
+          if [ -n "$OFFENDERS" ]; then
+            echo "::error::Do not commit .env files (only .env.example is allowed):"
+            echo "$OFFENDERS"
+            exit 1
+          fi
+
+      - name: Forbid generated /coverage paths
+        run: |
+          OFFENDERS=$(git diff --name-only origin/main...HEAD \
+            | grep -E '^coverage/' || true)
+          if [ -n "$OFFENDERS" ]; then
+            echo "::error::Do not commit /coverage output:"
+            echo "$OFFENDERS"
+            exit 1
+          fi
