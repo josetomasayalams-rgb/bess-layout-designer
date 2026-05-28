@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Read the docs first
+    url: https://github.com/josetomasayalams-rgb/bess-layout-designer/tree/main/docs
+    about: Read the architecture, exclusions and regulatory-traceability docs before opening an issue.
+  - name: Security vulnerability
+    url: https://github.com/josetomasayalams-rgb/bess-layout-designer/blob/main/SECURITY.md
+    about: Do NOT file public issues for security vulnerabilities. Follow SECURITY.md.
