@@ -38,8 +38,13 @@ describe("AlternativeCard", () => {
       corridorEfficiency: 5,
       ratioCompliance: 5,
     },
-    warnings: ["Warning 1", "Warning 2"],
-    assumptions: ["Assumption 1"],
+    warnings: [
+      { id: "w1", severity: "warning", message: "Warning 1" },
+      { id: "w2", severity: "warning", message: "Warning 2" }
+    ],
+    assumptions: [
+      { id: "a1", description: "Assumption 1", value: true, classification: "preliminary_assumption" }
+    ],
   };
 
   const defaultProps = {
