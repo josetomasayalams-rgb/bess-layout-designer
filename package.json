@@ -2,6 +2,32 @@
   "name": "bess-layout-designer",
   "version": "0.1.0",
   "private": true,
+  "description": "Preliminary BESS (Battery Energy Storage System) layout designer — draw site polygons, place equipment at real scale, compute KPIs, detect spacing/collision/out-of-bound issues, generate conceptual cable routes and access roads, and export a technical PDF report. Not a substitute for detailed electrical, civil, fire-protection or permitting engineering.",
+  "license": "UNLICENSED",
+  "author": "Jose Tomas Ayala <josetomasayalams@gmail.com>",
+  "homepage": "https://github.com/josetomasayalams-rgb/bess-layout-designer#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/josetomasayalams-rgb/bess-layout-designer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/josetomasayalams-rgb/bess-layout-designer/issues"
+  },
+  "keywords": [
+    "bess",
+    "battery-energy-storage",
+    "layout-design",
+    "preliminary-design",
+    "energy",
+    "chile",
+    "nextjs",
+    "maplibre",
+    "engineering-tool"
+  ],
+  "engines": {
+    "node": ">=20",
+    "npm": ">=10"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
