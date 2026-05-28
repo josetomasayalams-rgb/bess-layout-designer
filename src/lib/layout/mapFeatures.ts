@@ -16,6 +16,7 @@ import { rectCorners } from "@/lib/geometry/rectangles";
 import { toLocal, toLngLat } from "@/lib/geometry/projection";
 import type { RegulatoryProfile } from "@/types/bessLayoutTypes";
 import type { LayoutWarning } from "@/lib/layout/spacingRules";
+import type { SmartSiteFitCandidate } from "@/lib/layout/smartSiteFit/smartSiteFitTypes";
 
 export function polygonToFeature(polygon: LngLat[]): FeatureCollection<Polygon> {
   if (polygon.length < 3) {
@@ -648,4 +649,62 @@ export function regulatoryBufferFeatures(
     }
   }
   return { type: "FeatureCollection", features };
+}
+
+export function smartSiteFitPreviewFeatures(
+  alternative: SmartSiteFitCandidate | null | undefined,
+  anchor: ProjectAnchor | null
+): {
+  bessFeatures: FeatureCollection<Polygon>;
+  pcsFeatures: FeatureCollection<Polygon>;
+} {
+  if (!alternative || !anchor || !alternative.placedEquipment) {
+    return {
+      bessFeatures: { type: "FeatureCollection", features: [] },
+      pcsFeatures: { type: "FeatureCollection", features: [] },
+    };
+  }
+
+  const bessFeatures: Feature<Polygon>[] = [];
+  const pcsFeatures: Feature<Polygon>[] = [];
+
+  for (const p of alternative.placedEquipment) {
+    const spec = equipmentCatalog.find((e) => e.id === p.equipmentSpecId);
+    if (!spec) continue;
+
+    const center = toLocal(p.anchor, anchor);
+    const corners = rectCorners({
+      center,
+      length_m: spec.footprint.length_m,
+      width_m: spec.footprint.width_m,
+      rotation_deg: p.rotation_deg,
+    });
+    const ring = corners
+      .map((c) => toLngLat(c, anchor))
+      .map((ll) => [ll.lng, ll.lat] as [number, number]);
+    ring.push(ring[0]);
+
+    const feature: Feature<Polygon> = {
+      type: "Feature",
+      geometry: { type: "Polygon", coordinates: [ring] },
+      properties: {
+        id: p.id,
+        equipmentSpecId: p.equipmentSpecId,
+        type: spec.type,
+        label: `${spec.manufacturer} ${spec.model}`,
+        isSmartSiteFitPreview: true,
+      },
+    };
+
+    if (spec.type === "battery_container") {
+      bessFeatures.push(feature);
+    } else if (spec.type === "pcs_mv_station") {
+      pcsFeatures.push(feature);
+    }
+  }
+
+  return {
+    bessFeatures: { type: "FeatureCollection", features: bessFeatures },
+    pcsFeatures: { type: "FeatureCollection", features: pcsFeatures },
+  };
 }

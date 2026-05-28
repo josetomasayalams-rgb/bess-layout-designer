@@ -10,6 +10,7 @@ import {
   polygonToLineFeature,
   regulatoryBufferFeatures,
   warningMarkerFeatures,
+  smartSiteFitPreviewFeatures,
 } from "@/lib/layout/mapFeatures";
 import { getRegulatoryProfile } from "@/rules/regulatoryProfileMetadata";
 import type { Feature, LineString } from "geojson";
@@ -179,5 +180,67 @@ describe("regulatoryBufferFeatures", () => {
     expect(pcsBuffers).toHaveLength(1);
     expect(pcsBuffers[0].properties?.bufferType).toBe("normative_separation");
     expect(pcsBuffers[0].properties?.value_m).toBe(profile!.rules.electricalFrontWorkingClearance_m);
+  });
+});
+
+describe("smartSiteFitPreviewFeatures", () => {
+  it("handles null/undefined/empty inputs without throwing", () => {
+    const emptyResult = smartSiteFitPreviewFeatures(null, anchor);
+    expect(emptyResult.bessFeatures.features).toHaveLength(0);
+    expect(emptyResult.pcsFeatures.features).toHaveLength(0);
+
+    const emptyResult2 = smartSiteFitPreviewFeatures(undefined, null);
+    expect(emptyResult2.bessFeatures.features).toHaveLength(0);
+    expect(emptyResult2.pcsFeatures.features).toHaveLength(0);
+  });
+
+  it("converts a valid alternative into BESS and PCS polygon FeatureCollections with metadata", () => {
+    const mockAlternative = {
+      id: "alt-1",
+      strategy: "balanced" as const,
+      placedEquipment: [
+        {
+          id: "bess-1",
+          equipmentSpecId: "sungrow-st2752ux-us",
+          anchor: { lng: -70.0, lat: -33.0 },
+          rotation_deg: 0,
+          sourceReliability: "preliminary_assumption" as const,
+        },
+        {
+          id: "pcs-1",
+          equipmentSpecId: "sungrow-sc5000ud-mv-us-p3",
+          anchor: { lng: -70.001, lat: -33.0 },
+          rotation_deg: 0,
+          sourceReliability: "preliminary_assumption" as const,
+        },
+      ],
+      score: {
+        total: 90,
+        insidePolygon: 25,
+        noCollisions: 25,
+        boundaryMargin: 10,
+        siteUtilization: 10,
+        rowRegularity: 10,
+        corridorEfficiency: 5,
+        ratioCompliance: 5,
+      },
+      warnings: [],
+      assumptions: [],
+    };
+
+    const result = smartSiteFitPreviewFeatures(mockAlternative, anchor);
+
+    expect(result.bessFeatures.features).toHaveLength(1);
+    expect(result.pcsFeatures.features).toHaveLength(1);
+
+    // Validate geometry type
+    expect(result.bessFeatures.features[0].geometry.type).toBe("Polygon");
+    expect(result.pcsFeatures.features[0].geometry.type).toBe("Polygon");
+
+    // Validate metadata
+    expect(result.bessFeatures.features[0].properties?.isSmartSiteFitPreview).toBe(true);
+    expect(result.pcsFeatures.features[0].properties?.isSmartSiteFitPreview).toBe(true);
+    expect(result.bessFeatures.features[0].properties?.id).toBe("bess-1");
+    expect(result.pcsFeatures.features[0].properties?.id).toBe("pcs-1");
   });
 });
