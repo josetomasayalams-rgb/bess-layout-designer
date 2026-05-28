@@ -34,6 +34,8 @@ import { useMapCamera } from "./hooks/useMapCamera";
 import { useMapInteractionRouter } from "./hooks/useMapInteractionRouter";
 import { PolygonTerrainLayers } from "./layers/PolygonTerrainLayers";
 import { EquipmentSelectionOverlayLayers } from "./layers/EquipmentSelectionOverlayLayers";
+import { SmartSiteFitPreviewLayers } from "./layers/SmartSiteFitPreviewLayers";
+import { smartSiteFitPreviewFeatures } from "@/lib/layout/mapFeatures";
 import { getProjectMetrics } from "@/lib/layout/projectMetrics";
 import { copyFor } from "@/lib/i18n";
 import {
@@ -74,6 +76,7 @@ export function BessMap() {
   const storedCableRoutes = useProjectStore((s) => s.cableRoutes);
   const storedAccessRoads = useProjectStore((s) => s.accessRoads);
   const poi = useProjectStore((s) => s.poi);
+  const smartSiteFit = useProjectStore((s) => s.smartSiteFit);
 
 
   const selectEquipment = useProjectStore((s) => s.selectEquipment);
@@ -196,6 +199,21 @@ export function BessMap() {
     warnings: metrics.warnings,
     searchedPoint,
   });
+
+  const selectedAlternative = useMemo(() => {
+    if (!smartSiteFit.result || !smartSiteFit.selectedAlternativeId) return null;
+    return smartSiteFit.result.candidates.find(
+      (c) => c.id === smartSiteFit.selectedAlternativeId
+    ) || null;
+  }, [smartSiteFit.result, smartSiteFit.selectedAlternativeId]);
+
+  const { previewBessFc, previewPcsFc } = useMemo(() => {
+    const { bessFeatures, pcsFeatures } = smartSiteFitPreviewFeatures(
+      selectedAlternative,
+      anchor
+    );
+    return { previewBessFc: bessFeatures, previewPcsFc: pcsFeatures };
+  }, [selectedAlternative, anchor]);
 
   const { centerMap, searchCoordinates } = useMapCamera({
     mapRef,
@@ -331,6 +349,11 @@ export function BessMap() {
           repairZoneFc={repairZoneFc}
           repairZoneLineFc={repairZoneLineFc}
           repairZoneVerticesFc={repairZoneVerticesFc}
+        />
+
+        <SmartSiteFitPreviewLayers
+          bessFc={previewBessFc}
+          pcsFc={previewPcsFc}
         />
 
         <EquipmentSelectionOverlayLayers

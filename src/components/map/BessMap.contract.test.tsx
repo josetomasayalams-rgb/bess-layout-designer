@@ -87,6 +87,10 @@ describe("BessMap - Contract and Render Integrity", () => {
       "mock-layer-site-polygon-stroke",
       "mock-layer-terrain-measurement-labels",
       "mock-layer-site-polygon-vertex-points",
+      "mock-layer-smart-site-fit-preview-bess-fill",
+      "mock-layer-smart-site-fit-preview-bess-outline",
+      "mock-layer-smart-site-fit-preview-pcs-fill",
+      "mock-layer-smart-site-fit-preview-pcs-outline",
       "mock-layer-equipment-fill",
       "mock-layer-equipment-outline",
     ];
