@@ -12,6 +12,7 @@ import { ParametricTerrainPanel } from "@/components/sidebar/ParametricTerrainPa
 import { PreliminaryDesignToolsPanel } from "@/components/sidebar/PreliminaryDesignToolsPanel";
 import { RegulatoryCompliancePanel } from "@/components/sidebar/RegulatoryCompliancePanel";
 import { RegulatoryConfigPanel } from "@/components/sidebar/RegulatoryConfigPanel";
+import { SmartSiteFitPanel } from "@/components/sidebar/SmartSiteFitPanel";
 import { TechnicalReportPanel } from "@/components/sidebar/TechnicalReportPanel";
 import { WarningsPanel } from "@/components/sidebar/WarningsPanel";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
@@ -210,6 +211,7 @@ function renderSectionPanels(
   if (activeSection === "layout") {
     return region === "primary" ? (
       <>
+        <SmartSiteFitPanel />
         <PreliminaryDesignToolsPanel />
         <MVArchitecturePanel />
       </>

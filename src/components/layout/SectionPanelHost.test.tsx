@@ -58,6 +58,10 @@ vi.mock("@/components/sidebar/WarningsPanel", () => ({
   WarningsPanel: () => <section data-testid="warnings-panel" />,
 }));
 
+vi.mock("@/components/sidebar/SmartSiteFitPanel", () => ({
+  SmartSiteFitPanel: () => <section data-testid="smart-site-fit-panel" />,
+}));
+
 function resetStores() {
   useUiStore.setState({ locale: "en" });
   useProjectStore.setState({
@@ -172,6 +176,7 @@ describe("SectionPanelHost", () => {
       </>
     );
 
+    expect(screen.getByTestId("smart-site-fit-panel")).toBeDefined();
     expect(screen.getByTestId("preliminary-design-panel")).toBeDefined();
     expect(screen.getByTestId("layout-comparison-panel")).toBeDefined();
   });
