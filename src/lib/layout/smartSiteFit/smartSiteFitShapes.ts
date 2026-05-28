@@ -1,4 +1,4 @@
-import type { SmartSiteFitShapeCandidate, SmartSiteFitShapeKind, SmartSiteFitStrategy } from "./smartSiteFitTypes";
+import type { SmartSiteFitShapeCandidate, SmartSiteFitStrategy } from "./smartSiteFitTypes";
 
 export interface ShapeLayoutItem {
   equipmentSpecId: string;

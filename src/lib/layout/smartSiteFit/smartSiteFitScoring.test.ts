@@ -98,7 +98,6 @@ describe("SmartSiteFit Scoring", () => {
 
   it("should score compact_grid better than single_row on a square terrain due to shapeCompactness", () => {
     // Generate candidates for 32 BESS and 4 PCS
-    const bessCount = 32;
     const pcsCount = 4;
     
     // We mock a single_row candidate and a compact_grid candidate
@@ -118,13 +117,13 @@ describe("SmartSiteFit Scoring", () => {
       },
       placedEquipment: [
         // Placed in a single extremely long row along X
-        { id: "pcs1", equipmentSpecId: "sungrow-sc5000ud-mv-us-p3", anchor: { lng: -70.0001, lat: -33 }, rotation_deg: 0, sourceReliability: "preliminary_assumption" },
+        { id: "pcs1", equipmentSpecId: "sungrow-sc5000ud-mv-us-p3", anchor: { lng: -70.0001, lat: -33 }, rotation_deg: 0, sourceReliability: "preliminary_assumption" as const },
         ...Array.from({ length: 8 }).map((_, i) => ({
           id: `bess-${i}`,
           equipmentSpecId: "sungrow-st2752ux-us",
           anchor: { lng: -70.0001 + 0.0001 * (i + 1), lat: -33 },
           rotation_deg: 0,
-          sourceReliability: "preliminary_assumption",
+          sourceReliability: "preliminary_assumption" as const,
         }))
       ]
     };
@@ -144,13 +143,13 @@ describe("SmartSiteFit Scoring", () => {
       },
       placedEquipment: [
         // Placed in 4 rows of 8 BESS
-        { id: "pcs1", equipmentSpecId: "sungrow-sc5000ud-mv-us-p3", anchor: { lng: -70, lat: -33.0001 }, rotation_deg: 0, sourceReliability: "preliminary_assumption" },
+        { id: "pcs1", equipmentSpecId: "sungrow-sc5000ud-mv-us-p3", anchor: { lng: -70, lat: -33.0001 }, rotation_deg: 0, sourceReliability: "preliminary_assumption" as const },
         ...Array.from({ length: 8 }).map((_, i) => ({
           id: `bess-${i}`,
           equipmentSpecId: "sungrow-st2752ux-us",
           anchor: { lng: -70 + 0.00002 * (i % 4), lat: -33 + 0.00002 * Math.floor(i / 4) },
           rotation_deg: 0,
-          sourceReliability: "preliminary_assumption",
+          sourceReliability: "preliminary_assumption" as const,
         }))
       ]
     };

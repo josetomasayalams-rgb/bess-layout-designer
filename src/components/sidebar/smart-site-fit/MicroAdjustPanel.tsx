@@ -48,7 +48,7 @@ export function MicroAdjustPanel({
             value={overrides.preferredShapeKind ?? "auto"}
             onChange={(e) =>
               onUpdateOverrides({
-                preferredShapeKind: e.target.value as any,
+                preferredShapeKind: e.target.value as SmartSiteFitOverrides["preferredShapeKind"],
               })
             }
             className="w-full rounded border border-slate-800 bg-slate-950 p-1 text-[11px] text-slate-350 focus:border-cyan-500 focus:outline-none"
