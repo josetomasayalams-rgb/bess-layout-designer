@@ -1,0 +1,104 @@
+# Phase 15.6 — v1 Release Accessibility Audit
+
+## Method
+
+Synthesises the Phase 14.8 a11y smoke + the Phase 14.5 / 14.6 panel
+and map-subcomponent tests into a single v1 a11y posture document.
+
+**No new tools were installed for this phase.** `jest-axe` / `axe-core`
+remain explicitly deferred to v1.1 (see
+`docs/phases/phase14-a11y-findings.md`).
+
+## What was tested
+
+### Automated (in CI)
+
+1. **AppShell smoke** (`src/components/layout/AppShell.a11y.test.tsx`,
+   Phase 14.8): renders without throwing in JSDOM, exposes at least
+   one landmark (`main`, `[role=main]`, `[role=region]`,
+   `[role=navigation]`, `<nav>`), and **every `<button>` has
+   accessible text** (text content, `aria-label`, or `title`).
+2. **OrientationCube** (`src/components/map/OrientationCube.test.tsx`,
+   Phase 14.6): all four cardinal buttons + 2D/ISO toggles have
+   explicit `aria-label`s in both EN and ES, and `aria-pressed`
+   tracks the active direction / mode.
+3. **CoordinateSearch** (`src/components/map/CoordinateSearch.test.tsx`,
+   Phase 14.6): `aria-invalid` flips when the input is rejected.
+4. **LayerManagerPanel** (Phase 14.6): toggle button has
+   `aria-expanded`, close button has `aria-label`, every layer
+   checkbox is in a labelled control surface.
+5. **LayoutEditToolbar** (Phase 14.6): every action button has
+   visible text or is paired with an icon + label.
+
+### Manual / structural
+
+- All disclaimers in the PDF report are rendered as visible text (not
+  background images), so screen readers consuming the PDF can read
+  them. Verified via the structural snapshot tests
+  (`ReportDocument.snapshot.test.tsx` + `pdfSections.snapshot.test.tsx`).
+- Catalog selection (`EquipmentCatalogPanel`) uses real
+  `<button type="button">` elements with focus-visible outline rings
+  (`focus-visible:outline-2 focus-visible:outline-cyan-400`).
+- Color contrast on alert badges follows the documented
+  border + background + foreground triplet (see
+  `src/components/sidebar/WarningsPanel.tsx`). Not formally tested
+  against WCAG ratios.
+
+## What was NOT tested
+
+| Area | Reason | Path forward |
+|------|--------|--------------|
+| WCAG-conformant axe-core scan | Tool not installed (per Phase 14.8 deferral). | Phase 16 / v1.1 — install `jest-axe` and add it to the CI pipeline. |
+| Color contrast ratios | Requires visual inspection or axe-core. | v1.1 — pair with axe-core. |
+| Keyboard navigation across the full map / drawing flow | Requires Playwright + a real browser. | Phase 14B (Playwright deferred) — see `phase14-playwright-deferred.md`. |
+| Screen-reader linearisation of the map | MapLibre is a `<canvas>`-based renderer; the map itself is not screen-reader-accessible (industry-wide limitation). | Document as a known limitation in the v1 CHANGELOG. Provide tabular project data via the sidebar panels (already present). |
+| Focus traps in modals | No modals in the current shell. | Re-audit when modals are introduced. |
+| Reduced-motion preferences | Framer Motion animations not gated on `prefers-reduced-motion`. | v1.1 — add the preference gate. |
+
+## Findings
+
+### P0
+
+**None.** ✅ The automated a11y smoke passes; no orphan buttons; all
+landmarks present.
+
+### P1
+
+**None.** The known unaudited surfaces (axe-core, keyboard sweep,
+screen-reader sweep) are explicit deferrals, not regressions.
+
+### P2 (backlog → v1.1)
+
+| ID | Finding | Suggested action |
+|----|---------|------------------|
+| P2-a11y-1 | No axe-core / jest-axe automated WCAG sweep. | Add `jest-axe` as a devDependency in Phase 16; lint AppShell + key panels. |
+| P2-a11y-2 | `prefers-reduced-motion` not honoured by Framer Motion transitions. | Wrap motion variants with a `useReducedMotion` hook from framer-motion. |
+| P2-a11y-3 | MapLibre canvas is not screen-reader accessible. | Document as known limitation in CHANGELOG; ensure tabular data in sidebar panels remains the canonical accessible view. |
+| P2-a11y-4 | No formal WCAG color-contrast verification of alert badges. | Verify with axe-core; adjust palette as needed. |
+
+### P3
+
+| ID | Finding | Suggested action |
+|----|---------|------------------|
+| P3-a11y-1 | A few SVG icons rely on `aria-hidden="true"` and inherit the button's accessible name; not all paired with `<title>`. | Optional polish; not a blocker. |
+| P3-a11y-2 | Section landmarks could carry `aria-labelledby` linked to the section header for richer screen-reader navigation. | Optional polish. |
+
+## Known limitations to publish in the v1 release notes
+
+> The map view is rendered with MapLibre GL JS on an HTML `<canvas>`
+> element. As is standard for `<canvas>`-backed renderers, the map
+> itself is not directly readable by screen readers. All numerical
+> outputs (project area, MW, MWh, equipment count, warnings,
+> regulatory matrix) are available in the sidebar panels and the
+> downloadable technical PDF, which **are** screen-reader-accessible.
+
+> The technical PDF report is generated by `@react-pdf/renderer`. Text
+> is embedded as real text (not as rasterised glyphs), so screen
+> readers consuming the PDF can read disclaimers, KPIs, and the
+> regulatory annex.
+
+## Conclusion
+
+The Phase 14 smoke baseline is intact. **No P0 / P1 issues block
+v1.0**. The four P2 items are scoped to a focused a11y PR in v1.1
+(`feat(v1.1-a11y): add axe-core sweep + reduced-motion gates`).
