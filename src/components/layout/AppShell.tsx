@@ -6,6 +6,8 @@ import {
   PanelLeftOpen,
   PanelRightClose,
   PanelRightOpen,
+  PanelTopClose,
+  PanelTopOpen,
 } from "lucide-react";
 import { BessMap } from "@/components/map/BessMap";
 import { Toolbar } from "./Toolbar";
@@ -14,6 +16,7 @@ import { FlowStepper } from "./FlowStepper";
 import { SectionRail, type AppSectionId } from "./SectionRail";
 import { SectionPanelHost } from "./SectionPanelHost";
 import { useUiStore } from "@/store/uiStore";
+import { cn } from "@/lib/utils";
 
 // Las 4 combinaciones se escriben literales para que el JIT de Tailwind las detecte.
 const GRID_COLS: Record<string, string> = {
@@ -32,6 +35,7 @@ const TAB_BUTTON =
 
 export function AppShell() {
   const [activeSection, setActiveSection] = useState<AppSectionId>("site");
+  const [topCollapsed, setTopCollapsed] = useState(false);
   const hydrateLocale = useUiStore((s) => s.hydrateLocale);
   const hydrateLayerVisibility = useUiStore((s) => s.hydrateLayerVisibility);
   const locale = useUiStore((s) => s.locale);
@@ -68,12 +72,27 @@ export function AppShell() {
       ? "Ocultar panel de resultados"
       : "Hide results panel";
 
+  const topLabel = topCollapsed
+    ? isEs
+      ? "Mostrar panel superior"
+      : "Show top panel"
+    : isEs
+      ? "Ocultar panel superior"
+      : "Hide top panel";
+
   return (
     <div className="flex min-h-dvh w-full flex-col bg-slate-950 text-slate-100 lg:h-screen">
       <Toolbar />
-      <MetricBar />
-      <div className="border-b border-slate-800 bg-slate-950 px-2 py-2 sm:px-3">
-        <FlowStepper />
+      <div
+        className={cn(
+          "transition-[max-height] duration-300 ease-in-out overflow-hidden flex flex-col shrink-0",
+          topCollapsed ? "max-h-0" : "max-h-[300px]"
+        )}
+      >
+        <MetricBar />
+        <div className="border-b border-slate-800 bg-slate-950 px-2 py-2 sm:px-3">
+          <FlowStepper />
+        </div>
       </div>
       <div className="flex w-full max-w-full min-w-0 flex-1 overflow-hidden bg-slate-950">
         <SectionRail
@@ -86,6 +105,20 @@ export function AppShell() {
           <SectionPanelHost activeSection={activeSection} region="primary" />
           <main className="relative h-[560px] min-h-[460px] min-w-0 border-y border-slate-800 lg:h-auto lg:min-h-0 lg:border-y-0">
             <BessMap />
+            <button
+              type="button"
+              onClick={() => setTopCollapsed(!topCollapsed)}
+              className="absolute right-[140px] top-4 z-20 flex h-9 w-9 items-center justify-center rounded-md border border-slate-700 bg-slate-950/90 text-slate-200 shadow-lg backdrop-blur transition hover:border-cyan-400 hover:text-cyan-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-cyan-400"
+              title={topLabel}
+              aria-label={topLabel}
+              aria-expanded={!topCollapsed}
+            >
+              {topCollapsed ? (
+                <PanelTopOpen className="h-4 w-4" aria-hidden="true" />
+              ) : (
+                <PanelTopClose className="h-4 w-4" aria-hidden="true" />
+              )}
+            </button>
             <button
               type="button"
               onClick={toggleLeft}
