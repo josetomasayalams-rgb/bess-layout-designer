@@ -17,11 +17,34 @@ export interface SmartSiteFitPreset {
   notes: string;
 }
 
+export type SmartSiteFitShapeKind =
+  | "single_row"
+  | "two_row_block"
+  | "compact_grid"
+  | "wide_grid"
+  | "deep_grid"
+  | "multi_block"
+  | "split_blocks";
+
+export interface SmartSiteFitShapeCandidate {
+  id: string;
+  kind: SmartSiteFitShapeKind;
+  label: string;
+  description: string;
+  rows: number;
+  columns: number;
+  blocks: number;
+  bessPerBlock: number;
+  pcsPlacement: "end" | "side" | "centerline" | "distributed";
+  targetAspectRatio?: number;
+}
+
 export interface SmartSiteFitOverrides {
   bessToBess_m?: number;
   bessToPcs_m?: number;
   boundaryMargin_m?: number;
   pcsToPcs_m?: number;
+  preferredShapeKind?: SmartSiteFitShapeKind | "auto";
 }
 
 export interface SmartSiteFitInput {
@@ -44,6 +67,7 @@ export interface SmartSiteFitScore {
   rowRegularity: number;
   corridorEfficiency: number;
   ratioCompliance: number;
+  shapeCompactness?: number; // Criterio nuevo de compacidad de la forma
 }
 
 export interface SmartSiteFitWarning {
@@ -66,6 +90,16 @@ export interface SmartSiteFitCandidate {
   score: SmartSiteFitScore;
   warnings: SmartSiteFitWarning[];
   assumptions: SmartSiteFitAssumption[];
+  shape?: {
+    id: string;
+    kind: SmartSiteFitShapeKind;
+    label: string;
+    description: string;
+    rows: number;
+    columns: number;
+    blocks: number;
+    pcsPlacement: string;
+  };
 }
 
 export interface SmartSiteFitResult {
@@ -77,3 +111,4 @@ export interface SmartSiteFitResult {
   fallbackUsed: boolean;
   message: string;
 }
+
