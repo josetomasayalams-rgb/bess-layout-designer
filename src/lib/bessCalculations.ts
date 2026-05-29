@@ -1,12 +1,6 @@
 import type { PlacedEquipment } from "@/types/equipment";
 import type { EquipmentSpec } from "@/data/equipmentCatalog";
-import type {
-  BessModel,
-  BessParkSummary,
-  BessRawModel,
-  BessSizingInput,
-  BessSizingResult,
-} from "@/types/bess";
+import type { BessModel, BessParkSummary, BessRawModel } from "@/types/bess";
 
 const TOLERANCE = 0.15;
 
@@ -244,82 +238,6 @@ export function computeBessParkSummary(
     hasUnknownWeight,
     warnings,
   };
-}
-
-export function calculateQuickSizing(
-  input: BessSizingInput,
-  models: BessModel[]
-): BessSizingResult | null {
-  const model = models.find((item) => item.id === input.modelId);
-  if (!model || model.energyMWh === null) return null;
-
-  const requiredUnitsByEnergy = Math.ceil(input.targetEnergyMWh / model.energyMWh);
-  const requiredUnitsByPower =
-    model.powerMW === null ? null : Math.ceil(input.targetPowerMW / model.powerMW);
-  const requiredUnits = Math.max(requiredUnitsByEnergy, requiredUnitsByPower ?? 0);
-  const installedEnergyMWh = requiredUnits * model.energyMWh;
-  const installedPowerMW = model.powerMW === null ? null : requiredUnits * model.powerMW;
-  const { rows, columns, layoutAreaM2 } = compactMatrixArea(
-    requiredUnits,
-    model.lengthM,
-    model.widthM,
-    input.separationM,
-    input.mode
-  );
-
-  const warnings = [...model.warnings];
-  if (model.powerMW === null) {
-    warnings.push("Power sizing cannot be completed because the selected model has no rated MW.");
-  }
-  if (input.availableAreaM2 !== null && layoutAreaM2 > input.availableAreaM2) {
-    warnings.push("Preliminary matrix exceeds the available area entered by the user.");
-  }
-
-  return {
-    model,
-    requiredUnitsByEnergy,
-    requiredUnitsByPower,
-    requiredUnits,
-    installedEnergyMWh,
-    installedPowerMW,
-    energyOversizePercent:
-      ((installedEnergyMWh - input.targetEnergyMWh) / input.targetEnergyMWh) * 100,
-    powerOversizePercent:
-      installedPowerMW === null
-        ? null
-        : ((installedPowerMW - input.targetPowerMW) / input.targetPowerMW) * 100,
-    totalWeightT: model.weightT === null ? null : requiredUnits * model.weightT,
-    physicalAreaM2: requiredUnits * model.areaM2,
-    layoutAreaM2,
-    rows,
-    columns,
-    fitsAvailableArea:
-      input.availableAreaM2 === null ? null : layoutAreaM2 <= input.availableAreaM2,
-    warnings,
-  };
-}
-
-function compactMatrixArea(
-  quantity: number,
-  lengthM: number,
-  widthM: number,
-  separationM: number,
-  mode: BessSizingInput["mode"]
-) {
-  const corridorFactor = mode === "wide_aisles" ? 1.35 : mode === "maintenance_priority" ? 1.2 : 1;
-  let best = { rows: 1, columns: quantity, layoutAreaM2: Number.POSITIVE_INFINITY };
-  for (let rows = 1; rows <= quantity; rows++) {
-    const columns = Math.ceil(quantity / rows);
-    const totalLength = columns * lengthM + (columns - 1) * separationM;
-    const totalWidth = rows * widthM + (rows - 1) * separationM * corridorFactor;
-    const layoutAreaM2 = totalLength * totalWidth;
-    const score =
-      mode === "regular"
-        ? layoutAreaM2 * (1 + Math.abs(columns - rows) / Math.max(columns, rows))
-        : layoutAreaM2;
-    if (score < best.layoutAreaM2) best = { rows, columns, layoutAreaM2 };
-  }
-  return best;
 }
 
 export function rankBessModels(

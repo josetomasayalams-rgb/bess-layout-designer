@@ -105,39 +105,6 @@ export type BessParkSummary = {
   warnings: string[];
 };
 
-export type BessSizingMode =
-  | "compact"
-  | "regular"
-  | "wide_aisles"
-  | "maintenance_priority";
-
-export type BessSizingInput = {
-  targetEnergyMWh: number;
-  targetPowerMW: number;
-  availableAreaM2: number | null;
-  modelId: string;
-  separationM: number;
-  mode: BessSizingMode;
-};
-
-export type BessSizingResult = {
-  model: BessModel;
-  requiredUnitsByEnergy: number;
-  requiredUnitsByPower: number | null;
-  requiredUnits: number;
-  installedEnergyMWh: number;
-  installedPowerMW: number | null;
-  energyOversizePercent: number;
-  powerOversizePercent: number | null;
-  totalWeightT: number | null;
-  physicalAreaM2: number;
-  layoutAreaM2: number;
-  rows: number;
-  columns: number;
-  fitsAvailableArea: boolean | null;
-  warnings: string[];
-};
-
 export type BessArrayInput = {
   modelId: string;
   quantity: number;

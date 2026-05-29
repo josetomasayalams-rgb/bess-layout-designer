@@ -3,7 +3,6 @@
 import { Info, MapPinned, Ruler, Settings2 } from "lucide-react";
 import { BessModelLibraryPanel } from "@/components/sidebar/BessModelLibraryPanel";
 import { BessParkSummaryPanel } from "@/components/sidebar/BessParkSummaryPanel";
-import { BessQuickSizingPanel } from "@/components/sidebar/BessQuickSizingPanel";
 import { CaseStudyPanel } from "@/components/sidebar/CaseStudyPanel";
 import { EquipmentCatalogPanel } from "@/components/sidebar/EquipmentCatalogPanel";
 import { LayoutComparisonPanel } from "@/components/sidebar/LayoutComparisonPanel";
@@ -210,7 +209,6 @@ function renderSectionPanels(
       <>
         <SmartSiteFitPanel />
         <PreliminaryDesignToolsPanel />
-        <BessQuickSizingPanel />
         <MVArchitecturePanel />
       </>
     ) : (

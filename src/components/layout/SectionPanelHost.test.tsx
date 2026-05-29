@@ -12,10 +12,6 @@ vi.mock("@/components/sidebar/BessModelLibraryPanel", () => ({
   BessModelLibraryPanel: () => <section data-testid="model-library-panel" />,
 }));
 
-vi.mock("@/components/sidebar/BessQuickSizingPanel", () => ({
-  BessQuickSizingPanel: () => <section data-testid="quick-sizing-panel" />,
-}));
-
 vi.mock("@/components/sidebar/CaseStudyPanel", () => ({
   CaseStudyPanel: () => <section data-testid="case-study-panel" />,
 }));
@@ -86,8 +82,6 @@ describe("SectionPanelHost", () => {
 
     expect(screen.getByTestId("model-library-panel")).toBeDefined();
     expect(screen.getByTestId("equipment-catalog-panel")).toBeDefined();
-    // Quick sizing has been relocated out of the equipment section.
-    expect(screen.queryByTestId("quick-sizing-panel")).toBeNull();
   });
 
   it("renders each section shell without remapping ids", () => {
@@ -179,8 +173,6 @@ describe("SectionPanelHost", () => {
 
     expect(screen.getByTestId("smart-site-fit-panel")).toBeDefined();
     expect(screen.getByTestId("preliminary-design-panel")).toBeDefined();
-    // Quick sizing now lives under Layout, after the container sizing tools.
-    expect(screen.getByTestId("quick-sizing-panel")).toBeDefined();
     expect(screen.getByTestId("mv-architecture-panel")).toBeDefined();
     expect(screen.getByTestId("layout-comparison-panel")).toBeDefined();
   });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { bessModels } from "@/data/bessModels";
-import { calculateQuickSizing, rankBessModels } from "@/lib/bessCalculations";
+import { rankBessModels } from "@/lib/bessCalculations";
 
 describe("BESS model calculations", () => {
   it("loads the initial 17 utility-scale BESS models", () => {
@@ -21,23 +21,6 @@ describe("BESS model calculations", () => {
     const byd = bessModels.find((model) => model.id === "byd-standard-container-4h");
     expect(byd?.durationHours).toBe(2);
     expect(byd?.warnings.some((warning) => warning.includes("product name"))).toBe(true);
-  });
-
-  it("sizes a 100 MWh / 25 MW project from the selected model", () => {
-    const result = calculateQuickSizing(
-      {
-        targetEnergyMWh: 100,
-        targetPowerMW: 25,
-        availableAreaM2: 20000,
-        modelId: "catl-enerc-plus-5mwh",
-        separationM: 3,
-        mode: "compact",
-      },
-      bessModels
-    );
-    expect(result?.requiredUnits).toBe(20);
-    expect(result?.installedEnergyMWh).toBe(100);
-    expect(result?.installedPowerMW).toBeCloseTo(50.16, 2);
   });
 
   it("ranks models by surface energy density", () => {

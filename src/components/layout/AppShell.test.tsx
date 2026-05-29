@@ -20,9 +20,6 @@ vi.mock("@/components/sidebar/BessModelLibraryPanel", () => ({
   BessModelLibraryPanel: () => <section data-testid="model-library-panel" />,
 }));
 
-vi.mock("@/components/sidebar/BessQuickSizingPanel", () => ({
-  BessQuickSizingPanel: () => <section data-testid="quick-sizing-panel" />,
-}));
 
 vi.mock("@/components/sidebar/CaseStudyPanel", () => ({
   CaseStudyPanel: () => <section data-testid="case-study-panel" />,
@@ -107,8 +104,6 @@ describe("AppShell section shell surfaces", () => {
 
     expect(screen.getByTestId("model-library-panel")).toBeDefined();
     expect(screen.getByTestId("equipment-catalog-panel")).toBeDefined();
-    // Quick sizing has moved out of Equipment into the Layout section.
-    expect(screen.queryByTestId("quick-sizing-panel")).toBeNull();
     expect(screen.queryByTestId("case-study-panel")).toBeNull();
   });
 
@@ -118,8 +113,6 @@ describe("AppShell section shell surfaces", () => {
     // Navigate to Layout
     fireEvent.click(screen.getByRole("button", { name: "3. Layout" }));
     expect(screen.getByTestId("preliminary-design-panel")).toBeDefined();
-    // Quick sizing now appears under Layout, alongside the other sizing tools.
-    expect(screen.getByTestId("quick-sizing-panel")).toBeDefined();
     expect(screen.getByTestId("bess-map")).toBeDefined();
 
     // Navigate to Compliance
