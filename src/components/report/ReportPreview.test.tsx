@@ -73,7 +73,7 @@ describe("ReportPreview Component", () => {
     });
 
     // Verify main cover page titles
-    expect(screen.getByText("BESS PRELIMINARY PREDESIGN · DOSSIER")).toBeDefined();
+    expect(screen.getByText("BESS PRELIMINARY PREDESIGN · TECHNICAL REPORT")).toBeDefined();
     expect(screen.getByText("BESS preliminary predesign report")).toBeDefined();
   });
 

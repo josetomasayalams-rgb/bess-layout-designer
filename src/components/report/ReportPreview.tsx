@@ -28,6 +28,13 @@ import { runRegulatoryEvaluation } from "@/rules/regulatoryProfileEvaluator";
 import { downloadTechnicalReportPdf } from "@/lib/report/downloadTechnicalReport";
 import { getProjectCaseStudy, bessDelDesiertoPendingDataV12 } from "@/data/projectCaseStudies";
 import { svgPolygonPath } from "@/lib/report/buildSiteSvg";
+import {
+  resultSentence,
+  maturityLevel,
+  buildNextSteps,
+  groupExclusions,
+} from "./pdfFormatters";
+import { OUTCOME_LABEL, SEVERITY_LABEL_ES } from "./pdfSeverityMaps";
 import type { LngLat } from "@/types/geometry";
 
 type ReportPreviewProps = {
@@ -47,7 +54,8 @@ type SectionId =
   | "regulatory"
   | "traceability"
   | "scope"
-  | "annex";
+  | "annex"
+  | "annexEng";
 
 function centroidOf(polygon: LngLat[]): LngLat | null {
   if (polygon.length === 0) return null;
@@ -146,7 +154,7 @@ export function ReportPreview({ isOpen, onClose, includeGeocoding }: ReportPrevi
 
         const assembled = buildReportData({
           projectName: caseStudy?.projectName,
-          appVersion: "0.1.0",
+          appVersion: "1.0.0-rc.1",
           locale: currentLocale,
           polygon: project.polygon,
           anchor: project.anchor,
@@ -220,7 +228,8 @@ export function ReportPreview({ isOpen, onClose, includeGeocoding }: ReportPrevi
     { id: "regulatory", label: isEs ? "6. Validación Normativa" : "6. Regulatory Validation", icon: ListChecks },
     { id: "traceability", label: isEs ? "7. Alertas y Pendientes" : "7. Alerts & Pending Data", icon: ShieldAlert },
     { id: "scope", label: isEs ? "8. Alcance y Exclusiones" : "8. Scope & Exclusions", icon: BookOpen },
-    { id: "annex", label: isEs ? "Anexo: Matriz de Reglas" : "Annex: Rules Table", icon: ListChecks },
+    { id: "annex", label: isEs ? "A1. Anexo: Matriz de Reglas" : "A1. Annex: Rules Table", icon: ListChecks },
+    { id: "annexEng", label: isEs ? "A2. Anexo: Checklist e Ingeniería" : "A2. Annex: Engineering Checklist", icon: BookOpen },
   ];
 
   // Jump to specific section element in main scroll container
@@ -248,6 +257,13 @@ export function ReportPreview({ isOpen, onClose, includeGeocoding }: ReportPrevi
         return "bg-slate-500/10 text-slate-700 border-slate-500/20";
     }
   };
+
+  // Localized outcome / severity labels — mirror the PDF (Spanish-primary).
+  // In English mode keep the raw upper-case code so the preview stays bilingual.
+  const outcomeLabel = (outcome: string) =>
+    isEs ? OUTCOME_LABEL[outcome]?.label ?? outcome : outcome.toUpperCase();
+  const severityLabel = (severity: string) =>
+    isEs ? SEVERITY_LABEL_ES[severity] ?? severity : severity.toUpperCase();
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-slate-950/98 text-slate-100 font-sans backdrop-blur-md overflow-hidden">
@@ -327,17 +343,34 @@ export function ReportPreview({ isOpen, onClose, includeGeocoding }: ReportPrevi
               {/* PAGE 1: COVER (PORTADA) */}
               <div id="preview-sec-cover" className="min-h-[1000px] w-full bg-white text-slate-900 border border-slate-200 shadow-2xl p-10 md:p-14 rounded-md font-serif relative flex flex-col justify-between">
                 <div>
-                  <span className="text-[10px] uppercase font-bold tracking-widest text-slate-400 font-sans">
-                    BESS PRELIMINARY PREDESIGN · DOSSIER
+                  <span className="text-[10px] uppercase font-bold tracking-widest text-violet-700 font-sans">
+                    {isEs
+                      ? "PREDIMENSIONAMIENTO PRELIMINAR BESS · REPORTE TÉCNICO"
+                      : "BESS PRELIMINARY PREDESIGN · TECHNICAL REPORT"}
                   </span>
-                  <div className="h-1 bg-violet-600 mt-2 mb-6" />
-                  
+                  <div className="h-1 bg-violet-600 mt-2 mb-6 w-20" />
+
                   <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900 mb-2 leading-tight">
                     {reportData.metadata.title}
                   </h1>
-                  <h2 className="text-lg text-slate-600 mb-8 font-sans font-medium">
+                  <h2 className="text-lg text-slate-600 mb-4 font-sans font-medium">
                     {reportData.metadata.projectName}
                   </h2>
+
+                  {/* Scope band — preliminary character of the deliverable */}
+                  <div className="flex flex-wrap gap-1.5 mb-6 font-sans">
+                    {(isEs
+                      ? ["Predimensionamiento preliminar", "No apto para construcción", "No reemplaza ingeniería de detalle"]
+                      : ["Preliminary predesign", "Not for construction", "Not a substitute for detail engineering"]
+                    ).map((band) => (
+                      <span
+                        key={band}
+                        className="px-2 py-0.5 rounded text-[8.5px] uppercase font-bold tracking-wider bg-amber-100 text-amber-800"
+                      >
+                        {band}
+                      </span>
+                    ))}
+                  </div>
 
                   <div className="flex flex-wrap gap-2 mb-8 font-sans">
                     <span className={`px-2.5 py-0.5 rounded text-[9.5px] uppercase font-bold tracking-wider ${
@@ -387,17 +420,28 @@ export function ReportPreview({ isOpen, onClose, includeGeocoding }: ReportPrevi
                     </div>
                   )}
 
-                  {/* KPI Grid Cards */}
+                  {/* Main KPIs — four headline indicators (accented) */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-sans">
                     {[
                       { label: isEs ? "Potencia POI" : "POI Power", value: reportData.reportKpis.poiPowerMW !== null ? `${reportData.reportKpis.poiPowerMW} MW` : "—" },
-                      { label: isEs ? "Energía Com." : "Comm. Energy", value: reportData.reportKpis.commercialEnergyMWh !== null ? `${reportData.reportKpis.commercialEnergyMWh} MWh` : "—" },
-                      { label: isEs ? "Energía Bruta" : "Gross Energy", value: `${reportData.reportKpis.grossEnergyMWh.toFixed(1)} MWh` },
-                      { label: isEs ? "Autonomía" : "Duration", value: reportData.reportKpis.durationHours !== null ? `${reportData.reportKpis.durationHours.toFixed(1)} h` : "—" },
-                      { label: isEs ? "Contenedores" : "Containers", value: reportData.reportKpis.containers },
-                      { label: isEs ? "Estaciones PCS" : "PCS Stations", value: reportData.reportKpis.stations },
-                      { label: isEs ? "Alimentadores" : "MV Feeders", value: reportData.reportKpis.feeders },
-                      { label: isEs ? "Potencia Inst." : "Inst. Power", value: `${reportData.reportKpis.installedPowerMVA} MVA` },
+                      { label: isEs ? "Energía comercial útil" : "Commercial Energy", value: reportData.reportKpis.commercialEnergyMWh !== null ? `${reportData.reportKpis.commercialEnergyMWh} MWh` : "—" },
+                      { label: isEs ? "Duración nominal" : "Duration", value: reportData.reportKpis.durationHours !== null ? `${reportData.reportKpis.durationHours.toFixed(1)} h` : "—" },
+                      { label: isEs ? "Área del sitio" : "Site Area", value: `${reportData.siteMetrics.areaHa.toFixed(1)} ha` },
+                    ].map((kpi, idx) => (
+                      <div key={idx} className="border border-slate-200 border-t-2 border-t-violet-600 bg-slate-50/50 rounded p-2.5 text-center">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">{kpi.label}</span>
+                        <span className="text-sm font-bold text-slate-900 block mt-1">{kpi.value}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Secondary KPIs — physical inventory & installed power */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-sans mt-3">
+                    {[
+                      { label: isEs ? "Contenedores BESS" : "BESS Containers", value: `${reportData.reportKpis.containers} u.` },
+                      { label: isEs ? "Estaciones PCS/MV" : "PCS/MV Stations", value: `${reportData.reportKpis.stations} u.` },
+                      { label: isEs ? "Feeders MT" : "MV Feeders", value: `${reportData.reportKpis.feeders} u.` },
+                      { label: isEs ? "Potencia instalada" : "Installed Power", value: `${reportData.reportKpis.installedPowerMVA} MVA` },
                     ].map((kpi, idx) => (
                       <div key={idx} className="border border-slate-200 bg-slate-50/50 rounded p-2.5 text-center">
                         <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">{kpi.label}</span>
@@ -425,6 +469,19 @@ export function ReportPreview({ isOpen, onClose, includeGeocoding }: ReportPrevi
                     : "This technical predesign report summarizes the physical and electrical architecture of the preliminary Battery Energy Storage System (BESS) project. It includes the gross capacity estimation, quantity of PCS stations, MV collector circuits, and regulatory validations against the active compliance profile."}
                 </p>
 
+                {/* Result sentence hero + maturity level (mirrors PDF) */}
+                <div className="border-l-4 border-violet-600 bg-slate-50 rounded-r p-4 mb-3">
+                  <p className="text-sm font-bold text-slate-900 leading-snug font-sans">
+                    {resultSentence(reportData)}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 mb-6 font-sans">
+                  <span className="px-2.5 py-0.5 rounded text-[9.5px] font-bold tracking-wide bg-sky-100 text-sky-800">
+                    {maturityLevel(reportData).label}
+                  </span>
+                  <span className="text-[11px] text-slate-500">{maturityLevel(reportData).description}</span>
+                </div>
+
                 <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-2 font-sans">{isEs ? "Resumen General" : "Overall Metrics"}</h3>
                 <div className="grid grid-cols-2 gap-4 border border-slate-200 rounded p-4 mb-6 font-sans text-xs bg-slate-50/30">
                   {[
@@ -442,26 +499,51 @@ export function ReportPreview({ isOpen, onClose, includeGeocoding }: ReportPrevi
                   ))}
                 </div>
 
-                <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-2 font-sans">{isEs ? "Alertas de Consistencia" : "Consistency Alerts"}</h3>
+                <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-2 font-sans">{isEs ? "Alertas Prioritarias" : "Top Alerts"}</h3>
                 <div className="flex flex-col gap-3 font-sans">
                   {reportData.consistencyAlerts.length === 0 ? (
                     <p className="text-xs text-slate-500 italic bg-slate-50 border border-slate-200 rounded p-3">
                       {isEs ? "No se encontraron contradicciones internas en los datos." : "No internal contradictions found in the data metrics."}
                     </p>
                   ) : (
-                    reportData.consistencyAlerts.map((alert) => (
-                      <div key={alert.id} className={`border-l-4 rounded p-3 text-xs ${
-                        alert.severity === "critical" 
-                          ? "bg-rose-50 border-rose-500 text-rose-900" 
-                          : "bg-amber-50 border-amber-500 text-amber-900"
-                      }`}>
-                        <div className="font-bold uppercase mb-1">{alert.id} · {alert.title}</div>
-                        <div className="mb-2 leading-relaxed">{alert.message}</div>
-                        <div className="text-[10.5px] opacity-75 font-medium"><span className="underline">{isEs ? "Acción:" : "Action:"}</span> {alert.recommendation}</div>
-                      </div>
-                    ))
+                    <>
+                      {reportData.consistencyAlerts.slice(0, 3).map((alert) => (
+                        <div key={alert.id} className={`border-l-4 rounded p-3 text-xs ${
+                          alert.severity === "critical"
+                            ? "bg-rose-50 border-rose-500 text-rose-900"
+                            : "bg-amber-50 border-amber-500 text-amber-900"
+                        }`}>
+                          <div className="font-bold mb-1">
+                            <span className="px-1.5 py-0.5 rounded text-[8.5px] uppercase mr-1.5 bg-white/60">
+                              {alert.severity === "critical" ? (isEs ? "Crítico" : "Critical") : (isEs ? "Aviso" : "Warning")}
+                            </span>
+                            {alert.title}
+                          </div>
+                          <div className="mb-2 leading-relaxed">{alert.message}</div>
+                          <div className="text-[10.5px] opacity-75 font-medium"><span className="underline">{isEs ? "Acción:" : "Action:"}</span> {alert.recommendation}</div>
+                        </div>
+                      ))}
+                      {reportData.consistencyAlerts.length > 3 && (
+                        <p className="text-[11px] text-slate-500 italic">
+                          {isEs
+                            ? `El detalle completo de las ${reportData.consistencyAlerts.length} alertas está en la sección 7.`
+                            : `The complete detail of all ${reportData.consistencyAlerts.length} alerts is in section 7.`}
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
+
+                {/* Recommended next steps (mirrors PDF) */}
+                <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mt-6 mb-2 font-sans">{isEs ? "Próximos Pasos Recomendados" : "Recommended Next Steps"}</h3>
+                <ol className="flex flex-col gap-1.5 font-sans">
+                  {buildNextSteps(reportData).map((step, idx) => (
+                    <li key={idx} className="flex gap-2.5 items-start text-xs">
+                      <span className="shrink-0 w-4 h-4 rounded-full bg-violet-600 text-white text-[9px] font-bold flex items-center justify-center mt-0.5">{idx + 1}</span>
+                      <span className="leading-relaxed text-slate-700">{step}</span>
+                    </li>
+                  ))}
+                </ol>
               </div>
 
               {/* SECTION 2: SITE & LOCATION */}
@@ -795,10 +877,10 @@ export function ReportPreview({ isOpen, onClose, includeGeocoding }: ReportPrevi
                     <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-5 font-sans text-center text-xs">
                       {[
                         { label: isEs ? "REGLAS" : "RULES", value: reportData.preliminaryElectricalChecks.checks.length, color: "text-slate-700 bg-slate-50 border-slate-200" },
-                        { label: "PASS", value: reportData.preliminaryElectricalChecks.totals.pass, color: "text-emerald-700 bg-emerald-50 border-emerald-200" },
-                        { label: "VIOLATION", value: reportData.preliminaryElectricalChecks.totals.violation, color: "text-rose-700 bg-rose-50 border-rose-200" },
-                        { label: "N/A", value: reportData.preliminaryElectricalChecks.totals.notEvaluable, color: "text-slate-700 bg-slate-50 border-slate-200" },
-                        { label: "PENDING", value: reportData.preliminaryElectricalChecks.totals.pendingValidation, color: "text-indigo-700 bg-indigo-50 border-indigo-200" },
+                        { label: isEs ? "CUMPLE" : "PASS", value: reportData.preliminaryElectricalChecks.totals.pass, color: "text-emerald-700 bg-emerald-50 border-emerald-200" },
+                        { label: isEs ? "INCUMPLE" : "VIOLATION", value: reportData.preliminaryElectricalChecks.totals.violation, color: "text-rose-700 bg-rose-50 border-rose-200" },
+                        { label: isEs ? "NO EVAL." : "N/A", value: reportData.preliminaryElectricalChecks.totals.notEvaluable, color: "text-slate-700 bg-slate-50 border-slate-200" },
+                        { label: isEs ? "PENDIENTE" : "PENDING", value: reportData.preliminaryElectricalChecks.totals.pendingValidation, color: "text-indigo-700 bg-indigo-50 border-indigo-200" },
                         { label: isEs ? "ACOTADAS" : "CAPPED", value: reportData.preliminaryElectricalChecks.checks.filter((c) => c.severityCappedBy !== null).length, color: "text-violet-700 bg-violet-50 border-violet-200" },
                       ].map((item, idx) => (
                         <div key={idx} className={`border rounded p-2.5 ${item.color}`}>
@@ -854,13 +936,13 @@ export function ReportPreview({ isOpen, onClose, includeGeocoding }: ReportPrevi
                                   ) : null}
                                   {c.severityCappedBy ? (
                                     <div className="mt-1 text-[10px] text-violet-700">
-                                      {isEs ? "Severidad acotada" : "Severity capped"}: {c.severityCappedBy.from} → {c.effectiveSeverity} ({c.severityCappedBy.by === "document_level" ? (isEs ? "nivel" : "level") : (isEs ? "confianza" : "confidence")})
+                                      {isEs ? "Severidad acotada" : "Severity capped"}: {severityLabel(c.severityCappedBy.from)} · {severityLabel(c.effectiveSeverity)} ({c.severityCappedBy.by === "document_level" ? (isEs ? "nivel" : "level") : (isEs ? "confianza" : "confidence")})
                                     </div>
                                   ) : null}
                                 </td>
                                 <td className="py-2 pr-2">
                                   <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${sevColor}`}>
-                                    {c.effectiveSeverity}
+                                    {severityLabel(c.effectiveSeverity)}
                                   </span>
                                 </td>
                                 <td className="py-2 pr-2 font-mono text-[9.5px] text-slate-600">
@@ -868,7 +950,7 @@ export function ReportPreview({ isOpen, onClose, includeGeocoding }: ReportPrevi
                                 </td>
                                 <td className="py-2 pr-2">
                                   <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${outcomeColor}`}>
-                                    {c.outcome === "not_evaluable" ? "N/A" : c.outcome === "pending_validation" ? "PEND" : c.outcome.toUpperCase()}
+                                    {outcomeLabel(c.outcome)}
                                   </span>
                                 </td>
                                 <td className="py-2 text-[10px] text-slate-500 italic leading-normal">
@@ -908,10 +990,10 @@ export function ReportPreview({ isOpen, onClose, includeGeocoding }: ReportPrevi
 
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-6 font-sans text-center text-xs">
                       {[
-                        { label: "PASS", value: reportData.regulatoryEvaluation.totals.pass, color: "text-emerald-700 bg-emerald-50 border-emerald-200" },
-                        { label: "VIOLATION", value: reportData.regulatoryEvaluation.totals.violation, color: "text-rose-700 bg-rose-50 border-rose-200" },
-                        { label: "MANUAL", value: reportData.regulatoryEvaluation.totals.manualCheck, color: "text-amber-700 bg-amber-50 border-amber-200" },
-                        { label: "PENDING", value: reportData.regulatoryEvaluation.totals.pending, color: "text-indigo-700 bg-indigo-50 border-indigo-200" },
+                        { label: isEs ? "CUMPLE" : "PASS", value: reportData.regulatoryEvaluation.totals.pass, color: "text-emerald-700 bg-emerald-50 border-emerald-200" },
+                        { label: isEs ? "INCUMPLE" : "VIOLATION", value: reportData.regulatoryEvaluation.totals.violation, color: "text-rose-700 bg-rose-50 border-rose-200" },
+                        { label: isEs ? "REVISIÓN" : "MANUAL", value: reportData.regulatoryEvaluation.totals.manualCheck, color: "text-amber-700 bg-amber-50 border-amber-200" },
+                        { label: isEs ? "PENDIENTE" : "PENDING", value: reportData.regulatoryEvaluation.totals.pending, color: "text-indigo-700 bg-indigo-50 border-indigo-200" },
                       ].map((item, idx) => (
                         <div key={idx} className={`border rounded p-2.5 ${item.color}`}>
                           <span className="text-[9px] font-bold block opacity-75">{item.label}</span>
@@ -938,7 +1020,7 @@ export function ReportPreview({ isOpen, onClose, includeGeocoding }: ReportPrevi
                                 <div className="flex justify-between items-start gap-2 mb-1.5">
                                   <span className="font-mono text-slate-500 text-[10px] font-semibold">{rule.ruleId}</span>
                                   <span className="px-2 py-0.5 rounded text-[8.5px] font-bold bg-rose-100 text-rose-800 uppercase border border-rose-250">
-                                    VIOLATION
+                                    {outcomeLabel("violation")}
                                   </span>
                                 </div>
                                 <div className="font-bold text-slate-900 text-[12px] leading-snug mb-1">{rule.title}</div>
@@ -1043,22 +1125,40 @@ export function ReportPreview({ isOpen, onClose, includeGeocoding }: ReportPrevi
                 </h2>
 
                 <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-2 font-sans">{isEs ? "Exclusiones de Ingeniería de Detalle" : "Detail Engineering Exclusions"}</h3>
-                <div className="space-y-3 font-sans text-xs mb-8">
-                  {reportData.exclusions.map((ex, idx) => (
-                    <div key={idx} className="flex gap-2 bg-slate-50 border border-slate-250 p-2.5 rounded">
-                      <span className="font-extrabold text-slate-800 font-mono text-[9px] shrink-0 uppercase border border-slate-300 rounded px-1.5 h-fit bg-white">
-                        {ex.id || `EXC-${idx}`}
-                      </span>
-                      <div>
-                        <div className="font-bold text-slate-900 mb-0.5">{ex.scope}</div>
-                        <div className="text-slate-500 leading-normal mb-1">{ex.reason}</div>
-                        <div className="text-[10px] text-violet-650 font-bold uppercase tracking-wider">
-                          {isEs ? "Fase Requerida:" : "Required Phase:"} {ex.futureStage}
-                        </div>
+                <div className="font-sans text-xs mb-8">
+                  {groupExclusions(reportData.exclusions).map((group) => (
+                    <div key={group.category} className="mb-4">
+                      <h4 className="text-[11px] font-bold uppercase tracking-wider text-violet-700 mb-2">{group.category}</h4>
+                      <div className="space-y-2">
+                        {group.items.map((ex, idx) => (
+                          <div key={ex.id || idx} className="flex gap-2 bg-slate-50 border border-slate-250 p-2.5 rounded">
+                            <span className="font-extrabold text-slate-800 font-mono text-[9px] shrink-0 uppercase border border-slate-300 rounded px-1.5 h-fit bg-white">
+                              {ex.id || `EXC-${idx}`}
+                            </span>
+                            <div>
+                              <div className="font-bold text-slate-900 mb-0.5">{ex.scope}</div>
+                              <div className="text-slate-500 leading-normal mb-1">{ex.reason}</div>
+                              <div className="text-[10px] text-violet-650 font-bold uppercase tracking-wider">
+                                {isEs ? "Fase Requerida:" : "Required Phase:"} {ex.futureStage}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   ))}
                 </div>
+
+                {/* Recommended next steps (mirrors PDF) */}
+                <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-2 font-sans">{isEs ? "Próximos Pasos Recomendados" : "Recommended Next Steps"}</h3>
+                <ol className="flex flex-col gap-1.5 font-sans mb-8">
+                  {buildNextSteps(reportData).map((step, idx) => (
+                    <li key={idx} className="flex gap-2.5 items-start text-xs">
+                      <span className="shrink-0 w-4 h-4 rounded-full bg-violet-600 text-white text-[9px] font-bold flex items-center justify-center mt-0.5">{idx + 1}</span>
+                      <span className="leading-relaxed text-slate-700">{step}</span>
+                    </li>
+                  ))}
+                </ol>
 
                 {/* Preliminary Roads & Cable Routes (Phase 6) */}
                 {reportData.infrastructure ? (
@@ -1119,6 +1219,72 @@ export function ReportPreview({ isOpen, onClose, includeGeocoding }: ReportPrevi
                     </div>
                   ))}
                 </div>
+              </div>
+
+              {/* ANNEX: DETAILED RULES MATRIX TABLE */}
+              <div id="preview-sec-annex" className="w-full bg-white text-slate-900 border border-slate-200 shadow-2xl p-10 md:p-14 rounded-md font-serif">
+                <h2 className="text-xl font-bold border-b border-slate-200 pb-2 mb-4 font-sans tracking-wide text-slate-800">
+                  <span className="text-slate-400 mr-2">A1.</span>
+                  {isEs ? "Anexo: Matriz Completa de Reglas" : "Annex: Full Compliance Matrix"}
+                </h2>
+
+                {reportData.regulatoryEvaluation ? (
+                  <>
+                    <p className="text-sm leading-relaxed mb-6 font-serif">
+                      {isEs
+                        ? "Esta sección presenta el registro completo de evaluación para todas las reglas cargadas en el perfil:"
+                        : "This section contains the full validation logs of all evaluation checks loaded inside the profile:"}{" "}
+                      <strong className="font-sans">{reportData.regulatoryEvaluation.profileName}</strong>.
+                    </p>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full font-sans text-[11px] text-left border-collapse">
+                        <thead>
+                          <tr className="border-b border-slate-300 text-slate-400 uppercase tracking-wider text-[8px] font-bold">
+                            <th className="py-2 pr-2">Outcome</th>
+                            <th className="py-2 pr-2">ID</th>
+                            <th className="py-2 pr-2">{isEs ? "Título de Regla" : "Rule Title"}</th>
+                            <th className="py-2">{isEs ? "Referencia / Fuente" : "Regulatory Source"}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {reportData.regulatoryEvaluation.rules.map((rule, idx) => {
+                            const mainCite = rule.evidence.find((e) => e.documentId && e.documentId !== "__none__");
+                            return (
+                              <tr key={idx} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/50">
+                                <td className="py-2 pr-2">
+                                  <span className={`px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase border ${outcomeColors(rule.outcome)}`}>
+                                    {outcomeLabel(rule.outcome)}
+                                  </span>
+                                </td>
+                                <td className="py-2 pr-2 font-mono text-[9px] text-slate-650 font-bold">{rule.ruleId}</td>
+                                <td className="py-2 pr-2 font-medium text-slate-900 leading-snug">{rule.title}</td>
+                                <td className="py-2 text-slate-450 italic text-[10px] leading-normal">
+                                  {mainCite 
+                                    ? `${documentTitle(mainCite.documentId)}${mainCite.page ? ` · p.${mainCite.page}` : ""}`
+                                    : "—"
+                                  }
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-xs text-slate-500 italic bg-slate-50 border border-slate-200 rounded p-4 font-sans">
+                    {isEs ? "Evaluación regulatoria no disponible." : "Regulatory evaluation not active."}
+                  </p>
+                )}
+              </div>
+
+              {/* ANNEX A2: ENGINEERING CHECKLIST & REFERENCES */}
+              <div id="preview-sec-annexEng" className="w-full bg-white text-slate-900 border border-slate-200 shadow-2xl p-10 md:p-14 rounded-md font-serif">
+                <h2 className="text-xl font-bold border-b border-slate-200 pb-2 mb-4 font-sans tracking-wide text-slate-800">
+                  <span className="text-slate-400 mr-2">A2.</span>
+                  {isEs ? "Anexo: Checklist de Ingeniería y Referencias" : "Annex: Engineering Checklist & References"}
+                </h2>
 
                 {/* Engineering Checklist */}
                 <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider mb-2.5 font-sans">{isEs ? "Checklist de Cierre de Diseño" : "Design Validation Checklist"}</h3>
@@ -1167,64 +1333,6 @@ export function ReportPreview({ isOpen, onClose, includeGeocoding }: ReportPrevi
                     </tbody>
                   </table>
                 </div>
-              </div>
-
-              {/* ANNEX: DETAILED RULES MATRIX TABLE */}
-              <div id="preview-sec-annex" className="w-full bg-white text-slate-900 border border-slate-200 shadow-2xl p-10 md:p-14 rounded-md font-serif">
-                <h2 className="text-xl font-bold border-b border-slate-200 pb-2 mb-4 font-sans tracking-wide text-slate-800">
-                  <span className="text-slate-400 mr-2">A1.</span>
-                  {isEs ? "Anexo: Matriz Completa de Reglas" : "Annex: Full Compliance Matrix"}
-                </h2>
-
-                {reportData.regulatoryEvaluation ? (
-                  <>
-                    <p className="text-sm leading-relaxed mb-6 font-serif">
-                      {isEs
-                        ? "Esta sección presenta el registro completo de evaluación para todas las reglas cargadas en el perfil:"
-                        : "This section contains the full validation logs of all evaluation checks loaded inside the profile:"}{" "}
-                      <strong className="font-sans">{reportData.regulatoryEvaluation.profileName}</strong>.
-                    </p>
-
-                    <div className="overflow-x-auto">
-                      <table className="w-full font-sans text-[11px] text-left border-collapse">
-                        <thead>
-                          <tr className="border-b border-slate-300 text-slate-400 uppercase tracking-wider text-[8px] font-bold">
-                            <th className="py-2 pr-2">Outcome</th>
-                            <th className="py-2 pr-2">ID</th>
-                            <th className="py-2 pr-2">{isEs ? "Título de Regla" : "Rule Title"}</th>
-                            <th className="py-2">{isEs ? "Referencia / Fuente" : "Regulatory Source"}</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {reportData.regulatoryEvaluation.rules.map((rule, idx) => {
-                            const mainCite = rule.evidence.find((e) => e.documentId && e.documentId !== "__none__");
-                            return (
-                              <tr key={idx} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/50">
-                                <td className="py-2 pr-2">
-                                  <span className={`px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase border ${outcomeColors(rule.outcome)}`}>
-                                    {rule.outcome === "manual_check" ? "MANUAL" : rule.outcome === "pending_validation" ? "PENDING" : rule.outcome.toUpperCase()}
-                                  </span>
-                                </td>
-                                <td className="py-2 pr-2 font-mono text-[9px] text-slate-650 font-bold">{rule.ruleId}</td>
-                                <td className="py-2 pr-2 font-medium text-slate-900 leading-snug">{rule.title}</td>
-                                <td className="py-2 text-slate-450 italic text-[10px] leading-normal">
-                                  {mainCite 
-                                    ? `${documentTitle(mainCite.documentId)}${mainCite.page ? ` · p.${mainCite.page}` : ""}`
-                                    : "—"
-                                  }
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </>
-                ) : (
-                  <p className="text-xs text-slate-500 italic bg-slate-50 border border-slate-200 rounded p-4 font-sans">
-                    {isEs ? "Evaluación regulatoria no disponible." : "Regulatory evaluation not active."}
-                  </p>
-                )}
               </div>
             </div>
           ) : (
