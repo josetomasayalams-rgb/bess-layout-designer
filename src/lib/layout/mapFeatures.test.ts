@@ -243,4 +243,127 @@ describe("smartSiteFitPreviewFeatures", () => {
     expect(result.bessFeatures.features[0].properties?.id).toBe("bess-1");
     expect(result.pcsFeatures.features[0].properties?.id).toBe("pcs-1");
   });
+
+  // --- Adaptive preview (full vs simplified) ---
+
+  function makeGiantAlternative(bessCount: number, pcsCount: number, blocks: number) {
+    const placedEquipment: PlacedEquipment[] = [];
+    for (let i = 0; i < bessCount; i++) {
+      placedEquipment.push({
+        id: `bess-${i}`,
+        equipmentSpecId: "sungrow-st2752ux-us",
+        anchor: { lng: -70 + i * 0.0001, lat: -33 },
+        rotation_deg: 0,
+        blockId: `block-${i % blocks}`,
+        sourceReliability: "preliminary_assumption",
+      });
+    }
+    for (let j = 0; j < pcsCount; j++) {
+      placedEquipment.push({
+        id: `pcs-${j}`,
+        equipmentSpecId: "sungrow-sc5000ud-mv-us-p3",
+        anchor: { lng: -70 + j * 0.0002, lat: -32.999 },
+        rotation_deg: 0,
+        blockId: `block-${j}`,
+        sourceReliability: "preliminary_assumption",
+      });
+    }
+    return {
+      id: "alt-giant",
+      strategy: "max_capacity" as const,
+      placedEquipment,
+      score: {
+        total: 80,
+        insidePolygon: 25,
+        noCollisions: 25,
+        boundaryMargin: 10,
+        siteUtilization: 10,
+        rowRegularity: 5,
+        corridorEfficiency: 3,
+        ratioCompliance: 2,
+      },
+      warnings: [],
+      assumptions: [],
+    };
+  }
+
+  it("uses full preview mode when equipment count is below the simplification threshold", () => {
+    const alt = makeGiantAlternative(20, 5, 5);
+    const result = smartSiteFitPreviewFeatures(alt, anchor);
+    expect(result.previewMode).toBe("full");
+    // Full mode renders one feature per item.
+    expect(result.bessFeatures.features).toHaveLength(20);
+    expect(result.pcsFeatures.features).toHaveLength(5);
+    expect(result.representedEquipmentCount).toBe(25);
+  });
+
+  it("collapses BESS into aggregated block rectangles in simplified mode", () => {
+    // Force simplification with a tiny budget instead of building 600+ items.
+    const budget = {
+      maxCandidateEvaluations: 1200,
+      maxExactGeometryChecks: 24,
+      maxPreviewFeaturesBeforeSimplification: 10,
+      maxRenderedPreviewItems: 1000,
+      targetComputeTimeMs: 750,
+      hardTimeoutMs: 2500,
+      enableProgressiveFallback: true,
+    };
+    const alt = makeGiantAlternative(80, 8, 4);
+    const result = smartSiteFitPreviewFeatures(alt, anchor, budget);
+
+    expect(result.previewMode).toBe("simplified");
+    // 80 BESS collapse into 4 block rectangles.
+    expect(result.bessFeatures.features).toHaveLength(4);
+    // PCS stay individual.
+    expect(result.pcsFeatures.features).toHaveLength(8);
+    // The full equipment count is still reported for the UI explanation.
+    expect(result.representedEquipmentCount).toBe(88);
+    expect(result.renderedFeatureCount).toBe(12);
+    expect(result.renderedFeatureCount).toBeLessThan(result.representedEquipmentCount);
+  });
+
+  it("tags aggregated BESS blocks with representedEquipmentCount in simplified mode", () => {
+    const budget = {
+      maxCandidateEvaluations: 1200,
+      maxExactGeometryChecks: 24,
+      maxPreviewFeaturesBeforeSimplification: 10,
+      maxRenderedPreviewItems: 1000,
+      targetComputeTimeMs: 750,
+      hardTimeoutMs: 2500,
+      enableProgressiveFallback: true,
+    };
+    const alt = makeGiantAlternative(40, 4, 2);
+    const result = smartSiteFitPreviewFeatures(alt, anchor, budget);
+
+    expect(result.previewMode).toBe("simplified");
+    for (const f of result.bessFeatures.features) {
+      expect(f.properties?.aggregated).toBe(true);
+      expect(f.properties?.previewMode).toBe("simplified");
+      // Each block aggregates 40 / 2 = 20 BESS.
+      expect(f.properties?.representedEquipmentCount).toBe(20);
+    }
+  });
+
+  it("never emits a separate transformer feature in either preview mode", () => {
+    const budget = {
+      maxCandidateEvaluations: 1200,
+      maxExactGeometryChecks: 24,
+      maxPreviewFeaturesBeforeSimplification: 10,
+      maxRenderedPreviewItems: 1000,
+      targetComputeTimeMs: 750,
+      hardTimeoutMs: 2500,
+      enableProgressiveFallback: true,
+    };
+    const alt = makeGiantAlternative(60, 6, 3);
+    const result = smartSiteFitPreviewFeatures(alt, anchor, budget);
+
+    const allTypes = [
+      ...result.bessFeatures.features,
+      ...result.pcsFeatures.features,
+    ].map((f) => f.properties?.type);
+    expect(allTypes).not.toContain("transformer");
+    for (const t of allTypes) {
+      expect(["battery_container", "pcs_mv_station"]).toContain(t);
+    }
+  });
 });

@@ -17,6 +17,27 @@ import { toLocal, toLngLat } from "@/lib/geometry/projection";
 import type { RegulatoryProfile } from "@/types/bessLayoutTypes";
 import type { LayoutWarning } from "@/lib/layout/spacingRules";
 import type { SmartSiteFitCandidate } from "@/lib/layout/smartSiteFit/smartSiteFitTypes";
+import {
+  DEFAULT_PERFORMANCE_BUDGET,
+  type SmartSiteFitPerformanceBudget,
+} from "@/lib/layout/smartSiteFit/smartSiteFitPerformance";
+
+// O(1) spec lookup for the SmartSiteFit preview, which can resolve specs for
+// thousands of placed items on giant layouts.
+const smartSiteFitSpecById = new Map(equipmentCatalog.map((e) => [e.id, e]));
+
+export type SmartSiteFitPreviewMode = "full" | "simplified";
+
+export interface SmartSiteFitPreviewResult {
+  bessFeatures: FeatureCollection<Polygon>;
+  pcsFeatures: FeatureCollection<Polygon>;
+  /** "full" = one feature per equipment; "simplified" = aggregated block rects. */
+  previewMode: SmartSiteFitPreviewMode;
+  /** Total equipment the preview represents (BESS + PCS), regardless of mode. */
+  representedEquipmentCount: number;
+  /** Number of GeoJSON features actually drawn (may be far smaller in simplified mode). */
+  renderedFeatureCount: number;
+}
 
 export function polygonToFeature(polygon: LngLat[]): FeatureCollection<Polygon> {
   if (polygon.length < 3) {
@@ -651,26 +672,110 @@ export function regulatoryBufferFeatures(
   return { type: "FeatureCollection", features };
 }
 
+/**
+ * Build the SmartSiteFit map preview for an alternative.
+ *
+ * Adaptive rendering keeps utility-scale layouts (thousands of containers) from
+ * freezing the map:
+ *  - **full** mode (small/medium layouts): one polygon per BESS and per PCS,
+ *    exactly as before.
+ *  - **simplified** mode (giant layouts, above
+ *    `maxPreviewFeaturesBeforeSimplification`): each block's BESS are collapsed
+ *    into a single aggregated bounding rectangle, while PCS stay individual
+ *    (there are far fewer of them and they anchor each cluster). Aggregated
+ *    features carry `representedEquipmentCount` so the UI can explain the
+ *    grouping. Applying the alternative still places the full equipment list —
+ *    only the *preview* is simplified.
+ *
+ * Never emits a separate transformer feature: the SC5000UD-MV PCS is already an
+ * integrated PCS/MV station.
+ */
 export function smartSiteFitPreviewFeatures(
   alternative: SmartSiteFitCandidate | null | undefined,
-  anchor: ProjectAnchor | null
-): {
-  bessFeatures: FeatureCollection<Polygon>;
-  pcsFeatures: FeatureCollection<Polygon>;
-} {
+  anchor: ProjectAnchor | null,
+  budget: SmartSiteFitPerformanceBudget = DEFAULT_PERFORMANCE_BUDGET
+): SmartSiteFitPreviewResult {
+  const empty: SmartSiteFitPreviewResult = {
+    bessFeatures: { type: "FeatureCollection", features: [] },
+    pcsFeatures: { type: "FeatureCollection", features: [] },
+    previewMode: "full",
+    representedEquipmentCount: 0,
+    renderedFeatureCount: 0,
+  };
   if (!alternative || !anchor || !alternative.placedEquipment) {
+    return empty;
+  }
+
+  const placed = alternative.placedEquipment;
+  const simplified = placed.length > budget.maxPreviewFeaturesBeforeSimplification;
+
+  if (!simplified) {
+    const bessFeatures: Feature<Polygon>[] = [];
+    const pcsFeatures: Feature<Polygon>[] = [];
+
+    for (const p of placed) {
+      const spec = smartSiteFitSpecById.get(p.equipmentSpecId);
+      if (!spec) continue;
+
+      const center = toLocal(p.anchor, anchor);
+      const corners = rectCorners({
+        center,
+        length_m: spec.footprint.length_m,
+        width_m: spec.footprint.width_m,
+        rotation_deg: p.rotation_deg,
+      });
+      const ring = corners
+        .map((c) => toLngLat(c, anchor))
+        .map((ll) => [ll.lng, ll.lat] as [number, number]);
+      ring.push(ring[0]);
+
+      const feature: Feature<Polygon> = {
+        type: "Feature",
+        geometry: { type: "Polygon", coordinates: [ring] },
+        properties: {
+          id: p.id,
+          equipmentSpecId: p.equipmentSpecId,
+          type: spec.type,
+          label: `${spec.manufacturer} ${spec.model}`,
+          isSmartSiteFitPreview: true,
+          previewMode: "full",
+          representedEquipmentCount: 1,
+        },
+      };
+
+      if (spec.type === "battery_container") {
+        bessFeatures.push(feature);
+      } else if (spec.type === "pcs_mv_station") {
+        pcsFeatures.push(feature);
+      }
+    }
+
     return {
-      bessFeatures: { type: "FeatureCollection", features: [] },
-      pcsFeatures: { type: "FeatureCollection", features: [] },
+      bessFeatures: { type: "FeatureCollection", features: bessFeatures },
+      pcsFeatures: { type: "FeatureCollection", features: pcsFeatures },
+      previewMode: "full",
+      representedEquipmentCount: bessFeatures.length + pcsFeatures.length,
+      renderedFeatureCount: bessFeatures.length + pcsFeatures.length,
     };
   }
 
-  const bessFeatures: Feature<Polygon>[] = [];
+  // --- Simplified mode: aggregate BESS per block into one bounding rect ---
+  interface BlockAgg {
+    minX: number;
+    maxX: number;
+    minY: number;
+    maxY: number;
+    count: number;
+  }
+  const blockAggs = new Map<string, BlockAgg>();
   const pcsFeatures: Feature<Polygon>[] = [];
+  let representedEquipmentCount = 0;
 
-  for (const p of alternative.placedEquipment) {
-    const spec = equipmentCatalog.find((e) => e.id === p.equipmentSpecId);
+  for (const p of placed) {
+    const spec = smartSiteFitSpecById.get(p.equipmentSpecId);
     if (!spec) continue;
+    if (spec.type !== "battery_container" && spec.type !== "pcs_mv_station") continue;
+    representedEquipmentCount++;
 
     const center = toLocal(p.anchor, anchor);
     const corners = rectCorners({
@@ -679,32 +784,81 @@ export function smartSiteFitPreviewFeatures(
       width_m: spec.footprint.width_m,
       rotation_deg: p.rotation_deg,
     });
-    const ring = corners
+
+    if (spec.type === "pcs_mv_station") {
+      // PCS stay individual — they anchor each cluster and are far fewer.
+      const ring = corners
+        .map((c) => toLngLat(c, anchor))
+        .map((ll) => [ll.lng, ll.lat] as [number, number]);
+      ring.push(ring[0]);
+      pcsFeatures.push({
+        type: "Feature",
+        geometry: { type: "Polygon", coordinates: [ring] },
+        properties: {
+          id: p.id,
+          equipmentSpecId: p.equipmentSpecId,
+          type: spec.type,
+          label: `${spec.manufacturer} ${spec.model}`,
+          isSmartSiteFitPreview: true,
+          previewMode: "simplified",
+          representedEquipmentCount: 1,
+        },
+      });
+      continue;
+    }
+
+    // Aggregate BESS corners into the block's axis-aligned (local) bounds.
+    const key = p.blockId ?? p.groupId ?? "__none__";
+    let agg = blockAggs.get(key);
+    if (!agg) {
+      agg = { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity, count: 0 };
+      blockAggs.set(key, agg);
+    }
+    for (const c of corners) {
+      if (c.x_m < agg.minX) agg.minX = c.x_m;
+      if (c.x_m > agg.maxX) agg.maxX = c.x_m;
+      if (c.y_m < agg.minY) agg.minY = c.y_m;
+      if (c.y_m > agg.maxY) agg.maxY = c.y_m;
+    }
+    agg.count++;
+  }
+
+  const bessFeatures: Feature<Polygon>[] = [];
+  const maxBlockRects = Math.max(1, budget.maxRenderedPreviewItems - pcsFeatures.length);
+  let drawnBlocks = 0;
+  for (const [key, agg] of blockAggs) {
+    if (drawnBlocks >= maxBlockRects) break;
+    const localRing: LocalPoint[] = [
+      { x_m: agg.minX, y_m: agg.minY },
+      { x_m: agg.maxX, y_m: agg.minY },
+      { x_m: agg.maxX, y_m: agg.maxY },
+      { x_m: agg.minX, y_m: agg.maxY },
+    ];
+    const ring = localRing
       .map((c) => toLngLat(c, anchor))
       .map((ll) => [ll.lng, ll.lat] as [number, number]);
     ring.push(ring[0]);
-
-    const feature: Feature<Polygon> = {
+    bessFeatures.push({
       type: "Feature",
       geometry: { type: "Polygon", coordinates: [ring] },
       properties: {
-        id: p.id,
-        equipmentSpecId: p.equipmentSpecId,
-        type: spec.type,
-        label: `${spec.manufacturer} ${spec.model}`,
+        id: `bess-block-${key}`,
+        type: "battery_container",
+        label: `${agg.count} BESS agrupados`,
         isSmartSiteFitPreview: true,
+        previewMode: "simplified",
+        aggregated: true,
+        representedEquipmentCount: agg.count,
       },
-    };
-
-    if (spec.type === "battery_container") {
-      bessFeatures.push(feature);
-    } else if (spec.type === "pcs_mv_station") {
-      pcsFeatures.push(feature);
-    }
+    });
+    drawnBlocks++;
   }
 
   return {
     bessFeatures: { type: "FeatureCollection", features: bessFeatures },
     pcsFeatures: { type: "FeatureCollection", features: pcsFeatures },
+    previewMode: "simplified",
+    representedEquipmentCount,
+    renderedFeatureCount: bessFeatures.length + pcsFeatures.length,
   };
 }
