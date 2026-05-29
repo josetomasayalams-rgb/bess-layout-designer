@@ -46,11 +46,11 @@ const SECTION_COPY: Record<
   equipment: {
     es: {
       title: "Equipos",
-      description: "Catalogos, modelos y dimensionamiento preliminar.",
+      description: "Catalogos, modelos y biblioteca de equipos.",
     },
     en: {
       title: "Equipment",
-      description: "Catalogs, models and preliminary sizing.",
+      description: "Catalogs, models and equipment library.",
     },
   },
   layout: {
@@ -143,8 +143,8 @@ function useSectionCue(
     return {
       label: isEs ? "Sin equipos colocados" : "No placed equipment",
       text: isEs
-        ? "Selecciona un modelo o usa sizing preliminar; esta seccion no coloca equipos por si sola."
-        : "Select a model or use preliminary sizing; this section does not place equipment by itself.",
+        ? "Selecciona o revisa modelos del catalogo; el dimensionamiento vive ahora en la seccion Layout."
+        : "Select or review catalog models; sizing tools now live in the Layout section.",
     };
   }
 
@@ -199,10 +199,7 @@ function renderSectionPanels(
 
   if (activeSection === "equipment") {
     return region === "primary" ? (
-      <>
-        <BessModelLibraryPanel />
-        <BessQuickSizingPanel />
-      </>
+      <BessModelLibraryPanel />
     ) : (
       <EquipmentCatalogPanel />
     );
@@ -213,6 +210,7 @@ function renderSectionPanels(
       <>
         <SmartSiteFitPanel />
         <PreliminaryDesignToolsPanel />
+        <BessQuickSizingPanel />
         <MVArchitecturePanel />
       </>
     ) : (

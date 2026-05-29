@@ -106,8 +106,9 @@ describe("AppShell section shell surfaces", () => {
     fireEvent.click(screen.getByRole("button", { name: "2. Equipment" }));
 
     expect(screen.getByTestId("model-library-panel")).toBeDefined();
-    expect(screen.getByTestId("quick-sizing-panel")).toBeDefined();
     expect(screen.getByTestId("equipment-catalog-panel")).toBeDefined();
+    // Quick sizing has moved out of Equipment into the Layout section.
+    expect(screen.queryByTestId("quick-sizing-panel")).toBeNull();
     expect(screen.queryByTestId("case-study-panel")).toBeNull();
   });
 
@@ -117,6 +118,8 @@ describe("AppShell section shell surfaces", () => {
     // Navigate to Layout
     fireEvent.click(screen.getByRole("button", { name: "3. Layout" }));
     expect(screen.getByTestId("preliminary-design-panel")).toBeDefined();
+    // Quick sizing now appears under Layout, alongside the other sizing tools.
+    expect(screen.getByTestId("quick-sizing-panel")).toBeDefined();
     expect(screen.getByTestId("bess-map")).toBeDefined();
 
     // Navigate to Compliance

@@ -85,8 +85,9 @@ describe("SectionPanelHost", () => {
     );
 
     expect(screen.getByTestId("model-library-panel")).toBeDefined();
-    expect(screen.getByTestId("quick-sizing-panel")).toBeDefined();
     expect(screen.getByTestId("equipment-catalog-panel")).toBeDefined();
+    // Quick sizing has been relocated out of the equipment section.
+    expect(screen.queryByTestId("quick-sizing-panel")).toBeNull();
   });
 
   it("renders each section shell without remapping ids", () => {
@@ -178,6 +179,9 @@ describe("SectionPanelHost", () => {
 
     expect(screen.getByTestId("smart-site-fit-panel")).toBeDefined();
     expect(screen.getByTestId("preliminary-design-panel")).toBeDefined();
+    // Quick sizing now lives under Layout, after the container sizing tools.
+    expect(screen.getByTestId("quick-sizing-panel")).toBeDefined();
+    expect(screen.getByTestId("mv-architecture-panel")).toBeDefined();
     expect(screen.getByTestId("layout-comparison-panel")).toBeDefined();
   });
 });
