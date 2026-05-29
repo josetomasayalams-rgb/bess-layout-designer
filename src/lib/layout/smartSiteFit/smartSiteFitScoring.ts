@@ -7,6 +7,10 @@ import { toLocal } from "@/lib/geometry/projection";
 import { distanceBetweenRectangles, distanceRectToPolygonBoundary } from "@/lib/geometry/distance";
 import { getContainersPerPcsForDuration } from "./smartSiteFitPresets";
 
+// O(1) spec lookup. Scoring giant layouts resolves the spec for every placed
+// item, so a linear `equipmentCatalog.find` per item is quadratic at scale.
+const specById = new Map(equipmentCatalog.map((s) => [s.id, s]));
+
 export function scoreCandidate(
   candidate: SmartSiteFitCandidate,
   polygon: LocalPoint[],
@@ -30,7 +34,7 @@ export function scoreCandidate(
   // 1. Resolve rects in local coordinates
   const rectsWithSpec = placed.map((item) => {
     const localCenter = toLocal(item.anchor, anchor);
-    const spec = equipmentCatalog.find((s) => s.id === item.equipmentSpecId);
+    const spec = specById.get(item.equipmentSpecId);
     const length_m = spec?.footprint.length_m ?? 5;
     const width_m = spec?.footprint.width_m ?? 2;
     return {
