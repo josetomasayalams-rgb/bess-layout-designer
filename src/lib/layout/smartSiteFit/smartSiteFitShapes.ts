@@ -139,6 +139,94 @@ export function generateSmartSiteFitShapes(input: {
   return shapes;
 }
 
+// Sungrow footprint constants shared by the shape builders. Kept module-local
+// so the fast estimator and the exact builder never drift apart.
+const BESS_LENGTH_M = 9.34;
+const BESS_WIDTH_M = 1.73;
+const PCS_LENGTH_M = 6.058;
+const PCS_WIDTH_M = 2.438;
+
+/**
+ * Cheap, equipment-free bounding-box estimate of a shape's footprint. It mirrors
+ * the dimensional math in {@link buildShapeLayout} per kind but never places a
+ * single item, so it is O(1) and safe to call thousands of times while pruning.
+ */
+export function estimateShapeFootprint(
+  shape: SmartSiteFitShapeCandidate,
+  pcsCount: number,
+  containersPerPcs: number,
+  spacing: { bessToBess: number; bessToPcs: number; pcsToPcs: number }
+): { width_m: number; height_m: number } {
+  const { bessToBess, bessToPcs, pcsToPcs } = spacing;
+  const pcs = Math.max(1, pcsCount);
+
+  switch (shape.kind) {
+    case "single_row": {
+      const blockLength =
+        PCS_LENGTH_M + bessToPcs + containersPerPcs * (BESS_LENGTH_M + bessToBess) - bessToBess;
+      const blockWidth = Math.max(PCS_WIDTH_M, BESS_WIDTH_M);
+      return {
+        width_m: blockLength,
+        height_m: pcs * blockWidth + (pcs - 1) * bessToBess,
+      };
+    }
+
+    case "two_row_block": {
+      const bessCols = Math.ceil(containersPerPcs / 2);
+      const bessRowLength = bessCols * BESS_LENGTH_M + (bessCols - 1) * bessToBess;
+      const blockLength = bessRowLength + bessToPcs + PCS_LENGTH_M;
+      const blockHeight = 2 * BESS_WIDTH_M + bessToBess;
+      return {
+        width_m: blockLength,
+        height_m: pcs * blockHeight + (pcs - 1) * pcsToPcs,
+      };
+    }
+
+    case "compact_grid":
+    case "wide_grid":
+    case "deep_grid": {
+      const subCols = Math.max(1, Math.ceil(Math.sqrt(containersPerPcs)));
+      const subRows = Math.max(1, Math.ceil(containersPerPcs / subCols));
+      const bessBlockW = subCols * BESS_LENGTH_M + (subCols - 1) * bessToBess;
+      const bessBlockH = subRows * BESS_WIDTH_M + (subRows - 1) * bessToBess;
+      const clusterLength = bessBlockW + bessToPcs + PCS_LENGTH_M;
+      const clusterHeight = Math.max(bessBlockH, PCS_WIDTH_M);
+
+      let clusterCols = Math.max(1, Math.ceil(Math.sqrt(pcs)));
+      if (shape.kind === "wide_grid") {
+        clusterCols = Math.max(1, Math.ceil(Math.sqrt(pcs) * 1.6));
+      } else if (shape.kind === "deep_grid") {
+        clusterCols = Math.max(1, Math.floor(Math.sqrt(pcs) / 1.6) || 1);
+      }
+      clusterCols = Math.min(clusterCols, pcs);
+      const clusterRows = Math.ceil(pcs / clusterCols);
+
+      return {
+        width_m: clusterCols * clusterLength + (clusterCols - 1) * pcsToPcs,
+        height_m: clusterRows * clusterHeight + (clusterRows - 1) * pcsToPcs,
+      };
+    }
+
+    case "multi_block":
+    case "split_blocks": {
+      const blockRows = Math.ceil(Math.sqrt(pcs));
+      const blockCols = Math.ceil(pcs / blockRows);
+      const bessCols = Math.ceil(containersPerPcs / 2);
+      const bessRowLength = bessCols * BESS_LENGTH_M + (bessCols - 1) * bessToBess;
+      const blockLength = bessRowLength + bessToPcs + PCS_LENGTH_M;
+      const blockHeight = 2 * BESS_WIDTH_M + bessToBess;
+      const splitSpace = shape.kind === "split_blocks" && blockCols > 1 ? 6.0 : 0.0;
+      return {
+        width_m: blockCols * blockLength + (blockCols - 1) * pcsToPcs + splitSpace,
+        height_m: blockRows * blockHeight + (blockRows - 1) * pcsToPcs,
+      };
+    }
+
+    default:
+      return { width_m: 0, height_m: 0 };
+  }
+}
+
 export function buildShapeLayout(
   shape: SmartSiteFitShapeCandidate,
   pcsCount: number,

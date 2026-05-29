@@ -8,6 +8,7 @@ import { generateCandidates } from "./smartSiteFitCandidates";
 import { rankSmartSiteFitCandidates } from "./smartSiteFitScoring";
 import { toLocal } from "@/lib/geometry/projection";
 import { validatePolygonForSmartSiteFit } from "./smartSiteFitGeometry";
+import { DEFAULT_PERFORMANCE_BUDGET } from "./smartSiteFitPerformance";
 
 export function runSmartSiteFit(input: SmartSiteFitInput): SmartSiteFitResult {
   const durationHours = input.durationHours ?? 4;
@@ -78,6 +79,10 @@ export function runTargetSizing(
   const targetMW = input.targetMW ?? 10;
   const targetMWh = input.targetMWh ?? (targetMW * durationHours);
 
+  // Bound total compute time so giant scenarios degrade to a best-so-far result
+  // (with a performance_budget_reached warning) instead of freezing the UI.
+  const deadlineAt = Date.now() + DEFAULT_PERFORMANCE_BUDGET.hardTimeoutMs;
+
   // Generate candidates specifically matching the target size
   const candidates = generateCandidates(
     localPolygon,
@@ -86,7 +91,10 @@ export function runTargetSizing(
     strategy,
     input.overrides,
     targetMW,
-    targetMWh
+    targetMWh,
+    100,
+    DEFAULT_PERFORMANCE_BUDGET,
+    deadlineAt
   );
 
   if (candidates.length === 0) {
@@ -142,7 +150,9 @@ export function runTerrainSizing(
 
   // Spread the candidate budget across the three strategies to keep the
   // overall terrain sweep within the same performance envelope as a single run.
+  // One shared deadline across all three strategies bounds total wall time.
   const perStrategyBudget = 40;
+  const deadlineAt = Date.now() + DEFAULT_PERFORMANCE_BUDGET.hardTimeoutMs;
   const bestPerStrategy: SmartSiteFitCandidate[] = [];
   for (const s of strategies) {
     const candidates = generateCandidates(
@@ -153,7 +163,9 @@ export function runTerrainSizing(
       input.overrides,
       undefined,
       undefined,
-      perStrategyBudget
+      perStrategyBudget,
+      DEFAULT_PERFORMANCE_BUDGET,
+      deadlineAt
     );
     if (candidates.length === 0) continue;
     const ranked = rankSmartSiteFitCandidates(candidates, localPolygon, anchor, durationHours);
