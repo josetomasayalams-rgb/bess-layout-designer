@@ -131,17 +131,36 @@ export function runTerrainSizing(
   durationHours: number,
   strategy: "max_capacity" | "balanced" | "conservative"
 ): SmartSiteFitResult {
-  // Generate candidates for multiple strategies or search spaces
-  // Let's generate candidates for the active strategy first
-  const candidates = generateCandidates(
-    localPolygon,
-    anchor,
-    durationHours,
-    strategy,
-    input.overrides
-  );
+  // Terrain mode derives capacity from the polygon. We explore all three
+  // strategies so the user gets genuinely distinct conservative / balanced /
+  // max_capacity alternatives instead of three near-identical layouts.
+  const strategies: Array<"max_capacity" | "balanced" | "conservative"> = [
+    "max_capacity",
+    "balanced",
+    "conservative",
+  ];
 
-  if (candidates.length === 0) {
+  // Spread the candidate budget across the three strategies to keep the
+  // overall terrain sweep within the same performance envelope as a single run.
+  const perStrategyBudget = 40;
+  const bestPerStrategy: SmartSiteFitCandidate[] = [];
+  for (const s of strategies) {
+    const candidates = generateCandidates(
+      localPolygon,
+      anchor,
+      durationHours,
+      s,
+      input.overrides,
+      undefined,
+      undefined,
+      perStrategyBudget
+    );
+    if (candidates.length === 0) continue;
+    const ranked = rankSmartSiteFitCandidates(candidates, localPolygon, anchor, durationHours);
+    if (ranked[0]) bestPerStrategy.push(ranked[0]);
+  }
+
+  if (bestPerStrategy.length === 0) {
     return {
       success: true,
       candidates: [],
@@ -155,32 +174,36 @@ export function runTerrainSizing(
       ],
       assumptions: [],
       fallbackUsed: true,
-      message: "No se encontraron candidatos.",
+      message: "No se encontraron candidatos viables para este terreno.",
     };
   }
 
-  // Score and rank candidates
-  const ranked = rankSmartSiteFitCandidates(candidates, localPolygon, anchor, durationHours);
-
-  // Filter candidates to get unique diverse alternatives (e.g. up to 3 distinct capacities/configurations)
-  const uniqueAlternatives: SmartSiteFitCandidate[] = [];
-  const seenSizes = new Set<string>();
-
-  for (const c of ranked) {
+  // De-duplicate strategies that collapsed to the same size (small terrains),
+  // keeping the higher-scoring representative.
+  const bySize = new Map<string, SmartSiteFitCandidate>();
+  for (const c of bestPerStrategy) {
     const bessCount = c.placedEquipment.filter(
       (e) => e.equipmentSpecId === "sungrow-st2752ux-us"
     ).length;
-    const key = `${c.strategy}-${bessCount}`;
-    if (!seenSizes.has(key)) {
-      seenSizes.add(key);
-      uniqueAlternatives.push(c);
+    const pcsCount = c.placedEquipment.filter(
+      (e) => e.equipmentSpecId === "sungrow-sc5000ud-mv-us-p3"
+    ).length;
+    const key = `${bessCount}-${pcsCount}`;
+    const existing = bySize.get(key);
+    if (!existing || c.score.total > existing.score.total) {
+      bySize.set(key, c);
     }
-    if (uniqueAlternatives.length >= 3) break;
   }
 
-  // Fallback to top ranked if we couldn't differentiate
-  const finalAlternatives =
-    uniqueAlternatives.length > 0 ? uniqueAlternatives : ranked.slice(0, 3);
+  // Order alternatives so the active strategy leads, then by score.
+  const finalAlternatives = Array.from(bySize.values())
+    .sort((a, b) => {
+      if (a.strategy === strategy && b.strategy !== strategy) return -1;
+      if (b.strategy === strategy && a.strategy !== strategy) return 1;
+      return b.score.total - a.score.total;
+    })
+    .slice(0, 3);
+
   const selected = finalAlternatives[0] || null;
 
   return {
@@ -190,6 +213,6 @@ export function runTerrainSizing(
     warnings: selected?.warnings ?? [],
     assumptions: selected?.assumptions ?? [],
     fallbackUsed: false,
-    message: "Dimensionamiento maximizando terreno completado exitosamente.",
+    message: "Dimensionamiento por terreno completado exitosamente.",
   };
 }

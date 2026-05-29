@@ -79,4 +79,91 @@ describe("SmartSiteFit Engine", () => {
     expect(result.candidates.length).toBeGreaterThan(0);
     expect(result.candidates.length).toBeLessThanOrEqual(3); // Up to 3 alternatives
   });
+
+  it("should produce distinct alternatives (different sizes) on a large terrain", () => {
+    // ~250 m square — large enough for the three strategies to diverge.
+    const largeSquare: LngLat[] = [
+      { lng: -70.00135, lat: -33.00112 },
+      { lng: -69.99865, lat: -33.00112 },
+      { lng: -69.99865, lat: -32.99888 },
+      { lng: -70.00135, lat: -32.99888 },
+    ];
+
+    const result = runSmartSiteFit({
+      mode: "terrain",
+      polygon: largeSquare,
+      durationHours: 4,
+      strategy: "balanced",
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.candidates.length).toBeGreaterThanOrEqual(2);
+
+    // Every returned alternative must have a distinct BESS/PCS size combination.
+    const sizeKeys = result.candidates.map((c) => {
+      const bess = c.placedEquipment.filter((e) => e.equipmentSpecId === "sungrow-st2752ux-us").length;
+      const pcs = c.placedEquipment.filter((e) => e.equipmentSpecId === "sungrow-sc5000ud-mv-us-p3").length;
+      return `${bess}-${pcs}`;
+    });
+    expect(new Set(sizeKeys).size).toBe(sizeKeys.length);
+  }, 20000);
+
+  it("should degrade gracefully on a tiny terrain (reduced capacity, no crash)", () => {
+    // ~30 m square — only a small capacity should fit.
+    const tinySquare: LngLat[] = [
+      { lng: -70.00016, lat: -33.000135 },
+      { lng: -69.99984, lat: -33.000135 },
+      { lng: -69.99984, lat: -32.999865 },
+      { lng: -70.00016, lat: -32.999865 },
+    ];
+
+    const result = runSmartSiteFit({
+      mode: "terrain",
+      polygon: tinySquare,
+      durationHours: 4,
+      strategy: "balanced",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.selected) {
+      const bess = result.selected.placedEquipment.filter(
+        (e) => e.equipmentSpecId === "sungrow-st2752ux-us"
+      ).length;
+      // A 30 m site cannot hold a large park; capacity must stay small.
+      expect(bess).toBeLessThan(40);
+    } else {
+      expect(result.fallbackUsed).toBe(true);
+    }
+  }, 20000);
+
+  it("should avoid a single absurd row for a large 320 BESS / 40 PCS park and keep PCS near their clusters", () => {
+    // 4h => 8:1 ratio. 40 PCS * 5 MW = 200 MW, 320 BESS * 2.752 = ~880 MWh.
+    const result = runSmartSiteFit({
+      mode: "target",
+      polygon,
+      targetMW: 200,
+      targetMWh: 880,
+      durationHours: 4,
+      strategy: "balanced",
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.selected).not.toBeNull();
+    const selected = result.selected!;
+
+    const bess = selected.placedEquipment.filter((e) => e.equipmentSpecId === "sungrow-st2752ux-us");
+    const pcs = selected.placedEquipment.filter((e) => e.equipmentSpecId === "sungrow-sc5000ud-mv-us-p3");
+    expect(bess.length / pcs.length).toBe(8);
+    expect(pcs.length).toBeGreaterThanOrEqual(40);
+
+    // Must not collapse into a single long row.
+    expect(selected.shape?.kind).not.toBe("single_row");
+
+    // Each PCS must share a block with BESS (integrated cluster, not a detached wall).
+    for (const p of pcs) {
+      expect(p.blockId).toBeDefined();
+      const sameBlockBess = bess.filter((b) => b.blockId === p.blockId);
+      expect(sameBlockBess.length).toBeGreaterThan(0);
+    }
+  }, 30000);
 });

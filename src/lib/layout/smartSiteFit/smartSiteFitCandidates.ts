@@ -20,7 +20,8 @@ export function generateCandidates(
   strategy: SmartSiteFitStrategy,
   overrides?: SmartSiteFitOverrides,
   targetMW?: number,
-  targetMWh?: number
+  targetMWh?: number,
+  maxCandidates: number = 100
 ): SmartSiteFitCandidate[] {
   if (polygon.length < 3) return [];
 
@@ -116,7 +117,7 @@ export function generateCandidates(
   const gridShiftsY = [-10, 0, 10];
 
   let candidateCount = 0;
-  const maxCandidatesToEvaluate = 100;
+  const maxCandidatesToEvaluate = Math.max(1, maxCandidates);
 
   for (const rotationDeg of rotations) {
     const rad = (rotationDeg * Math.PI) / 180;
