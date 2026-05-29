@@ -22,6 +22,7 @@ import {
   LocationSection,
 } from "./pdfProjectSections";
 import {
+  EngineeringAnnexSection,
   RegulatoryAnnexSection,
   ScopeSection,
   TraceabilitySection,
@@ -52,6 +53,7 @@ export function ReportDocument({ data }: Props) {
       <TraceabilitySection data={data} />
       <ScopeSection data={data} />
       <RegulatoryAnnexSection data={data} />
+      <EngineeringAnnexSection data={data} />
     </Document>
   );
 }

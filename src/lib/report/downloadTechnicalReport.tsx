@@ -118,7 +118,7 @@ export async function downloadTechnicalReportPdf({
 
   const data = buildReportData({
     projectName: caseStudy?.projectName,
-    appVersion: "0.1.0",
+    appVersion: "1.0.0-rc.1",
     locale,
     polygon: project.polygon,
     anchor: project.anchor,
