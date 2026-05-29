@@ -58,16 +58,17 @@ type SectionDescriptor = {
 const EXPECTED_SECTION_SEQUENCE: ReadonlyArray<SectionDescriptor> = Object.freeze([
   // 1. Cover page — <Page> directly, no SectionPage wrapper, no number/title.
   {},
-  { number: "1", title: "Resumen técnico ejecutivo" },
+  { number: "1", title: "Resumen ejecutivo" },
   { number: "2", title: "Sitio y ubicación" },
   { number: "3", title: "Parámetros principales del BESS" },
   { number: "4", title: "Layout físico y ocupación del terreno" },
-  { number: "5", title: "Arquitectura eléctrica preliminar" },
+  { number: "5", title: "Arquitectura eléctrica conceptual" },
   { number: "5b", title: "Validaciones eléctricas preliminares" },
   { number: "6", title: "Validación normativa resumida" },
   { number: "7", title: "Alertas críticas y pendientes técnicos" },
   { number: "8", title: "Alcance, exclusiones y próximos estudios" },
   { number: "A1", title: "Anexo: tabla completa de reglas" },
+  { number: "A2", title: "Anexo: checklist de ingeniería y referencias" },
 ]);
 
 /**
@@ -143,7 +144,7 @@ function describeChild(child: ChildElement): SectionDescriptor {
 }
 
 describe("ReportDocument — Phase 12A protective structural snapshot", () => {
-  it("renders exactly 11 pages (cover + 10 sections including 5b and A1)", () => {
+  it("renders exactly 12 pages (cover + 11 sections including 5b, A1 and A2)", () => {
     const children = getDocumentChildren();
     expect(children.length).toBe(EXPECTED_SECTION_SEQUENCE.length);
   });
@@ -161,10 +162,10 @@ describe("ReportDocument — Phase 12A protective structural snapshot", () => {
     expect(sixth.title).toBe("Validaciones eléctricas preliminares");
   });
 
-  it("includes the regulatory annex (A1) as the final page", () => {
+  it("includes the engineering annex (A2) as the final page", () => {
     const children = getDocumentChildren();
     const last = describeChild(children[children.length - 1]);
-    expect(last.number).toBe("A1");
-    expect(last.title).toBe("Anexo: tabla completa de reglas");
+    expect(last.number).toBe("A2");
+    expect(last.title).toBe("Anexo: checklist de ingeniería y referencias");
   });
 });

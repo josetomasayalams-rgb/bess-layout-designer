@@ -8,10 +8,10 @@
  *
  * All four components are byte-equivalent to their originals in
  * `ReportDocument.tsx` of commit `a334552` (lines 32–170 of head pre-extract):
- *   - SectionPage  → lines 32–57
- *   - Table        → lines 70–115 (with local `Col` type at lines 63–68)
- *   - DefGrid      → lines 117–132
- *   - AlertCard    → lines 134–170
+ *   - SectionPage  - lines 32–57
+ *   - Table        - lines 70–115 (with local `Col` type at lines 63–68)
+ *   - DefGrid      - lines 117–132
+ *   - AlertCard    - lines 134–170
  *
  * `SectionPage` depends on `PageHeader` and `PageFooter` from `./pdfChrome`.
  * That dependency is one-directional: `pdfPrimitives` imports from
