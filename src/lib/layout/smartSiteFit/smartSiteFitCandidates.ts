@@ -77,7 +77,7 @@ export function generateCandidates(
     // Terrain mode: calculate max blocks based on polygon area
     const blockArea = (blockLength + pcsToPcs) * (blockWidth + bessToBess);
     const maxTheoreticalBlocks = Math.max(1, Math.floor(analysis.area_m2 / blockArea));
-    targetBlockCount = Math.min(100, maxTheoreticalBlocks);
+    targetBlockCount = Math.min(200, maxTheoreticalBlocks);
   }
 
   // Pre-configured warnings & assumptions
