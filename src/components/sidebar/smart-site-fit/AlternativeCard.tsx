@@ -1,7 +1,8 @@
 import React from "react";
 import type { SmartSiteFitCandidate } from "@/lib/layout/smartSiteFit/smartSiteFitTypes";
 import { strategyLabel, explainAlternative } from "@/lib/layout/smartSiteFit/smartSiteFitExplain";
-import { AlertTriangle, Info, Check } from "lucide-react";
+import { DEFAULT_PERFORMANCE_BUDGET } from "@/lib/layout/smartSiteFit/smartSiteFitPerformance";
+import { AlertTriangle, Info, Check, Layers } from "lucide-react";
 
 interface AlternativeCardProps {
   candidate: SmartSiteFitCandidate;
@@ -33,6 +34,12 @@ export function AlternativeCard({
   const ratio = pcsCount > 0 ? parseFloat((bessCount / pcsCount).toFixed(1)) : 0;
 
   const explanation = explainAlternative(candidate, locale);
+
+  // Giant layouts render a simplified (aggregated) map preview to stay fluid;
+  // applying still places the full equipment list.
+  const totalEquipment = candidate.placedEquipment.length;
+  const previewSimplified =
+    totalEquipment > DEFAULT_PERFORMANCE_BUDGET.maxPreviewFeaturesBeforeSimplification;
 
   return (
     <div
@@ -138,6 +145,17 @@ export function AlternativeCard({
       <p className="mt-2 text-[10px] leading-relaxed text-slate-400 font-sans">
         {explanation}
       </p>
+
+      {previewSimplified && (
+        <div className="mt-2 flex items-start gap-1.5 rounded-md border border-cyan-500/20 bg-cyan-500/10 p-2 text-[9.5px] leading-snug text-cyan-200/90">
+          <Layers className="mt-px h-3 w-3 shrink-0 text-cyan-400" />
+          <span>
+            {isEs
+              ? `Preview simplificado por rendimiento: ${totalEquipment} equipos agrupados visualmente. Aplicar generará el layout completo.`
+              : `Simplified preview for performance: ${totalEquipment} units grouped visually. Applying generates the full layout.`}
+          </span>
+        </div>
+      )}
 
       {candidate.warnings.length > 0 && (
         <ul className="mt-2 space-y-1">
