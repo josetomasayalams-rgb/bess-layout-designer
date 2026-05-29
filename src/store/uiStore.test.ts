@@ -46,3 +46,46 @@ describe("uiStore layer visibility", () => {
     expect(useUiStore.getState().layerVisibility.labels).toBe(false);
   });
 });
+
+describe("uiStore theme", () => {
+  beforeEach(() => {
+    storage.clear();
+    Object.defineProperty(window, "localStorage", {
+      configurable: true,
+      value: {
+        clear: () => storage.clear(),
+        getItem: (key: string) => storage.get(key) ?? null,
+        removeItem: (key: string) => storage.delete(key),
+        setItem: (key: string, value: string) => storage.set(key, value),
+      },
+    });
+    useUiStore.setState({ theme: "dark" });
+    document.documentElement.className = "";
+  });
+
+  it("defaults to dark", () => {
+    expect(useUiStore.getState().theme).toBe("dark");
+  });
+
+  it("setTheme persists to localStorage and applies the class to <html>", () => {
+    useUiStore.getState().setTheme("light");
+    expect(useUiStore.getState().theme).toBe("light");
+    expect(storage.get("bess-layout-theme")).toBe("light");
+    expect(document.documentElement.classList.contains("light")).toBe(true);
+    expect(document.documentElement.classList.contains("dark")).toBe(false);
+  });
+
+  it("toggleTheme flips between dark and light", () => {
+    useUiStore.getState().toggleTheme();
+    expect(useUiStore.getState().theme).toBe("light");
+    useUiStore.getState().toggleTheme();
+    expect(useUiStore.getState().theme).toBe("dark");
+  });
+
+  it("hydrateTheme restores the stored preference", () => {
+    useUiStore.getState().setTheme("light");
+    useUiStore.setState({ theme: "dark" });
+    useUiStore.getState().hydrateTheme();
+    expect(useUiStore.getState().theme).toBe("light");
+  });
+});

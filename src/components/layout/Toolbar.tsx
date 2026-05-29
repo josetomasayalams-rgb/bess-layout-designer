@@ -8,9 +8,11 @@ import {
   FileText,
   Globe2,
   Loader2,
+  Moon,
   Redo2,
   RotateCcw,
   RotateCw,
+  Sun,
   Trash2,
   Undo2,
   Wand2,
@@ -48,6 +50,8 @@ export function Toolbar() {
   const canRedo = useProjectStore((s) => s.future.length > 0);
   const locale = useUiStore((s) => s.locale);
   const toggleLocale = useUiStore((s) => s.toggleLocale);
+  const theme = useUiStore((s) => s.theme);
+  const toggleTheme = useUiStore((s) => s.toggleTheme);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [exportStatus, setExportStatus] = useState<string | null>(null);
   const [exportBusy, setExportBusy] = useState<"pdf" | "pdf-geocode" | null>(null);
@@ -341,6 +345,36 @@ export function Toolbar() {
           >
             <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
             {t.topbar.reset}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleTheme}
+            title={
+              theme === "dark"
+                ? isEs
+                  ? "Cambiar a modo claro"
+                  : "Switch to light mode"
+                : isEs
+                  ? "Cambiar a modo oscuro"
+                  : "Switch to dark mode"
+            }
+            aria-label={
+              theme === "dark"
+                ? isEs
+                  ? "Cambiar a modo claro"
+                  : "Switch to light mode"
+                : isEs
+                  ? "Cambiar a modo oscuro"
+                  : "Switch to dark mode"
+            }
+            aria-pressed={theme === "light"}
+          >
+            {theme === "dark" ? (
+              <Sun className="h-3.5 w-3.5" aria-hidden="true" />
+            ) : (
+              <Moon className="h-3.5 w-3.5" aria-hidden="true" />
+            )}
           </Button>
           <Button variant="ghost" onClick={toggleLocale} title={t.topbar.language}>
             <Globe2 className="h-3.5 w-3.5" aria-hidden="true" />

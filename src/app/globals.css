@@ -13,6 +13,15 @@
   --color-critical: #f43f5e;
 }
 
+/* Light theme — toggled from the top bar (uiStore.setTheme). The app ships
+   dark by default; the light variant flips the base page tokens so the toggle
+   has a visible, persistent effect without restyling every panel. */
+html.light {
+  --background: #f1f5f9;
+  --foreground: #0f172a;
+  color-scheme: light;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

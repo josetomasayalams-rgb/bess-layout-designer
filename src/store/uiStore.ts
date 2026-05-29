@@ -5,6 +5,9 @@ import { DEFAULT_UNIT_SYSTEM, type UnitSystemId } from "@/data/unitSystem";
 /** 2D = top-down flat view; iso = isometric view with 3D equipment volumes. */
 export type MapViewMode = "2d" | "iso";
 
+/** UI color theme. The app ships dark by default. */
+export type ThemeMode = "dark" | "light";
+
 export type LayerVisibility = {
   terrain: boolean;
   terrainFill: boolean;
@@ -153,14 +156,18 @@ const LAYER_PRESETS: Record<
 
 type UiState = {
   locale: Locale;
+  theme: ThemeMode;
   unitSystem: UnitSystemId;
   leftSidebarCollapsed: boolean;
   rightSidebarCollapsed: boolean;
   viewMode: MapViewMode;
   layerVisibility: LayerVisibility;
   hydrateLocale: () => void;
+  hydrateTheme: () => void;
   hydrateLayerVisibility: () => void;
   setLocale: (locale: Locale) => void;
+  setTheme: (theme: ThemeMode) => void;
+  toggleTheme: () => void;
   setUnitSystem: (unitSystem: UnitSystemId) => void;
   toggleLocale: () => void;
   toggleLeftSidebar: () => void;
@@ -174,11 +181,27 @@ type UiState = {
 };
 
 const LAYER_STORAGE_KEY = "bess-layout-layer-visibility";
+const THEME_STORAGE_KEY = "bess-layout-theme";
 
 function storedLocale(): Locale | null {
   if (typeof window === "undefined" || !window.localStorage) return null;
   const stored = window.localStorage.getItem("bess-layout-locale");
   return stored === "es" || stored === "en" ? stored : null;
+}
+
+function storedTheme(): ThemeMode | null {
+  if (typeof window === "undefined" || !window.localStorage) return null;
+  const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+  return stored === "dark" || stored === "light" ? stored : null;
+}
+
+/** Reflect the active theme onto <html> so Tailwind's `dark:` variants apply. */
+function applyThemeClass(theme: ThemeMode) {
+  if (typeof document === "undefined") return;
+  const root = document.documentElement;
+  root.classList.toggle("dark", theme === "dark");
+  root.classList.toggle("light", theme === "light");
+  root.style.colorScheme = theme;
 }
 
 function saveLayerVisibility(layerVisibility: LayerVisibility) {
@@ -200,6 +223,7 @@ function storedLayerVisibility(): LayerVisibility | null {
 
 export const useUiStore = create<UiState>((set, get) => ({
   locale: "en",
+  theme: "dark",
   unitSystem: DEFAULT_UNIT_SYSTEM,
   leftSidebarCollapsed: false,
   rightSidebarCollapsed: false,
@@ -208,6 +232,11 @@ export const useUiStore = create<UiState>((set, get) => ({
   hydrateLocale: () => {
     const locale = storedLocale();
     if (locale) set({ locale });
+  },
+  hydrateTheme: () => {
+    const theme = storedTheme() ?? get().theme;
+    applyThemeClass(theme);
+    set({ theme });
   },
   hydrateLayerVisibility: () => {
     const layerVisibility = storedLayerVisibility();
@@ -218,6 +247,17 @@ export const useUiStore = create<UiState>((set, get) => ({
       window.localStorage.setItem("bess-layout-locale", locale);
     }
     set({ locale });
+  },
+  setTheme: (theme) => {
+    if (typeof window !== "undefined" && window.localStorage) {
+      window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+    }
+    applyThemeClass(theme);
+    set({ theme });
+  },
+  toggleTheme: () => {
+    const next = get().theme === "dark" ? "light" : "dark";
+    get().setTheme(next);
   },
   setUnitSystem: (unitSystem) => set({ unitSystem }),
   toggleLocale: () => {

@@ -37,6 +37,7 @@ export function AppShell() {
   const [activeSection, setActiveSection] = useState<AppSectionId>("site");
   const [topCollapsed, setTopCollapsed] = useState(false);
   const hydrateLocale = useUiStore((s) => s.hydrateLocale);
+  const hydrateTheme = useUiStore((s) => s.hydrateTheme);
   const hydrateLayerVisibility = useUiStore((s) => s.hydrateLayerVisibility);
   const locale = useUiStore((s) => s.locale);
   const leftCollapsed = useUiStore((s) => s.leftSidebarCollapsed);
@@ -47,8 +48,9 @@ export function AppShell() {
 
   useEffect(() => {
     hydrateLocale();
+    hydrateTheme();
     hydrateLayerVisibility();
-  }, [hydrateLocale, hydrateLayerVisibility]);
+  }, [hydrateLocale, hydrateTheme, hydrateLayerVisibility]);
 
   const gridCols =
     GRID_COLS[
