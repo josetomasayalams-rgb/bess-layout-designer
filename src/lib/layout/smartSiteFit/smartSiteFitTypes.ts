@@ -54,6 +54,11 @@ export interface SmartSiteFitOverrides {
   pcsCount?: number;
   durationHours?: number;
   orientationDeg?: number;
+  // Approximate power/energy targets the user edits in the UI. The engine
+  // still consumes bessCount/pcsCount; these are derived from them via
+  // deriveEquipmentCountsFromPowerEnergy and kept for display/state.
+  targetPowerMW?: number;
+  targetEnergyMWh?: number;
 }
 
 export interface SmartSiteFitInput {

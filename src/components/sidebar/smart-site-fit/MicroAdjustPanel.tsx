@@ -1,6 +1,11 @@
 import React from "react";
 import type { SmartSiteFitOverrides } from "@/lib/layout/smartSiteFit/smartSiteFitTypes";
 import { getContainersPerPcsForDuration } from "@/lib/layout/smartSiteFit/smartSiteFitPresets";
+import {
+  deriveEquipmentCountsFromPowerEnergy,
+  estimatePowerEnergyFromCounts,
+} from "@/lib/layout/smartSiteFit/smartSiteFitSizing";
+import { NumberField } from "@/components/ui/NumberField";
 import { Sliders, RefreshCw, X, Check, AlertTriangle } from "lucide-react";
 
 interface MicroAdjustPanelProps {
@@ -39,31 +44,53 @@ export function MicroAdjustPanel({
   const boundaryMargin = overrides.boundaryMargin_m ?? 4.0;
   const pcsToPcs = overrides.pcsToPcs_m ?? 3.0;
 
-  // Capacity micro-adjustments: defaults come from the selected alternative.
+  // Capacity micro-adjustments are now driven by approximate power/energy.
+  // The engine still consumes BESS/PCS counts, so each edit re-derives them
+  // via deriveEquipmentCountsFromPowerEnergy and stores both into overrides.
   const durationHours = overrides.durationHours ?? currentDurationHours ?? 4;
-  const ratio = getContainersPerPcsForDuration(durationHours);
-  const bessCount = overrides.bessCount ?? currentBessCount ?? 0;
-  const pcsCount = overrides.pcsCount ?? currentPcsCount ?? 0;
-  const suggestedPcs = Math.max(1, Math.ceil(bessCount / ratio));
-  const ratioBroken = bessCount > 0 && pcsCount > 0 && pcsCount !== suggestedPcs;
 
-  // Changing BESS count recomputes the suggested PCS/MV count from the ratio.
-  const handleBessChange = (raw: string) => {
-    const n = Math.max(0, Math.floor(Number(raw) || 0));
-    onUpdateOverrides({ bessCount: n, pcsCount: Math.max(1, Math.ceil(n / ratio)) });
-  };
-  // Changing PCS count is honored as-is; a ratio mismatch is surfaced below.
-  const handlePcsChange = (raw: string) => {
-    const n = Math.max(0, Math.floor(Number(raw) || 0));
-    onUpdateOverrides({ pcsCount: n });
-  };
-  // Changing duration recomputes the ratio and re-derives suggested PCS.
-  const handleDurationChange = (d: number) => {
-    const newRatio = getContainersPerPcsForDuration(d);
-    onUpdateOverrides({
-      durationHours: d,
-      pcsCount: bessCount > 0 ? Math.max(1, Math.ceil(bessCount / newRatio)) : pcsCount,
+  // Seed the MW/MWh inputs from the selected alternative when the user has
+  // not edited them yet. Counts → approximate power/energy.
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+  const seeded = estimatePowerEnergyFromCounts({
+    bessCount: currentBessCount ?? 0,
+    pcsCount: currentPcsCount ?? 0,
+  });
+  const targetPowerMW = overrides.targetPowerMW ?? round2(seeded.powerMW);
+  const targetEnergyMWh = overrides.targetEnergyMWh ?? round2(seeded.energyMWh);
+
+  // Live derivation used both for informational display and for the warnings.
+  const derived = deriveEquipmentCountsFromPowerEnergy({
+    targetPowerMW: targetPowerMW > 0 ? targetPowerMW : undefined,
+    targetEnergyMWh: targetEnergyMWh > 0 ? targetEnergyMWh : undefined,
+    durationHours,
+  });
+
+  // Re-derive counts whenever any of MW / MWh / duration changes and persist
+  // both the user-facing targets and the engine-facing counts.
+  const applyTargets = (powerMW: number, energyMWh: number, duration: number) => {
+    const result = deriveEquipmentCountsFromPowerEnergy({
+      targetPowerMW: powerMW > 0 ? powerMW : undefined,
+      targetEnergyMWh: energyMWh > 0 ? energyMWh : undefined,
+      durationHours: duration,
     });
+    onUpdateOverrides({
+      targetPowerMW: powerMW,
+      targetEnergyMWh: energyMWh,
+      durationHours: duration,
+      bessCount: result.bessCount,
+      pcsCount: result.pcsCount,
+    });
+  };
+
+  const handlePowerChange = (value: number) => {
+    applyTargets(value, targetEnergyMWh, durationHours);
+  };
+  const handleEnergyChange = (value: number) => {
+    applyTargets(targetPowerMW, value, durationHours);
+  };
+  const handleDurationChange = (d: number) => {
+    applyTargets(targetPowerMW, targetEnergyMWh, d);
   };
 
   return (
@@ -75,49 +102,38 @@ export function MicroAdjustPanel({
         </h4>
       </div>
 
-      {/* Capacity adjustments: BESS count, PCS count and duration. */}
+      {/* Capacity adjustments: approximate target power, energy and duration. */}
       <div className="space-y-3 border-b border-slate-800 pb-3">
         <div className="grid grid-cols-2 gap-2">
           <div className="space-y-1">
-            <label className="block text-[11px] text-slate-400" htmlFor="micro-bess-count">
-              {isEs ? "Contenedores BESS" : "BESS containers"}
+            <label className="block text-[11px] text-slate-400" htmlFor="micro-target-power">
+              {isEs ? "Potencia objetivo aprox. (MW)" : "Approx. target power (MW)"}
             </label>
-            <input
-              id="micro-bess-count"
-              type="number"
+            <NumberField
+              id="micro-target-power"
+              aria-label={isEs ? "Potencia objetivo aproximada en MW" : "Approximate target power in MW"}
+              value={targetPowerMW}
+              onChange={handlePowerChange}
               min={0}
               step={1}
-              value={bessCount}
-              onChange={(e) => handleBessChange(e.target.value)}
               className="w-full rounded border border-slate-800 bg-slate-950 p-1 text-[11px] font-mono text-slate-350 focus:border-cyan-500 focus:outline-none"
             />
           </div>
           <div className="space-y-1">
-            <label className="block text-[11px] text-slate-400" htmlFor="micro-pcs-count">
-              {isEs ? "Estaciones PCS/MV" : "PCS/MV stations"}
+            <label className="block text-[11px] text-slate-400" htmlFor="micro-target-energy">
+              {isEs ? "Energía objetivo aprox. (MWh)" : "Approx. target energy (MWh)"}
             </label>
-            <input
-              id="micro-pcs-count"
-              type="number"
+            <NumberField
+              id="micro-target-energy"
+              aria-label={isEs ? "Energía objetivo aproximada en MWh" : "Approximate target energy in MWh"}
+              value={targetEnergyMWh}
+              onChange={handleEnergyChange}
               min={0}
               step={1}
-              value={pcsCount}
-              onChange={(e) => handlePcsChange(e.target.value)}
               className="w-full rounded border border-slate-800 bg-slate-950 p-1 text-[11px] font-mono text-slate-350 focus:border-cyan-500 focus:outline-none"
             />
           </div>
         </div>
-
-        {ratioBroken && (
-          <div className="flex items-start gap-1.5 rounded-md border border-amber-500/20 bg-amber-500/10 p-2 text-[10px] leading-snug text-amber-300/90">
-            <AlertTriangle className="mt-px h-3 w-3 shrink-0 text-amber-400" />
-            <span>
-              {isEs
-                ? `Relación fuera del ${ratio}:1 preliminar para ${durationHours}h. PCS/MV sugerido: ${suggestedPcs}.`
-                : `Ratio departs from the preliminary ${ratio}:1 for ${durationHours}h. Suggested PCS/MV: ${suggestedPcs}.`}
-            </span>
-          </div>
-        )}
 
         <div className="space-y-1">
           <span className="block text-[11px] text-slate-400">
@@ -140,6 +156,31 @@ export function MicroAdjustPanel({
             ))}
           </div>
         </div>
+
+        {/* Informational result: derived equipment counts (not an input). */}
+        <div className="rounded-md border border-slate-800 bg-slate-950/60 p-2 text-[10px] leading-snug text-slate-400">
+          <span className="font-semibold text-slate-300">
+            {isEs ? "Equipos estimados (preliminar): " : "Estimated equipment (preliminary): "}
+          </span>
+          <span className="font-mono text-cyan-300">
+            {derived.bessCount} {isEs ? "BESS" : "BESS"} · {derived.pcsCount} PCS/MV
+          </span>
+          <span className="block text-slate-500">
+            {isEs
+              ? `≈ ${derived.effectivePowerMW.toFixed(0)} MW · ${derived.effectiveEnergyMWh.toFixed(0)} MWh`
+              : `≈ ${derived.effectivePowerMW.toFixed(0)} MW · ${derived.effectiveEnergyMWh.toFixed(0)} MWh`}
+          </span>
+        </div>
+
+        {derived.warnings.map((w) => (
+          <div
+            key={w.id}
+            className="flex items-start gap-1.5 rounded-md border border-amber-500/20 bg-amber-500/10 p-2 text-[10px] leading-snug text-amber-300/90"
+          >
+            <AlertTriangle className="mt-px h-3 w-3 shrink-0 text-amber-400" />
+            <span>{w.message}</span>
+          </div>
+        ))}
       </div>
 
       <div className="space-y-3">

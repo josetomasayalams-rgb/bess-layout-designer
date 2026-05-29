@@ -39,7 +39,7 @@ describe("MicroAdjustPanel", () => {
     expect(screen.getByText("Layout shape")).toBeDefined();
   });
 
-  it("renders BESS and PCS count inputs and a design duration group", () => {
+  it("renders approximate power/energy inputs and a design duration group", () => {
     render(
       <MicroAdjustPanel
         {...defaultProps}
@@ -49,21 +49,36 @@ describe("MicroAdjustPanel", () => {
       />
     );
 
-    expect(screen.getByText("BESS containers")).toBeDefined();
-    expect(screen.getByText("PCS/MV stations")).toBeDefined();
+    expect(screen.getByText(/Approx\. target power/i)).toBeDefined();
+    expect(screen.getByText(/Approx\. target energy/i)).toBeDefined();
     expect(screen.getByText("Design duration")).toBeDefined();
 
-    // Capacity controls are spinbuttons, not sliders, and keep exactly one combobox.
+    // Capacity controls are now two spinbuttons (MW, MWh), four sliders, one select.
     const spinbuttons = screen.getAllByRole("spinbutton");
     expect(spinbuttons.length).toBe(2);
     expect(screen.getAllByRole("slider").length).toBe(4);
     expect(screen.getAllByRole("combobox").length).toBe(1);
 
-    expect((spinbuttons[0] as HTMLInputElement).value).toBe("40");
-    expect((spinbuttons[1] as HTMLInputElement).value).toBe("5");
+    // Seeded from counts: 5 PCS × 5 MVA = 25 MW; 40 BESS × 2.752 = 110.08 MWh.
+    expect((spinbuttons[0] as HTMLInputElement).value).toBe("25");
+    expect((spinbuttons[1] as HTMLInputElement).value).toBe("110.08");
   });
 
-  it("recomputes suggested PCS when BESS count changes and marks dirty", () => {
+  it("shows the derived BESS/PCS counts as an informational result", () => {
+    render(
+      <MicroAdjustPanel
+        {...defaultProps}
+        currentBessCount={40}
+        currentPcsCount={5}
+        currentDurationHours={4}
+      />
+    );
+    expect(screen.getByText(/Estimated equipment/i)).toBeDefined();
+    // 40 BESS · 5 PCS/MV derived from 25 MW / 110.08 MWh / 4h.
+    expect(screen.getByText(/40 BESS · 5 PCS\/MV/i)).toBeDefined();
+  });
+
+  it("re-derives counts and marks dirty when target power changes", () => {
     const onUpdateOverrides = vi.fn();
     render(
       <MicroAdjustPanel
@@ -75,41 +90,15 @@ describe("MicroAdjustPanel", () => {
       />
     );
 
-    const bessInput = screen.getAllByRole("spinbutton")[0];
-    // 4h => 8:1, so 80 BESS suggests 10 PCS.
-    fireEvent.change(bessInput, { target: { value: "80" } });
-    expect(onUpdateOverrides).toHaveBeenCalledWith({ bessCount: 80, pcsCount: 10 });
+    const powerInput = screen.getAllByRole("spinbutton")[0];
+    fireEvent.change(powerInput, { target: { value: "100" } });
+    // 100 MW → ceil(100/5)=20 PCS; energy unchanged → 40 BESS.
+    expect(onUpdateOverrides).toHaveBeenCalledWith(
+      expect.objectContaining({ targetPowerMW: 100, pcsCount: 20, bessCount: 40 })
+    );
   });
 
-  it("honors a manual PCS count change and warns when the ratio is broken", () => {
-    const onUpdateOverrides = vi.fn();
-    const { rerender } = render(
-      <MicroAdjustPanel
-        {...defaultProps}
-        onUpdateOverrides={onUpdateOverrides}
-        currentBessCount={40}
-        currentPcsCount={5}
-        currentDurationHours={4}
-      />
-    );
-
-    const pcsInput = screen.getAllByRole("spinbutton")[1];
-    fireEvent.change(pcsInput, { target: { value: "9" } });
-    expect(onUpdateOverrides).toHaveBeenCalledWith({ pcsCount: 9 });
-
-    // Reflect the broken ratio through overrides and confirm the warning shows.
-    rerender(
-      <MicroAdjustPanel
-        {...defaultProps}
-        onUpdateOverrides={onUpdateOverrides}
-        overrides={{ ...defaultProps.overrides, bessCount: 40, pcsCount: 9 }}
-        currentDurationHours={4}
-      />
-    );
-    expect(screen.getByText(/Suggested PCS\/MV: 5/i)).toBeDefined();
-  });
-
-  it("recomputes the ratio when duration changes", () => {
+  it("re-derives counts and marks dirty when target energy changes", () => {
     const onUpdateOverrides = vi.fn();
     render(
       <MicroAdjustPanel
@@ -121,9 +110,30 @@ describe("MicroAdjustPanel", () => {
       />
     );
 
-    // Switch to 8h => 16:1, so 40 BESS suggests 3 PCS (ceil 2.5).
+    const energyInput = screen.getAllByRole("spinbutton")[1];
+    fireEvent.change(energyInput, { target: { value: "220.16" } });
+    // 220.16 MWh → ceil(220.16/2.752)=80 BESS.
+    expect(onUpdateOverrides).toHaveBeenCalledWith(
+      expect.objectContaining({ targetEnergyMWh: 220.16, bessCount: 80 })
+    );
+  });
+
+  it("re-derives counts when duration changes", () => {
+    const onUpdateOverrides = vi.fn();
+    render(
+      <MicroAdjustPanel
+        {...defaultProps}
+        onUpdateOverrides={onUpdateOverrides}
+        currentBessCount={40}
+        currentPcsCount={5}
+        currentDurationHours={4}
+      />
+    );
+
     fireEvent.click(screen.getByRole("button", { name: /8h \(16:1\)/i }));
-    expect(onUpdateOverrides).toHaveBeenCalledWith({ durationHours: 8, pcsCount: 3 });
+    expect(onUpdateOverrides).toHaveBeenCalledWith(
+      expect.objectContaining({ durationHours: 8 })
+    );
   });
 
   it("triggers onUpdateOverrides when sliders change", () => {
