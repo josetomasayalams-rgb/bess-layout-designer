@@ -65,4 +65,48 @@ describe("SmartSiteFit Shapes", () => {
     expect(pcs.length).toBe(2);
     expect(bess.length).toBe(16);
   });
+
+  it("should keep each PCS attached to its own BESS cluster in a compact_grid (no PCS wall)", () => {
+    const pcsCount = 4;
+    const containersPerPcs = 8;
+    const shapes = generateSmartSiteFitShapes({
+      bessCount: pcsCount * containersPerPcs,
+      pcsCount,
+      containersPerPcs,
+      strategy: "balanced",
+    });
+    const compactShape = shapes.find((s) => s.kind === "compact_grid")!;
+    expect(compactShape).toBeDefined();
+
+    const items = buildShapeLayout(compactShape, pcsCount, containersPerPcs, {
+      bessToBess: 3.0,
+      bessToPcs: 3.0,
+      pcsToPcs: 3.0,
+    });
+
+    expect(items.length).toBe(pcsCount + pcsCount * containersPerPcs);
+
+    const pcsItems = items.filter((i) => i.equipmentSpecId === "sungrow-sc5000ud-mv-us-p3");
+    expect(pcsItems.length).toBe(pcsCount);
+
+    // Each PCS must be close to a BESS that shares its block index (its cluster).
+    for (const pcs of pcsItems) {
+      const clusterBess = items.filter(
+        (i) =>
+          i.equipmentSpecId === "sungrow-st2752ux-us" && i.blockIndex === pcs.blockIndex
+      );
+      expect(clusterBess.length).toBe(containersPerPcs);
+      const nearest = Math.min(
+        ...clusterBess.map((b) =>
+          Math.sqrt((b.x_m - pcs.x_m) ** 2 + (b.y_m - pcs.y_m) ** 2)
+        )
+      );
+      // PCS sits at the operative edge of its own sub-grid — well under a block width.
+      expect(nearest).toBeLessThan(20);
+    }
+
+    // PCS should NOT all share the same x (which would be a detached vertical wall).
+    const uniquePcsX = new Set(pcsItems.map((p) => Math.round(p.x_m)));
+    expect(uniquePcsX.size).toBeGreaterThan(1);
+  });
 });

@@ -219,45 +219,58 @@ export function buildShapeLayout(
     case "compact_grid":
     case "wide_grid":
     case "deep_grid": {
-      const bessCount = pcsCount * containersPerPcs;
-      let cols = Math.ceil(Math.sqrt(bessCount));
-      let rows = Math.ceil(bessCount / cols);
+      // Cluster-based grid: each PCS/MV stays attached to its own BESS sub-grid
+      // (its cluster), and clusters are tiled in a meta-grid whose aspect ratio
+      // depends on the shape kind. This keeps the PCS integrated with the BESS it
+      // feeds instead of forming a detached "PCS wall".
+      const subCols = Math.max(1, Math.ceil(Math.sqrt(containersPerPcs)));
+      const subRows = Math.max(1, Math.ceil(containersPerPcs / subCols));
+      const bessBlockW = subCols * bessLength + (subCols - 1) * bessToBess;
+      const bessBlockH = subRows * bessWidth + (subRows - 1) * bessToBess;
+      const clusterLength = bessBlockW + bessToPcs + pcsLength;
+      const clusterHeight = Math.max(bessBlockH, pcsWidth);
 
+      // Meta-grid of clusters, aspect driven by shape kind
+      let clusterCols = Math.max(1, Math.ceil(Math.sqrt(pcsCount)));
       if (shape.kind === "wide_grid") {
-        cols = Math.ceil(Math.sqrt(bessCount) * 1.5);
-        rows = Math.ceil(bessCount / cols);
+        clusterCols = Math.max(1, Math.ceil(Math.sqrt(pcsCount) * 1.6));
       } else if (shape.kind === "deep_grid") {
-        rows = Math.ceil(Math.sqrt(bessCount) * 1.5);
-        cols = Math.ceil(bessCount / rows);
+        clusterCols = Math.max(1, Math.floor(Math.sqrt(pcsCount) / 1.6) || 1);
       }
+      clusterCols = Math.min(clusterCols, pcsCount);
+      const clusterRows = Math.ceil(pcsCount / clusterCols);
 
-      const bessGridHeight = rows * bessWidth + (rows - 1) * bessToBess;
+      const stepX = clusterLength + pcsToPcs;
+      const stepY = clusterHeight + pcsToPcs;
 
-      // Place BESS
-      for (let b = 0; b < bessCount; b++) {
-        const rIdx = Math.floor(b / cols);
-        const cIdx = b % cols;
-        const x = (cIdx - (cols - 1) / 2) * (bessLength + bessToBess);
-        const y = (rIdx - (rows - 1) / 2) * (bessWidth + bessToBess);
-        const blockIndex = Math.floor(b / containersPerPcs);
+      for (let i = 0; i < pcsCount; i++) {
+        const cc = i % clusterCols;
+        const cr = Math.floor(i / clusterCols);
+        const clusterCenterX = (cc - (clusterCols - 1) / 2) * stepX;
+        const clusterCenterY = (cr - (clusterRows - 1) / 2) * stepY;
 
-        items.push({
-          equipmentSpecId: "sungrow-st2752ux-us",
-          x_m: x,
-          y_m: y,
-          blockIndex,
-        });
-      }
+        // BESS sub-grid on the left side of the cluster
+        const bessOriginX = clusterCenterX - clusterLength / 2;
+        for (let b = 0; b < containersPerPcs; b++) {
+          const rIdx = Math.floor(b / subCols);
+          const cIdx = b % subCols;
+          const x = bessOriginX + cIdx * (bessLength + bessToBess) + bessLength / 2;
+          const y = clusterCenterY + (rIdx - (subRows - 1) / 2) * (bessWidth + bessToBess);
+          items.push({
+            equipmentSpecId: "sungrow-st2752ux-us",
+            x_m: x,
+            y_m: y,
+            blockIndex: i,
+          });
+        }
 
-      // Place PCS below the BESS grid
-      const yPcs = -bessGridHeight / 2 - bessToPcs - pcsWidth / 2;
-      for (let p = 0; p < pcsCount; p++) {
-        const x = (p - (pcsCount - 1) / 2) * (pcsLength + pcsToPcs);
+        // PCS/MV at the operative edge of its own cluster, vertically centered
+        const xPcs = clusterCenterX + clusterLength / 2 - pcsLength / 2;
         items.push({
           equipmentSpecId: "sungrow-sc5000ud-mv-us-p3",
-          x_m: x,
-          y_m: yPcs,
-          blockIndex: p,
+          x_m: xPcs,
+          y_m: clusterCenterY,
+          blockIndex: i,
         });
       }
       break;
