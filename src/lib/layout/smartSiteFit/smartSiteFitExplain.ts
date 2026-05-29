@@ -5,18 +5,18 @@ export function strategyLabel(strategy: SmartSiteFitStrategy, locale: "es" | "en
   if (locale === "es") {
     switch (strategy) {
       case "max_capacity":
-        return "Capacidad Máxima";
+        return "Compacta";
       case "balanced":
-        return "Balanceado";
+        return "Balanceada";
       case "conservative":
-        return "Conservador";
+        return "Conservadora";
       default:
         return strategy;
     }
   } else {
     switch (strategy) {
       case "max_capacity":
-        return "Maximum Capacity";
+        return "Compact";
       case "balanced":
         return "Balanced";
       case "conservative":
@@ -93,10 +93,10 @@ export function explainAlternative(candidate: SmartSiteFitCandidate, locale: "es
       : "";
     const intent =
       candidate.strategy === "max_capacity"
-        ? "Prioriza una mayor cabida preliminar respetando las separaciones geométricas."
+        ? "Alternativa compacta: prioriza mayor cabida dentro del terreno usando una matriz más densa y márgenes mínimos preliminares."
         : candidate.strategy === "conservative"
-        ? "Mantiene mayor holgura, más margen perimetral y menor ocupación del terreno."
-        : "Busca una ocupación media-alta con una forma ordenada y legible.";
+        ? "Alternativa conservadora: reduce ocupación y aumenta holguras para dejar más espacio interno y mayor margen perimetral."
+        : "Alternativa balanceada: busca equilibrio entre cabida, orden geométrico y holgura operativa.";
     const terrainSentence =
       terrainFit == null
         ? ""
@@ -121,10 +121,10 @@ export function explainAlternative(candidate: SmartSiteFitCandidate, locale: "es
       : "";
     const intent =
       candidate.strategy === "max_capacity"
-        ? "Prioritizes higher preliminary capacity while respecting geometric separations."
+        ? "Compact alternative: prioritizes higher fit within the terrain using a denser matrix and minimal preliminary margins."
         : candidate.strategy === "conservative"
-        ? "Keeps more clearance, larger perimeter margin and lower terrain occupancy."
-        : "Aims for medium-high occupancy with an ordered, legible shape.";
+        ? "Conservative alternative: reduces occupancy and increases clearances to leave more internal space and a larger perimeter margin."
+        : "Balanced alternative: seeks a balance between fit, geometric order and operational clearance.";
     const terrainSentence =
       terrainFit == null
         ? ""

@@ -183,11 +183,11 @@ export function TargetSizingTab({
                 className="w-full rounded-md border border-slate-800 bg-slate-900 px-3 py-1.5 text-xs text-slate-100 focus:border-cyan-500 focus:outline-none"
               >
                 <option value="max_capacity">
-                  {isEs ? "Capacidad Máxima" : "Maximum Capacity"}
+                  {isEs ? "Compacta" : "Compact"}
                 </option>
-                <option value="balanced">{isEs ? "Balanceado" : "Balanced"}</option>
+                <option value="balanced">{isEs ? "Balanceada" : "Balanced"}</option>
                 <option value="conservative">
-                  {isEs ? "Conservador" : "Conservative"}
+                  {isEs ? "Conservadora" : "Conservative"}
                 </option>
               </select>
             </div>

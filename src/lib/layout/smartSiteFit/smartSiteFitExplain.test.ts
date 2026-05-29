@@ -4,11 +4,11 @@ import type { SmartSiteFitCandidate } from "./smartSiteFitTypes";
 
 describe("SmartSiteFit Explain", () => {
   it("should output correct labels for strategies in both languages", () => {
-    expect(strategyLabel("max_capacity", "es")).toBe("Capacidad Máxima");
-    expect(strategyLabel("max_capacity", "en")).toBe("Maximum Capacity");
-    expect(strategyLabel("balanced", "es")).toBe("Balanceado");
+    expect(strategyLabel("max_capacity", "es")).toBe("Compacta");
+    expect(strategyLabel("max_capacity", "en")).toBe("Compact");
+    expect(strategyLabel("balanced", "es")).toBe("Balanceada");
     expect(strategyLabel("balanced", "en")).toBe("Balanced");
-    expect(strategyLabel("conservative", "es")).toBe("Conservador");
+    expect(strategyLabel("conservative", "es")).toBe("Conservadora");
     expect(strategyLabel("conservative", "en")).toBe("Conservative");
   });
 

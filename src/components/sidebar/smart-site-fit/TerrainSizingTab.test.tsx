@@ -115,11 +115,11 @@ describe("TerrainSizingTab", () => {
     );
 
     expect(screen.getByText(/Layout Alternatives/i)).toBeDefined();
-    expect(screen.getAllByText(/Maximum Capacity/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Compact/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Balanced/i).length).toBeGreaterThan(0);
 
-    // Click on maximum capacity candidate to select it
-    const maxCard = screen.getAllByText(/Maximum Capacity/i)[0];
+    // Click on compact (max-capacity) candidate to select it
+    const maxCard = screen.getAllByText(/Compact/i)[0];
     fireEvent.click(maxCard);
 
     expect(onSelectAlternative).toHaveBeenCalledWith("cand-max");
