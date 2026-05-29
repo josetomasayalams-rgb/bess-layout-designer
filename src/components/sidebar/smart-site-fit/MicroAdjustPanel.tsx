@@ -83,14 +83,23 @@ export function MicroAdjustPanel({
     });
   };
 
+  // Dimensionamiento inteligente: la energia se deriva de potencia x duracion.
+  // Al cambiar la potencia (o la duracion) la energia objetivo se recalcula
+  // automaticamente para mantener la relacion preliminar E = P x h.
   const handlePowerChange = (value: number) => {
-    applyTargets(value, targetEnergyMWh, durationHours);
+    const autoEnergy = value > 0 ? round2(value * durationHours) : 0;
+    applyTargets(value, autoEnergy, durationHours);
   };
   const handleEnergyChange = (value: number) => {
-    applyTargets(targetPowerMW, value, durationHours);
+    // Edicion manual de energia: deriva la potencia equivalente (E / h) para
+    // mantener la coherencia con la duracion seleccionada.
+    const autoPower =
+      value > 0 && durationHours > 0 ? round2(value / durationHours) : targetPowerMW;
+    applyTargets(autoPower, value, durationHours);
   };
   const handleDurationChange = (d: number) => {
-    applyTargets(targetPowerMW, targetEnergyMWh, d);
+    const autoEnergy = targetPowerMW > 0 ? round2(targetPowerMW * d) : targetEnergyMWh;
+    applyTargets(targetPowerMW, autoEnergy, d);
   };
 
   return (
@@ -121,7 +130,9 @@ export function MicroAdjustPanel({
           </div>
           <div className="space-y-1">
             <label className="block text-[11px] text-slate-400" htmlFor="micro-target-energy">
-              {isEs ? "Energía objetivo aprox. (MWh)" : "Approx. target energy (MWh)"}
+              {isEs
+                ? "Energía objetivo aprox. (MWh) · auto = MW × h"
+                : "Approx. target energy (MWh) · auto = MW × h"}
             </label>
             <NumberField
               id="micro-target-energy"
@@ -134,6 +145,12 @@ export function MicroAdjustPanel({
             />
           </div>
         </div>
+
+        <p className="text-[10px] leading-snug text-slate-500">
+          {isEs
+            ? "Al cambiar la potencia, la energía se ajusta automáticamente (energía ≈ potencia × duración). Estimación preliminar."
+            : "Changing the power auto-adjusts the energy (energy ≈ power × duration). Preliminary estimate."}
+        </p>
 
         <div className="space-y-1">
           <span className="block text-[11px] text-slate-400">

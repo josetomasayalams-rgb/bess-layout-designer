@@ -78,7 +78,7 @@ describe("MicroAdjustPanel", () => {
     expect(screen.getByText(/40 BESS · 5 PCS\/MV/i)).toBeDefined();
   });
 
-  it("re-derives counts and marks dirty when target power changes", () => {
+  it("auto-adjusts energy and re-derives counts when target power changes", () => {
     const onUpdateOverrides = vi.fn();
     render(
       <MicroAdjustPanel
@@ -92,10 +92,23 @@ describe("MicroAdjustPanel", () => {
 
     const powerInput = screen.getAllByRole("spinbutton")[0];
     fireEvent.change(powerInput, { target: { value: "100" } });
-    // 100 MW → ceil(100/5)=20 PCS; energy unchanged → 40 BESS.
+    // Smart sizing: 100 MW × 4h → energy auto-set to 400 MWh.
+    // 400 MWh → ceil(400/2.752)=146 BESS; ceil(100/5)=20 PCS.
     expect(onUpdateOverrides).toHaveBeenCalledWith(
-      expect.objectContaining({ targetPowerMW: 100, pcsCount: 20, bessCount: 40 })
+      expect.objectContaining({
+        targetPowerMW: 100,
+        targetEnergyMWh: 400,
+        pcsCount: 20,
+        bessCount: 146,
+      })
     );
+  });
+
+  it("shows the automatic energy-from-power note", () => {
+    render(<MicroAdjustPanel {...defaultProps} currentDurationHours={4} />);
+    expect(
+      screen.getByText(/Changing the power auto-adjusts the energy/i)
+    ).toBeDefined();
   });
 
   it("re-derives counts and marks dirty when target energy changes", () => {
