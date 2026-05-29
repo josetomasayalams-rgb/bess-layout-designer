@@ -53,7 +53,9 @@ export function MicroAdjustPanel({
             }
             className="w-full rounded border border-slate-800 bg-slate-950 p-1 text-[11px] text-slate-350 focus:border-cyan-500 focus:outline-none"
           >
-            <option value="auto">{isEs ? "Automática" : "Automatic"}</option>
+            <option value="auto">
+              {isEs ? "Automática recomendada" : "Automatic (recommended)"}
+            </option>
             <option value="single_row">{isEs ? "Fila Única" : "Single Row"}</option>
             <option value="two_row_block">{isEs ? "Dos Hileras" : "Two Rows"}</option>
             <option value="compact_grid">{isEs ? "Compacta" : "Compact Grid"}</option>

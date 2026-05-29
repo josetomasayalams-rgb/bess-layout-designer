@@ -100,17 +100,66 @@ export function AlternativeCard({
       </div>
 
       {candidate.shape && (
-        <div className="mt-2 text-[10px]">
-          <span className="text-slate-500">{isEs ? "Forma: " : "Shape: "}</span>
-          <span className="rounded bg-slate-850 px-1.5 py-0.5 text-cyan-300 font-medium font-mono text-[9.5px]">
-            {candidate.shape.label}
-          </span>
+        <div className="mt-2 flex items-center justify-between text-[10px]">
+          <div>
+            <span className="text-slate-500">{isEs ? "Forma: " : "Shape: "}</span>
+            <span className="rounded bg-slate-850 px-1.5 py-0.5 text-cyan-300 font-medium font-mono text-[9.5px]">
+              {candidate.shape.label}
+            </span>
+          </div>
+          {candidate.score.siteUtilizationPct != null && (
+            <div>
+              <span className="text-slate-500">{isEs ? "Ocupación: " : "Occupancy: "}</span>
+              <span className="font-mono font-bold text-slate-350">
+                {candidate.score.siteUtilizationPct}%
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {(candidate.score.terrainFit != null || candidate.score.pcsIntegration != null) && (
+        <div className="mt-2 flex items-center gap-3 text-[10px] text-slate-500">
+          {candidate.score.terrainFit != null && (
+            <span>
+              {isEs ? "Ajuste terreno" : "Terrain fit"}:{" "}
+              <span className="font-mono text-slate-350">{candidate.score.terrainFit}/10</span>
+            </span>
+          )}
+          {candidate.score.pcsIntegration != null && (
+            <span>
+              {isEs ? "Integración PCS" : "PCS integration"}:{" "}
+              <span className="font-mono text-slate-350">{candidate.score.pcsIntegration}/10</span>
+            </span>
+          )}
         </div>
       )}
 
       <p className="mt-2 text-[10px] leading-relaxed text-slate-400 font-sans">
         {explanation}
       </p>
+
+      {candidate.warnings.length > 0 && (
+        <ul className="mt-2 space-y-1">
+          {candidate.warnings.slice(0, 3).map((w) => (
+            <li
+              key={w.id}
+              className="flex items-start gap-1 text-[9.5px] leading-snug text-slate-400"
+            >
+              <AlertTriangle
+                className={`mt-px h-3 w-3 shrink-0 ${
+                  w.severity === "error"
+                    ? "text-rose-500/80"
+                    : w.severity === "warning"
+                    ? "text-amber-500/80"
+                    : "text-cyan-500/80"
+                }`}
+              />
+              <span>{w.message}</span>
+            </li>
+          ))}
+        </ul>
+      )}
 
       <div className="mt-2 flex items-center gap-3 text-[10px] text-slate-500">
         <span className="flex items-center gap-1">
