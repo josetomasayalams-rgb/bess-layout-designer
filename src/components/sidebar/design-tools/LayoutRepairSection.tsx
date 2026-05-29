@@ -3,6 +3,7 @@
 import { AlertTriangle, CheckCircle2, Compass, Move, SquarePen, Wrench } from "lucide-react";
 import { formatLength, formatNumber } from "@/lib/units/formatUnits";
 import type { Locale } from "@/lib/i18n";
+import type { RepairStrategy } from "@/lib/layout/layoutRepair";
 import type { TerrainFitResult } from "@/lib/layout/repairLayoutToSite";
 import type { PlacedEquipment } from "@/types/equipment";
 import type { LngLat } from "@/types/geometry";
@@ -23,6 +24,8 @@ export interface LayoutRepairSectionProps {
       initialConflicts: number;
       movedCount: number;
       maxDisplacementM: number;
+      clusterCount: number;
+      strategy: RepairStrategy;
     };
   } | null;
   terrainFitPreview: {
@@ -48,6 +51,26 @@ function repairStatusClass(status: "success" | "partial" | "error") {
   if (status === "success") return "border-emerald-500/30 bg-emerald-500/10 text-emerald-100";
   if (status === "partial") return "border-amber-500/40 bg-amber-500/10 text-amber-100";
   return "border-rose-500/40 bg-rose-500/10 text-rose-100";
+}
+
+/** Etiqueta preliminar de la estrategia geometrica aplicada por la reparacion. */
+function repairStrategyLabel(strategy: RepairStrategy, isEs: boolean): string | null {
+  switch (strategy) {
+    case "cluster-rigid":
+      return isEs
+        ? "Se mantuvo la agrupacion por bloques cuando fue posible."
+        : "Block grouping was preserved where possible.";
+    case "cluster-recenter":
+      return isEs
+        ? "Se reordenaron los bloques y se recentro el conjunto dentro del terreno."
+        : "Blocks were reordered and the set re-centered within the site.";
+    case "per-node":
+      return isEs
+        ? "Se reordenaron los equipos individualmente (sin metadata de bloque)."
+        : "Equipment was reordered individually (no block metadata).";
+    default:
+      return null;
+  }
 }
 
 function terrainFitWarningText(warning: string, isEs: boolean) {
@@ -207,6 +230,11 @@ export function LayoutRepairSection({
                 ? "Repair zone"
                 : "Repair all"}
             </button>
+            <p className="text-[10px] leading-snug text-slate-600">
+              {isEs
+                ? "Ajuste geometrico preliminar: corrige equipos fuera del terreno, colisiones, separaciones y margen al deslinde. No corrige estudios electricos ni reemplaza ingenieria de detalle."
+                : "Preliminary geometric adjustment: corrects equipment outside the site, collisions, spacing and setback. It does not resolve electrical studies nor replace detailed engineering."}
+            </p>
 
             <div className="rounded-md border border-cyan-500/20 bg-cyan-500/5 p-2">
               <div className="flex items-center gap-1.5">
@@ -345,6 +373,31 @@ export function LayoutRepairSection({
               {isEs ? "Reparacion" : "Repair"} · {lastRepairResult.status}
             </div>
             <div>{repairText}</div>
+            {lastRepairResult.status !== "error"
+              ? (() => {
+                  const label = repairStrategyLabel(
+                    lastRepairResult.diagnostics.strategy,
+                    isEs
+                  );
+                  return label ? <div className="mt-1 opacity-90">{label}</div> : null;
+                })()
+              : null}
+            {lastRepairResult.status !== "error" &&
+            lastRepairResult.diagnostics.remainingConflicts > 0 ? (
+              <div className="mt-1 opacity-90">
+                {isEs
+                  ? `Quedan ${formatNumber(
+                      lastRepairResult.diagnostics.remainingConflicts,
+                      0,
+                      locale
+                    )} advertencia(s) por revisar.`
+                  : `${formatNumber(
+                      lastRepairResult.diagnostics.remainingConflicts,
+                      0,
+                      locale
+                    )} warning(s) remain to review.`}
+              </div>
+            ) : null}
             {lastRepairResult.diagnostics.movedCount > 0 ? (
               <div className="mt-1 font-mono">
                 {formatNumber(
@@ -358,6 +411,13 @@ export function LayoutRepairSection({
                   locale,
                 })}{" "}
                 {isEs ? "max" : "max"}
+                {lastRepairResult.diagnostics.clusterCount > 0
+                  ? ` · ${formatNumber(
+                      lastRepairResult.diagnostics.clusterCount,
+                      0,
+                      locale
+                    )} ${isEs ? "bloque(s)" : "block(s)"}`
+                  : ""}
               </div>
             ) : null}
           </div>
