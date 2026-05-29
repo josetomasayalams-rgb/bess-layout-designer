@@ -62,10 +62,19 @@ export function scoreCandidate(
   // --- noCollisions (25 pts) ---
   let collisionCount = 0;
   const maxAllowedCollisions = rectsWithSpec.length;
-  outerLoop: for (let i = 0; i < rectsWithSpec.length; i++) {
-    const rectA = rectsWithSpec[i].rect;
-    for (let j = i + 1; j < rectsWithSpec.length; j++) {
-      const rectB = rectsWithSpec[j].rect;
+  // Sort by x coordinate of the center for sweep-and-prune
+  const sortedRects = [...rectsWithSpec].sort((a, b) => a.rect.center.x_m - b.rect.center.x_m);
+
+  outerLoop: for (let i = 0; i < sortedRects.length; i++) {
+    const rectA = sortedRects[i].rect;
+    for (let j = i + 1; j < sortedRects.length; j++) {
+      const rectB = sortedRects[j].rect;
+      // Since sorted by x, if the difference in x is greater than 9.0m,
+      // no subsequent rectB can possibly be close enough to collide.
+      if (rectB.center.x_m - rectA.center.x_m > 9.0) {
+        break;
+      }
+
       // Fast center distance filter (8.5m is upper bound for intersection of any two specs)
       const dx = rectA.center.x_m - rectB.center.x_m;
       const dy = rectA.center.y_m - rectB.center.y_m;
@@ -85,8 +94,13 @@ export function scoreCandidate(
   // --- boundaryMargin (10 pts) ---
   // Ideal boundary margin is >= 3.0 meters
   let totalMarginScore = 0;
-  for (const { rect } of rectsWithSpec) {
+  // If we have a very large layout, we sample to prevent blocking the thread
+  const marginStep = rectsWithSpec.length > 150 ? Math.ceil(rectsWithSpec.length / 150) : 1;
+  let marginCheckedCount = 0;
+  for (let i = 0; i < rectsWithSpec.length; i += marginStep) {
+    const { rect } = rectsWithSpec[i];
     const dist = distanceRectToPolygonBoundary(rect, polygon);
+    marginCheckedCount++;
     if (dist === Infinity || isNaN(dist)) {
       totalMarginScore += 0;
     } else if (dist >= 3.0) {
@@ -95,7 +109,7 @@ export function scoreCandidate(
       totalMarginScore += (dist / 3.0) * 10;
     }
   }
-  const boundaryMarginScore = Math.max(0, Math.min(10, totalMarginScore / rectsWithSpec.length));
+  const boundaryMarginScore = Math.max(0, Math.min(10, marginCheckedCount > 0 ? totalMarginScore / marginCheckedCount : 0));
 
   // --- siteUtilization (10 pts) ---
   // Calculate total footprint area vs polygon area
@@ -142,19 +156,23 @@ export function scoreCandidate(
   // --- corridorEfficiency (10 pts) ---
   // Separation between BESS containers should be ~3.0 meters
   let totalCorridorScore = 0;
-  if (rectsWithSpec.length <= 1) {
-    totalCorridorScore = 10 * rectsWithSpec.length;
+  if (sortedRects.length <= 1) {
+    totalCorridorScore = 10 * sortedRects.length;
   } else {
-    for (let i = 0; i < rectsWithSpec.length; i++) {
+    for (let i = 0; i < sortedRects.length; i++) {
       let minDist = Infinity;
-      const rectA = rectsWithSpec[i].rect;
-      for (let j = 0; j < rectsWithSpec.length; j++) {
-        if (i === j) continue;
-        const rectB = rectsWithSpec[j].rect;
+      const rectA = sortedRects[i].rect;
 
-        // Fast center distance filter: skip if centers are > 20m apart (closest under 15m is what matters)
-        const dx = rectA.center.x_m - rectB.center.x_m;
+      // Look forward (to the right)
+      for (let j = i + 1; j < sortedRects.length; j++) {
+        const rectB = sortedRects[j].rect;
+        if (rectB.center.x_m - rectA.center.x_m > 20.0) {
+          break; // Since sorted by x, no further rect can be within 20m in x direction
+        }
         const dy = rectA.center.y_m - rectB.center.y_m;
+        if (Math.abs(dy) > 20.0) continue;
+
+        const dx = rectA.center.x_m - rectB.center.x_m;
         if (dx * dx + dy * dy > 400) continue;
 
         const d = distanceBetweenRectangles(rectA, rectB);
@@ -162,6 +180,25 @@ export function scoreCandidate(
           minDist = d;
         }
       }
+
+      // Look backward (to the left)
+      for (let j = i - 1; j >= 0; j--) {
+        const rectB = sortedRects[j].rect;
+        if (rectA.center.x_m - rectB.center.x_m > 20.0) {
+          break; // Since sorted by x, no prior rect can be within 20m in x direction
+        }
+        const dy = rectA.center.y_m - rectB.center.y_m;
+        if (Math.abs(dy) > 20.0) continue;
+
+        const dx = rectA.center.x_m - rectB.center.x_m;
+        if (dx * dx + dy * dy > 400) continue;
+
+        const d = distanceBetweenRectangles(rectA, rectB);
+        if (d < minDist) {
+          minDist = d;
+        }
+      }
+
       if (minDist === Infinity) {
         // Spacing too wide, inefficient
         totalCorridorScore += 0;
@@ -176,7 +213,7 @@ export function scoreCandidate(
       }
     }
   }
-  const corridorEfficiencyScore = Math.max(0, Math.min(10, totalCorridorScore / rectsWithSpec.length));
+  const corridorEfficiencyScore = Math.max(0, Math.min(10, totalCorridorScore / sortedRects.length));
 
   // --- ratioCompliance (10 pts) ---
   let bessCount = 0;
