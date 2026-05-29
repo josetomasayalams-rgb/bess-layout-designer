@@ -76,7 +76,6 @@ export function TargetSizingTab({
                 id="target-mw"
                 type="number"
                 min="1"
-                max="1000"
                 value={targetMW}
                 onChange={(e) => {
                   const val = Math.max(1, parseInt(e.target.value) || 0);
@@ -152,7 +151,6 @@ export function TargetSizingTab({
                 id="target-mwh"
                 type="number"
                 min="1"
-                max="32000"
                 value={targetMWh}
                 onChange={(e) =>
                   setTargetMWh(Math.max(1, parseInt(e.target.value) || 0))
