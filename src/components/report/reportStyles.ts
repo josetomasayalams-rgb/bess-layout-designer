@@ -524,4 +524,77 @@ export const reportStyles = StyleSheet.create({
     backgroundColor: REPORT_COLORS.paperAlt,
     padding: 6,
   },
+
+  // ──────── Section header (numbered chip) ────────
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 9,
+    paddingBottom: 5,
+    borderBottomWidth: 1,
+    borderBottomColor: REPORT_COLORS.accent,
+  },
+  sectionNumberChip: {
+    fontFamily: REPORT_FONTS.dataBold,
+    fontSize: 9.5,
+    color: REPORT_COLORS.paper,
+    backgroundColor: REPORT_COLORS.accent,
+    borderRadius: 3,
+    paddingVertical: 2,
+    paddingHorizontal: 6,
+    textAlign: "center",
+  },
+  sectionHeaderTitle: {
+    flex: 1,
+    fontFamily: REPORT_FONTS.bodyBold,
+    fontSize: 14,
+    color: REPORT_COLORS.ink,
+  },
+
+  // ──────── Alert card (left accent bar + severity badge) ────────
+  alertCard: {
+    flexDirection: "row",
+    borderWidth: 0.5,
+    borderRadius: 4,
+    marginBottom: 7,
+    overflow: "hidden",
+  },
+  alertAccentBar: {
+    width: 3,
+  },
+  alertBody: {
+    flex: 1,
+    paddingVertical: 7,
+    paddingHorizontal: 9,
+  },
+  alertHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 3,
+  },
+  alertBadge: {
+    borderRadius: 2,
+    paddingVertical: 1,
+    paddingHorizontal: 5,
+    fontFamily: REPORT_FONTS.dataBold,
+    fontSize: 6.5,
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+  },
+  alertTitle: {
+    flex: 1,
+    fontFamily: REPORT_FONTS.dataBold,
+    fontSize: 9,
+    color: REPORT_COLORS.ink,
+  },
+  alertMessage: {
+    fontSize: 8.5,
+  },
+  alertRecommendation: {
+    marginTop: 3,
+    fontSize: 8,
+    color: REPORT_COLORS.muted,
+  },
 });
