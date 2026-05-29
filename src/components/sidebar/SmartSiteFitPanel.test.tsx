@@ -77,7 +77,7 @@ describe("SmartSiteFitPanel", () => {
 
     // Alternative card and adjustment panels are displayed
     expect(screen.getByText(/Generated Alternative/i)).toBeDefined();
-    expect(screen.getByText(/Setbacks and Spacing Adjustments/i)).toBeDefined();
+    expect(screen.getByText(/Capacity and Spacing Adjustments/i)).toBeDefined();
   });
 
   it("completes terrain sizing flow when polygon exists and selects alternatives", () => {

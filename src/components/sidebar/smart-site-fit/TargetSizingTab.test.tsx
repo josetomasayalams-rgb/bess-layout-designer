@@ -88,7 +88,7 @@ describe("TargetSizingTab", () => {
 
     expect(screen.getByText(/Generated Alternative/i)).toBeDefined();
     expect(screen.getAllByText(/Balanced/i).length).toBeGreaterThan(0);
-    expect(screen.getByText(/Setbacks and Spacing Adjustments/i)).toBeDefined();
+    expect(screen.getByText(/Capacity and Spacing Adjustments/i)).toBeDefined();
   });
 
   it("supports choosing 8h and 16h durations and shows corresponding ratios and warnings", () => {

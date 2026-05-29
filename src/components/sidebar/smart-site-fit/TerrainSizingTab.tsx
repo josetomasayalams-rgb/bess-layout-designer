@@ -53,6 +53,17 @@ export function TerrainSizingTab({
     (c) => c.id === selectedAlternativeId
   );
 
+  const selectedBessCount = selectedAlternative
+    ? selectedAlternative.placedEquipment.filter(
+        (e) => e.equipmentSpecId === "sungrow-st2752ux-us"
+      ).length
+    : undefined;
+  const selectedPcsCount = selectedAlternative
+    ? selectedAlternative.placedEquipment.filter(
+        (e) => e.equipmentSpecId === "sungrow-sc5000ud-mv-us-p3"
+      ).length
+    : undefined;
+
   if (!hasPolygon) {
     return (
       <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-slate-800 bg-slate-900/20 p-6 text-center">
@@ -193,6 +204,9 @@ export function TerrainSizingTab({
               onApply={onApply}
               onDiscard={onDiscard}
               locale={locale}
+              currentBessCount={selectedBessCount}
+              currentPcsCount={selectedPcsCount}
+              currentDurationHours={duration}
             />
           )}
         </div>

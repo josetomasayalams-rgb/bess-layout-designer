@@ -1,6 +1,7 @@
 import React from "react";
 import type { SmartSiteFitOverrides } from "@/lib/layout/smartSiteFit/smartSiteFitTypes";
-import { Sliders, RefreshCw, X, Check } from "lucide-react";
+import { getContainersPerPcsForDuration } from "@/lib/layout/smartSiteFit/smartSiteFitPresets";
+import { Sliders, RefreshCw, X, Check, AlertTriangle } from "lucide-react";
 
 interface MicroAdjustPanelProps {
   overrides: SmartSiteFitOverrides;
@@ -10,7 +11,13 @@ interface MicroAdjustPanelProps {
   onApply: () => void;
   onDiscard: () => void;
   locale: "es" | "en";
+  /** Current counts/duration of the selected alternative, used as defaults. */
+  currentBessCount?: number;
+  currentPcsCount?: number;
+  currentDurationHours?: number;
 }
+
+const DURATION_OPTIONS = [2, 4, 8, 16] as const;
 
 export function MicroAdjustPanel({
   overrides,
@@ -20,6 +27,9 @@ export function MicroAdjustPanel({
   onApply,
   onDiscard,
   locale,
+  currentBessCount,
+  currentPcsCount,
+  currentDurationHours,
 }: MicroAdjustPanelProps) {
   const isEs = locale === "es";
 
@@ -29,13 +39,107 @@ export function MicroAdjustPanel({
   const boundaryMargin = overrides.boundaryMargin_m ?? 4.0;
   const pcsToPcs = overrides.pcsToPcs_m ?? 3.0;
 
+  // Capacity micro-adjustments: defaults come from the selected alternative.
+  const durationHours = overrides.durationHours ?? currentDurationHours ?? 4;
+  const ratio = getContainersPerPcsForDuration(durationHours);
+  const bessCount = overrides.bessCount ?? currentBessCount ?? 0;
+  const pcsCount = overrides.pcsCount ?? currentPcsCount ?? 0;
+  const suggestedPcs = Math.max(1, Math.ceil(bessCount / ratio));
+  const ratioBroken = bessCount > 0 && pcsCount > 0 && pcsCount !== suggestedPcs;
+
+  // Changing BESS count recomputes the suggested PCS/MV count from the ratio.
+  const handleBessChange = (raw: string) => {
+    const n = Math.max(0, Math.floor(Number(raw) || 0));
+    onUpdateOverrides({ bessCount: n, pcsCount: Math.max(1, Math.ceil(n / ratio)) });
+  };
+  // Changing PCS count is honored as-is; a ratio mismatch is surfaced below.
+  const handlePcsChange = (raw: string) => {
+    const n = Math.max(0, Math.floor(Number(raw) || 0));
+    onUpdateOverrides({ pcsCount: n });
+  };
+  // Changing duration recomputes the ratio and re-derives suggested PCS.
+  const handleDurationChange = (d: number) => {
+    const newRatio = getContainersPerPcsForDuration(d);
+    onUpdateOverrides({
+      durationHours: d,
+      pcsCount: bessCount > 0 ? Math.max(1, Math.ceil(bessCount / newRatio)) : pcsCount,
+    });
+  };
+
   return (
     <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-3 space-y-4">
       <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
         <Sliders className="h-4 w-4 text-cyan-400" />
         <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">
-          {isEs ? "Ajustes perimetrales y distancias" : "Setbacks and Spacing Adjustments"}
+          {isEs ? "Ajustes de capacidad y distancias" : "Capacity and Spacing Adjustments"}
         </h4>
+      </div>
+
+      {/* Capacity adjustments: BESS count, PCS count and duration. */}
+      <div className="space-y-3 border-b border-slate-800 pb-3">
+        <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-1">
+            <label className="block text-[11px] text-slate-400" htmlFor="micro-bess-count">
+              {isEs ? "Contenedores BESS" : "BESS containers"}
+            </label>
+            <input
+              id="micro-bess-count"
+              type="number"
+              min={0}
+              step={1}
+              value={bessCount}
+              onChange={(e) => handleBessChange(e.target.value)}
+              className="w-full rounded border border-slate-800 bg-slate-950 p-1 text-[11px] font-mono text-slate-350 focus:border-cyan-500 focus:outline-none"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="block text-[11px] text-slate-400" htmlFor="micro-pcs-count">
+              {isEs ? "Estaciones PCS/MV" : "PCS/MV stations"}
+            </label>
+            <input
+              id="micro-pcs-count"
+              type="number"
+              min={0}
+              step={1}
+              value={pcsCount}
+              onChange={(e) => handlePcsChange(e.target.value)}
+              className="w-full rounded border border-slate-800 bg-slate-950 p-1 text-[11px] font-mono text-slate-350 focus:border-cyan-500 focus:outline-none"
+            />
+          </div>
+        </div>
+
+        {ratioBroken && (
+          <div className="flex items-start gap-1.5 rounded-md border border-amber-500/20 bg-amber-500/10 p-2 text-[10px] leading-snug text-amber-300/90">
+            <AlertTriangle className="mt-px h-3 w-3 shrink-0 text-amber-400" />
+            <span>
+              {isEs
+                ? `Relación fuera del ${ratio}:1 preliminar para ${durationHours}h. PCS/MV sugerido: ${suggestedPcs}.`
+                : `Ratio departs from the preliminary ${ratio}:1 for ${durationHours}h. Suggested PCS/MV: ${suggestedPcs}.`}
+            </span>
+          </div>
+        )}
+
+        <div className="space-y-1">
+          <span className="block text-[11px] text-slate-400">
+            {isEs ? "Duración de diseño" : "Design duration"}
+          </span>
+          <div className="grid grid-cols-4 gap-1">
+            {DURATION_OPTIONS.map((d) => (
+              <button
+                key={d}
+                type="button"
+                onClick={() => handleDurationChange(d)}
+                className={`rounded-md py-1.5 text-[10px] font-semibold ${
+                  durationHours === d
+                    ? "bg-cyan-600 text-white"
+                    : "bg-slate-900 text-slate-400 border border-slate-800 hover:border-slate-700"
+                }`}
+              >
+                {d}h ({getContainersPerPcsForDuration(d)}:1)
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div className="space-y-3">
@@ -155,7 +259,7 @@ export function MicroAdjustPanel({
         <div className="rounded-md border border-amber-500/20 bg-amber-500/10 p-2 text-[10px] text-amber-300/90 leading-tight">
           {isEs
             ? "Hay cambios pendientes. Haz clic en Recalcular para actualizar la previsualización."
-            : "Spacings have changed. Click Recalculate to update the sizing preview."}
+            : "Adjustments have changed. Click Recalculate to update the sizing preview."}
         </div>
       )}
 

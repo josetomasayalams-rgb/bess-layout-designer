@@ -62,6 +62,17 @@ export function TargetSizingTab({
     (c) => c.id === selectedAlternativeId
   );
 
+  const selectedBessCount = selectedAlternative
+    ? selectedAlternative.placedEquipment.filter(
+        (e) => e.equipmentSpecId === "sungrow-st2752ux-us"
+      ).length
+    : undefined;
+  const selectedPcsCount = selectedAlternative
+    ? selectedAlternative.placedEquipment.filter(
+        (e) => e.equipmentSpecId === "sungrow-sc5000ud-mv-us-p3"
+      ).length
+    : undefined;
+
   return (
     <div className="space-y-4">
       {!result ? (
@@ -240,6 +251,9 @@ export function TargetSizingTab({
               onApply={onApply}
               onDiscard={onDiscard}
               locale={locale}
+              currentBessCount={selectedBessCount}
+              currentPcsCount={selectedPcsCount}
+              currentDurationHours={duration}
             />
           )}
         </div>
