@@ -265,6 +265,7 @@ export type ProjectState = {
   addPolygonVertex: (p: LngLat) => void;
   finishPolygon: () => void;
   clearPolygon: () => void;
+  setPolygonFromCoordinates: (vertices: LngLat[]) => void;
   setMapViewCenter: (center: LngLat) => void;
   createPreviewTerrain: (
     input: Omit<ParametricTerrainInput, "center"> & { center?: LngLat | null }

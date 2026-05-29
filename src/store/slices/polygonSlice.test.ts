@@ -71,6 +71,44 @@ describe("polygonSlice — clearPolygon", () => {
   });
 });
 
+describe("polygonSlice — setPolygonFromCoordinates", () => {
+  it("sets a polygon from valid coordinates, anchors to the first vertex and centers the view", () => {
+    const vertices = [
+      { lng: -70.0, lat: -33.0 },
+      { lng: -70.1, lat: -33.0 },
+      { lng: -70.1, lat: -33.1 },
+    ];
+    useProjectStore.getState().setPolygonFromCoordinates(vertices);
+
+    const s = useProjectStore.getState();
+    expect(s.polygon).toEqual(vertices);
+    expect(s.anchor).toEqual({ lng0: -70.0, lat0: -33.0 });
+    expect(s.interactionMode).toBe("select");
+    expect(s.mapViewCenter).not.toBeNull();
+    expect(s.past).toHaveLength(1);
+  });
+
+  it("drops a trailing vertex that repeats the first (already-closed input)", () => {
+    const vertices = [
+      { lng: -70.0, lat: -33.0 },
+      { lng: -70.1, lat: -33.0 },
+      { lng: -70.1, lat: -33.1 },
+      { lng: -70.0, lat: -33.0 },
+    ];
+    useProjectStore.getState().setPolygonFromCoordinates(vertices);
+    expect(useProjectStore.getState().polygon).toHaveLength(3);
+  });
+
+  it("ignores inputs with fewer than three distinct vertices", () => {
+    const before = useProjectStore.getState().polygon;
+    useProjectStore.getState().setPolygonFromCoordinates([
+      { lng: -70.0, lat: -33.0 },
+      { lng: -70.1, lat: -33.0 },
+    ]);
+    expect(useProjectStore.getState().polygon).toEqual(before);
+  });
+});
+
 describe("polygonSlice — setMapViewCenter", () => {
   it("only updates mapViewCenter", () => {
     const before = useProjectStore.getState();

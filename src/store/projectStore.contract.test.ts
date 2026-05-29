@@ -61,6 +61,7 @@ const EXPECTED_ACTIONS = [
   "addPolygonVertex",
   "finishPolygon",
   "clearPolygon",
+  "setPolygonFromCoordinates",
   "setMapViewCenter",
   // preview-terrain
   "createPreviewTerrain",
