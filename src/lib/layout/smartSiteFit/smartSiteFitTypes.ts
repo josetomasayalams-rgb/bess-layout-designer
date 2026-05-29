@@ -47,6 +47,13 @@ export interface SmartSiteFitOverrides {
   boundaryMargin_m?: number;
   pcsToPcs_m?: number;
   preferredShapeKind?: SmartSiteFitShapeKind | "auto";
+  // Capacity micro-adjustments applied after selecting an alternative.
+  // When set, they pin the size of the recalculated layout instead of
+  // letting the strategy derive it from the terrain.
+  bessCount?: number;
+  pcsCount?: number;
+  durationHours?: number;
+  orientationDeg?: number;
 }
 
 export interface SmartSiteFitInput {

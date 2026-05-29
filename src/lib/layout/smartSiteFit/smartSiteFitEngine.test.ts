@@ -166,4 +166,93 @@ describe("SmartSiteFit Engine", () => {
       expect(sameBlockBess.length).toBeGreaterThan(0);
     }
   }, 30000);
+
+  const countBess = (c: { placedEquipment: { equipmentSpecId: string }[] }) =>
+    c.placedEquipment.filter((e) => e.equipmentSpecId === "sungrow-st2752ux-us").length;
+
+  it("should group terrain alternatives by strategy and rank compact densest", () => {
+    // ~250 m square — large enough for three distinct strategies.
+    const largeSquare: LngLat[] = [
+      { lng: -70.00135, lat: -33.00112 },
+      { lng: -69.99865, lat: -33.00112 },
+      { lng: -69.99865, lat: -32.99888 },
+      { lng: -70.00135, lat: -32.99888 },
+    ];
+
+    const result = runSmartSiteFit({
+      mode: "terrain",
+      polygon: largeSquare,
+      durationHours: 4,
+      strategy: "balanced",
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.candidates.length).toBe(3);
+
+    // One alternative per strategy id (grouped, not top-3 global of one strategy).
+    const strategies = new Set(result.candidates.map((c) => c.strategy));
+    expect(strategies.has("max_capacity")).toBe(true);
+    expect(strategies.has("balanced")).toBe(true);
+    expect(strategies.has("conservative")).toBe(true);
+
+    const byStrategy = (s: string) => result.candidates.find((c) => c.strategy === s)!;
+    const compact = countBess(byStrategy("max_capacity"));
+    const balanced = countBess(byStrategy("balanced"));
+    const conservative = countBess(byStrategy("conservative"));
+
+    // Compact packs the densest, conservative the loosest, balanced in between.
+    expect(compact).toBeGreaterThan(balanced);
+    expect(balanced).toBeGreaterThan(conservative);
+  }, 30000);
+
+  it("should explain when a small terrain admits fewer than three distinct alternatives", () => {
+    // ~30 m square — strategies collapse to one or two distinct sizes.
+    const tinySquare: LngLat[] = [
+      { lng: -70.00016, lat: -33.000135 },
+      { lng: -69.99984, lat: -33.000135 },
+      { lng: -69.99984, lat: -32.999865 },
+      { lng: -70.00016, lat: -32.999865 },
+    ];
+
+    const result = runSmartSiteFit({
+      mode: "terrain",
+      polygon: tinySquare,
+      durationHours: 4,
+      strategy: "balanced",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.candidates.length < 3) {
+      expect(
+        result.warnings.some((w) => w.id === "limited-terrain-alternatives")
+      ).toBe(true);
+    }
+  }, 20000);
+
+  it("should honor bessCount / pcsCount overrides when recalculating a terrain alternative", () => {
+    const largeSquare: LngLat[] = [
+      { lng: -70.00135, lat: -33.00112 },
+      { lng: -69.99865, lat: -33.00112 },
+      { lng: -69.99865, lat: -32.99888 },
+      { lng: -70.00135, lat: -32.99888 },
+    ];
+
+    // pcsCount pins the block count: 4h => 8:1, so 5 PCS => 40 BESS.
+    const result = runSmartSiteFit({
+      mode: "terrain",
+      polygon: largeSquare,
+      durationHours: 4,
+      strategy: "balanced",
+      overrides: { pcsCount: 5 },
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.selected).not.toBeNull();
+    const pcs = result.selected!.placedEquipment.filter(
+      (e) => e.equipmentSpecId === "sungrow-sc5000ud-mv-us-p3"
+    ).length;
+    const bess = countBess(result.selected!);
+    expect(pcs).toBe(5);
+    expect(bess).toBe(40);
+  }, 20000);
 });

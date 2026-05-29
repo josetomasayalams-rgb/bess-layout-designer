@@ -11,7 +11,10 @@ import { validatePolygonForSmartSiteFit } from "./smartSiteFitGeometry";
 import { DEFAULT_PERFORMANCE_BUDGET } from "./smartSiteFitPerformance";
 
 export function runSmartSiteFit(input: SmartSiteFitInput): SmartSiteFitResult {
-  const durationHours = input.durationHours ?? 4;
+  // A duration micro-adjustment override (set when recalculating a selected
+  // alternative) takes precedence over the original request duration.
+  const durationHours =
+    input.overrides?.durationHours ?? input.durationHours ?? 4;
   const strategy = input.strategy ?? "balanced";
 
   // Check if polygon is provided
@@ -190,17 +193,23 @@ export function runTerrainSizing(
     };
   }
 
-  // De-duplicate strategies that collapsed to the same size (small terrains),
-  // keeping the higher-scoring representative.
-  const bySize = new Map<string, SmartSiteFitCandidate>();
-  for (const c of bestPerStrategy) {
+  // We keep one best candidate per strategy. On small terrains two strategies
+  // may still collapse to the same size; we de-duplicate those genuinely
+  // identical layouts, keeping the higher-scoring representative, and then
+  // explain to the user when fewer than three distinct alternatives are viable.
+  const sizeKey = (c: SmartSiteFitCandidate) => {
     const bessCount = c.placedEquipment.filter(
       (e) => e.equipmentSpecId === "sungrow-st2752ux-us"
     ).length;
     const pcsCount = c.placedEquipment.filter(
       (e) => e.equipmentSpecId === "sungrow-sc5000ud-mv-us-p3"
     ).length;
-    const key = `${bessCount}-${pcsCount}`;
+    return `${bessCount}-${pcsCount}`;
+  };
+
+  const bySize = new Map<string, SmartSiteFitCandidate>();
+  for (const c of bestPerStrategy) {
+    const key = sizeKey(c);
     const existing = bySize.get(key);
     if (!existing || c.score.total > existing.score.total) {
       bySize.set(key, c);
@@ -218,11 +227,29 @@ export function runTerrainSizing(
 
   const selected = finalAlternatives[0] || null;
 
+  // Explain why fewer than three distinct alternatives were produced: the
+  // terrain only admits a limited range of preliminary sizes.
+  const baseWarnings = selected?.warnings ?? [];
+  const warnings =
+    finalAlternatives.length < 3
+      ? [
+          ...baseWarnings,
+          {
+            id: "limited-terrain-alternatives",
+            severity: "info" as const,
+            message:
+              finalAlternatives.length === 1
+                ? "El terreno solo admite una alternativa de predimensionamiento distinta; las estrategias convergen a la misma cabida preliminar."
+                : "El terreno solo admite dos alternativas de predimensionamiento distintas; dos estrategias convergen a la misma cabida preliminar.",
+          },
+        ]
+      : baseWarnings;
+
   return {
     success: true,
     candidates: finalAlternatives,
     selected,
-    warnings: selected?.warnings ?? [],
+    warnings,
     assumptions: selected?.assumptions ?? [],
     fallbackUsed: false,
     message: "Dimensionamiento por terreno completado exitosamente.",

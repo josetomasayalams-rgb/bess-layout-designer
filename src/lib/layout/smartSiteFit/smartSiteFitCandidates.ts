@@ -112,11 +112,25 @@ export function generateCandidates(
   const blockLength = PCS_LENGTH_M + bessToPcs + bessPerPcs * (BESS_LENGTH_M + bessToBess) - bessToBess;
   const blockWidth = Math.max(PCS_WIDTH_M, BESS_WIDTH_M);
 
+  // Forced size from capacity micro-adjustments (overrides). pcsCount pins the
+  // block count directly; otherwise bessCount derives PCS via the duration
+  // ratio. A forced size behaves like target mode: the requested size is kept
+  // and the app explains any overflow rather than silently downsizing it.
+  const forcedPcsCount =
+    overrides?.pcsCount !== undefined && overrides.pcsCount > 0
+      ? Math.max(1, Math.floor(overrides.pcsCount))
+      : overrides?.bessCount !== undefined && overrides.bessCount > 0
+      ? Math.max(1, Math.ceil(overrides.bessCount / bessPerPcs))
+      : undefined;
+
   // Determine target block count
   let targetBlockCount = 1;
   const isTargetMode = targetMW !== undefined || targetMWh !== undefined;
+  const isFixedSize = isTargetMode || forcedPcsCount !== undefined;
 
-  if (isTargetMode) {
+  if (forcedPcsCount !== undefined) {
+    targetBlockCount = forcedPcsCount;
+  } else if (isTargetMode) {
     // 5 MW per PCS station
     const pcsFromPower = targetMW ? Math.ceil(targetMW / 5.0) : 0;
     // 2.752 MWh per BESS container
@@ -124,10 +138,19 @@ export function generateCandidates(
     const pcsFromEnergy = Math.ceil(bessNeeded / bessPerPcs);
     targetBlockCount = Math.max(1, Math.max(pcsFromPower, pcsFromEnergy));
   } else {
-    // Terrain mode: calculate max blocks based on polygon area
+    // Terrain mode: derive blocks from polygon area, then bias by a
+    // per-strategy occupancy intent so the three strategies produce
+    // genuinely distinct sizes (compact packs denser, conservative looser)
+    // instead of collapsing to one identical layout.
     const blockArea = (blockLength + pcsToPcs) * (blockWidth + bessToBess);
     const maxTheoreticalBlocks = Math.max(1, Math.floor(analysis.area_m2 / blockArea));
-    targetBlockCount = Math.min(200, maxTheoreticalBlocks);
+    const occupancyIntentByStrategy: Record<SmartSiteFitStrategy, number> = {
+      max_capacity: 0.9,
+      balanced: 0.62,
+      conservative: 0.42,
+    };
+    const intent = occupancyIntentByStrategy[strategy];
+    targetBlockCount = Math.max(1, Math.min(200, Math.floor(maxTheoreticalBlocks * intent)));
   }
 
   // Adaptive search plan: small layouts get a thorough sweep, giant layouts a
@@ -165,9 +188,10 @@ export function generateCandidates(
     },
   ];
 
-  // Block-count candidates. Target mode always keeps the requested size; terrain
-  // mode may downsize per the search plan to find a layout that actually fits.
-  const blockCountFactors = isTargetMode ? [1] : plan.blockCountFactors;
+  // Block-count candidates. A fixed size (target mode or a forced override)
+  // always keeps the requested size; terrain mode may downsize per the search
+  // plan to find a layout that actually fits.
+  const blockCountFactors = isFixedSize ? [1] : plan.blockCountFactors;
   const blockCountsToTry = Array.from(
     new Set(
       blockCountFactors.map((f) => (f === 1 ? targetBlockCount : Math.floor(targetBlockCount * f)))
@@ -209,7 +233,7 @@ export function generateCandidates(
         strategy,
         shapeKind: shape.kind,
         bessCount: blocks * bessPerPcs,
-        isTargetMode,
+        isTargetMode: isFixedSize,
         boundaryMargin_m,
       });
       shapeJobs.push({ blocks, shape, fast });
@@ -222,10 +246,12 @@ export function generateCandidates(
   shapeJobs.sort((a, b) => b.fast.total - a.fast.total);
 
   // --- Placements: rotations × grid shifts, ordered most-natural-first ---
-  const rotationDegs = [dominantAngle, dominantAngle + 90, 0, 90].slice(
-    0,
-    Math.max(1, plan.rotationsToTry)
-  );
+  // A forced orientation override pins the layout to a single rotation.
+  const rotationDegs = (
+    overrides?.orientationDeg !== undefined
+      ? [overrides.orientationDeg]
+      : [dominantAngle, dominantAngle + 90, 0, 90]
+  ).slice(0, Math.max(1, plan.rotationsToTry));
   const placements: PlacementOption[] = [];
   for (const rotationDeg of rotationDegs) {
     const rad = (rotationDeg * Math.PI) / 180;
