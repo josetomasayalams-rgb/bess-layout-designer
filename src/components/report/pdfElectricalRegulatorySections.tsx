@@ -1,23 +1,131 @@
-import { Text, View } from "@react-pdf/renderer";
+import { Line, Rect, Svg, Text, View } from "@react-pdf/renderer";
 import { REPORT_COLORS, REPORT_FONTS, reportStyles as s } from "./reportStyles";
 import { documentTitle, type TechnicalReportData } from "@/lib/report/buildReportData";
 import { fmtInt, fmtNum, formatIsoDate } from "./pdfFormatters";
 import { AlertCard, DefGrid, SectionPage, Table } from "./pdfPrimitives";
-import { OUTCOME_LABEL, SEVERITY_PILL, outcomePillStyle } from "./pdfSeverityMaps";
+import {
+  OUTCOME_LABEL,
+  SEVERITY_LABEL_ES,
+  SEVERITY_PILL,
+  outcomePillStyle,
+} from "./pdfSeverityMaps";
 
 type ReportSectionProps = { data: TechnicalReportData };
+
+/**
+ * Diagrama unilineal conceptual (single-line diagram) dibujado en SVG.
+ *
+ * Se dibuja con primitivas vectoriales (Rect / Line / Polygon) en lugar de
+ * glifos de flecha tipográficos, que el set de fuentes estándar de
+ * @react-pdf/renderer (WinAnsi) no puede codificar y renderiza como cajas
+ * `notdef`. Las puntas de flecha son triángulos vectoriales.
+ */
+function SingleLineDiagram() {
+  const stages = [
+    { title: "Contenedor BESS", sub: "DC" },
+    { title: "PCS + trafo", sub: "BT/MT integrado" },
+    { title: "Feeder MT", sub: "media tensión" },
+    { title: "Barra / secc.", sub: "MT" },
+    { title: "POI", sub: "conexión red" },
+  ];
+  const BOX_W = 88;
+  const BOX_H = 44;
+  const STEP = 106; // BOX_W + gap
+  const TOP = 18;
+  const MID = TOP + BOX_H / 2;
+  const VB_W = 520;
+  const VB_H = 80;
+
+  return (
+    <View style={s.sldWrap}>
+      <Svg viewBox={`0 0 ${VB_W} ${VB_H}`} style={{ width: "100%", height: 88 }}>
+        {stages.map((_, i) => {
+          const x = i * STEP;
+          return (
+            <Rect
+              key={`box-${i}`}
+              x={x}
+              y={TOP}
+              width={BOX_W}
+              height={BOX_H}
+              rx={4}
+              fill="#eff6ff"
+              stroke={REPORT_COLORS.accent}
+              strokeWidth={0.8}
+            />
+          );
+        })}
+        {/* Conectores con punta de flecha vectorial */}
+        {stages.slice(0, -1).map((_, i) => {
+          const fromX = i * STEP + BOX_W;
+          const toX = (i + 1) * STEP;
+          return (
+            <Line
+              key={`ln-${i}`}
+              x1={fromX + 1}
+              y1={MID}
+              x2={toX - 5}
+              y2={MID}
+              stroke={REPORT_COLORS.accent}
+              strokeWidth={1.2}
+            />
+          );
+        })}
+        {stages.slice(0, -1).map((_, i) => {
+          const tipX = (i + 1) * STEP;
+          return (
+            <Svg key={`ah-${i}`}>
+              <Line x1={tipX - 6} y1={MID - 3} x2={tipX} y2={MID} stroke={REPORT_COLORS.accent} strokeWidth={1.2} />
+              <Line x1={tipX - 6} y1={MID + 3} x2={tipX} y2={MID} stroke={REPORT_COLORS.accent} strokeWidth={1.2} />
+            </Svg>
+          );
+        })}
+        {stages.map((st, i) => {
+          const cx = i * STEP + BOX_W / 2;
+          return (
+            <Svg key={`tx-${i}`}>
+              <Text
+                x={cx}
+                y={MID - 1}
+                textAnchor="middle"
+                style={{ fontFamily: REPORT_FONTS.dataBold, fontSize: 7.5, fill: REPORT_COLORS.ink }}
+              >
+                {st.title}
+              </Text>
+              <Text
+                x={cx}
+                y={MID + 9}
+                textAnchor="middle"
+                style={{ fontFamily: REPORT_FONTS.data, fontSize: 6, fill: REPORT_COLORS.muted }}
+              >
+                {st.sub}
+              </Text>
+            </Svg>
+          );
+        })}
+      </Svg>
+      <Text style={s.imageCaption}>
+        Diagrama unilineal conceptual. El PCS integra el transformador BT/MT en
+        una misma estación; no se modelan transformadores separados por bloque.
+      </Text>
+    </View>
+  );
+}
 
 export function ElectricalSection({ data }: ReportSectionProps) {
   const e = data.electrical;
   const k = data.reportKpis;
   return (
-    <SectionPage data={data} number="5" title="Arquitectura eléctrica preliminar">
+    <SectionPage data={data} number="5" title="Arquitectura eléctrica conceptual">
       <Text style={s.paragraph}>
-        Cadena Container → PCS → Transformador bloque → Feeder MT → Barra →
-        POI. La fuente de los datos eléctricos se cita explícitamente cuando
-        está disponible; los campos vacíos representan información pendiente
-        de validación de fabricante o EPC.
+        La arquitectura conceptual encadena el contenedor BESS (lado DC), el PCS
+        con transformador BT/MT integrado, el feeder de media tensión, la barra
+        y seccionamiento MT, y el punto de conexión (POI). La fuente de los datos
+        eléctricos se cita cuando está disponible; los campos vacíos representan
+        información pendiente de validación de fabricante o EPC.
       </Text>
+
+      <SingleLineDiagram />
 
       <DefGrid
         items={[
@@ -46,10 +154,10 @@ export function ElectricalSection({ data }: ReportSectionProps) {
 
       {e.stations.length === 0 && k.stations > 0 ? (
         <AlertCard
-          severity="critical"
-          title="Arquitectura eléctrica no persistida"
-          message="El layout contiene estaciones PCS/MV, pero no existe ConversionStation[] sincronizado. La tabla siguiente se deriva del inventario físico."
-          recommendation="Cargar preset v1.2 o ejecutar sincronización de arquitectura antes de usar el reporte como base técnica formal."
+          severity="warning"
+          title="Calidad de dato: arquitectura eléctrica no sincronizada"
+          message="El layout contiene estaciones PCS/MV, pero no existe una arquitectura eléctrica (ConversionStation[]) sincronizada. La información siguiente se deriva del inventario físico. No representa una falla de diseño, sino un dato pendiente de cargar."
+          recommendation="Cargar el preset v1.2 o ejecutar la sincronización de arquitectura antes de usar el reporte como base técnica formal."
         />
       ) : null}
 
@@ -223,12 +331,12 @@ export function PreliminaryElectricalChecksSection({ data }: ReportSectionProps)
           <DefGrid
             items={[
               { label: "Reglas", value: fmtInt(checks.length) },
-              { label: "Pass", value: fmtInt(block.totals.pass) },
-              { label: "Violation", value: fmtInt(block.totals.violation) },
-              { label: "N/A", value: fmtInt(block.totals.notEvaluable) },
-              { label: "Pending", value: fmtInt(block.totals.pendingValidation) },
+              { label: "Cumple", value: fmtInt(block.totals.pass) },
+              { label: "Incumple", value: fmtInt(block.totals.violation) },
+              { label: "No evaluable", value: fmtInt(block.totals.notEvaluable) },
+              { label: "Pendiente", value: fmtInt(block.totals.pendingValidation) },
               {
-                label: "Severity caps",
+                label: "Severidad acotada",
                 value: block.hasSeverityCaps ? "sí" : "no",
               },
             ]}
@@ -263,7 +371,8 @@ export function PreliminaryElectricalChecksSection({ data }: ReportSectionProps)
                   </Text>
                   <View style={[s.tableCell, { width: "10%" }]}>
                     <Text style={[s.pill, outcomePillStyle(sevPill)]}>
-                      {entry.effectiveSeverity.toUpperCase()}
+                      {SEVERITY_LABEL_ES[entry.effectiveSeverity] ??
+                        entry.effectiveSeverity}
                     </Text>
                   </View>
                   <Text
@@ -295,11 +404,12 @@ export function PreliminaryElectricalChecksSection({ data }: ReportSectionProps)
                   <Text key={`cap-${c.ruleId}`} style={s.note}>
                     {c.ruleId}: declarada{" "}
                     <Text style={{ fontFamily: REPORT_FONTS.bodyBold }}>
-                      {c.severityCappedBy?.from}
+                      {SEVERITY_LABEL_ES[c.severityCappedBy?.from ?? ""] ??
+                        c.severityCappedBy?.from}
                     </Text>{" "}
-                    → efectiva{" "}
+                    · acotada a{" "}
                     <Text style={{ fontFamily: REPORT_FONTS.bodyBold }}>
-                      {c.effectiveSeverity}
+                      {SEVERITY_LABEL_ES[c.effectiveSeverity] ?? c.effectiveSeverity}
                     </Text>{" "}
                     ({c.severityCappedBy?.by === "document_level"
                       ? "nivel documental"
@@ -337,24 +447,33 @@ export function RegulatorySection({ data }: ReportSectionProps) {
             ({ev.rules.length} reglas evaluadas el {formatIsoDate(ev.evaluatedAt)}).
           </Text>
 
-          <DefGrid
-            items={[
-              { label: "Pass", value: fmtInt(ev.totals.pass) },
-              { label: "Violation", value: fmtInt(ev.totals.violation) },
-              { label: "Manual check", value: fmtInt(ev.totals.manualCheck) },
-              { label: "Pending", value: fmtInt(ev.totals.pending) },
-              { label: "Not evaluable", value: fmtInt(ev.totals.notEvaluable) },
-              { label: "Out of scope", value: fmtInt(ev.totals.outOfScope) },
-              {
-                label: "Bloqueantes",
-                value: fmtInt(ev.totals.blockingViolations),
-              },
-              {
-                label: "Avisos",
-                value: fmtInt(ev.totals.warningViolations),
-              },
-            ]}
-          />
+          {/* Resumen visual de estado normativo */}
+          <View style={s.statusChipRow}>
+            {[
+              { label: "Cumple", count: ev.totals.pass, bg: "#dcfce7", fg: REPORT_COLORS.ok, border: "#bbf7d0" },
+              { label: "Incumple", count: ev.totals.violation, bg: "#fee2e2", fg: REPORT_COLORS.danger, border: "#fecaca" },
+              { label: "Revisión manual", count: ev.totals.manualCheck, bg: "#e0f2fe", fg: "#075985", border: "#bae6fd" },
+              { label: "Pendiente", count: ev.totals.pending, bg: "#fef3c7", fg: REPORT_COLORS.warn, border: "#fde68a" },
+              { label: "No evaluable", count: ev.totals.notEvaluable, bg: "#e2e8f0", fg: REPORT_COLORS.muted, border: "#cbd5e1" },
+              { label: "Fuera de alcance", count: ev.totals.outOfScope, bg: "#e2e8f0", fg: REPORT_COLORS.muted, border: "#cbd5e1" },
+            ].map((chip) => (
+              <View
+                key={chip.label}
+                style={[s.statusChip, { backgroundColor: chip.bg, borderColor: chip.border }]}
+              >
+                <Text style={[s.statusChipCount, { color: chip.fg }]}>
+                  {fmtInt(chip.count)}
+                </Text>
+                <Text style={[s.statusChipLabel, { color: chip.fg }]}>
+                  {chip.label}
+                </Text>
+              </View>
+            ))}
+          </View>
+          <Text style={s.note}>
+            De las violaciones, {fmtInt(ev.totals.blockingViolations)} son
+            bloqueantes y {fmtInt(ev.totals.warningViolations)} son avisos.
+          </Text>
 
           <Text style={s.subTitle}>Reglas críticas o accionables</Text>
           <View style={s.table} wrap>
@@ -393,7 +512,11 @@ export function RegulatorySection({ data }: ReportSectionProps) {
                     <Text style={[s.pill, outcomePillStyle(o.style)]}>{o.label}</Text>
                   </View>
                   <Text
-                    style={[s.tableCell, s.tableCellMono, { width: "16%" }]}
+                    style={[
+                      s.tableCell,
+                      s.tableCellMono,
+                      { width: "16%", fontSize: 7, color: REPORT_COLORS.muted },
+                    ]}
                   >
                     {entry.ruleId}
                   </Text>
