@@ -4,9 +4,9 @@
  *
  * Extracted from `ReportDocument.tsx` in Phase 12A. All three components are
  * byte-equivalent to their originals in merge commit `c8bf0e2`:
- *   - PageHeader  → ReportDocument.tsx lines 64–74
- *   - PageFooter  → ReportDocument.tsx lines 76–90
- *   - CoverPage   → ReportDocument.tsx lines 96–238
+ *   - PageHeader  - ReportDocument.tsx lines 64–74
+ *   - PageFooter  - ReportDocument.tsx lines 76–90
+ *   - CoverPage   - ReportDocument.tsx lines 96–238
  *
  * The chrome lives here (rather than alongside the section pages) because
  * `SectionPage` depends on `PageHeader` / `PageFooter`; co-locating them
@@ -64,47 +64,46 @@ export function CoverPage({ data }: Props) {
     (alert) => alert.severity === "critical"
   ).length;
 
-  const kpis = [
+  // KPIs principales — los cuatro indicadores de cabecera del prediseño.
+  const mainKpis = [
     {
       label: "Potencia POI",
       value: k.poiPowerMW === null ? "—" : fmtNum(k.poiPowerMW, 0),
       unit: "MW",
     },
     {
-      label: "Energía comercial",
+      label: "Energía comercial útil",
       value: k.commercialEnergyMWh === null ? "—" : fmtNum(k.commercialEnergyMWh, 0),
       unit: "MWh",
     },
     {
-      label: "Energía bruta",
-      value: fmtNum(k.grossEnergyMWh, 1),
-      unit: "MWh",
-    },
-    {
-      label: "Duración",
-      value: k.durationHours === null ? "—" : fmtNum(k.durationHours, 2),
+      label: "Duración nominal",
+      value: k.durationHours === null ? "—" : fmtNum(k.durationHours, 1),
       unit: "h",
     },
     {
-      label: "Contenedores",
-      value: fmtInt(k.containers),
-      unit: "u.",
+      label: "Área del sitio",
+      value: fmtNum(data.siteMetrics.areaHa, 1),
+      unit: "ha",
     },
+  ];
+
+  // KPIs secundarios — inventario físico y potencia instalada.
+  const secondaryKpis = [
+    { label: "Contenedores BESS", value: fmtInt(k.containers), unit: "u." },
+    { label: "Estaciones PCS/MV", value: fmtInt(k.stations), unit: "u." },
+    { label: "Feeders MT", value: fmtInt(k.feeders), unit: "u." },
     {
-      label: "Estaciones",
-      value: fmtInt(k.stations),
-      unit: "u.",
-    },
-    {
-      label: "Feeders MT",
-      value: fmtInt(k.feeders),
-      unit: "u.",
-    },
-    {
-      label: "Potencia inst.",
+      label: "Potencia instalada",
       value: fmtNum(k.installedPowerMVA, 0),
       unit: "MVA",
     },
+  ];
+
+  const scopeBands = [
+    "Predimensionamiento preliminar",
+    "No apto para construcción",
+    "No reemplaza ingeniería de detalle",
   ];
 
   return (
@@ -112,7 +111,7 @@ export function CoverPage({ data }: Props) {
       <View style={s.coverWrap}>
         <View>
           <Text style={s.coverTopLine}>
-            BESS PRELIMINARY PREDESIGN · REPORT
+            PREDIMENSIONAMIENTO PRELIMINAR BESS · REPORTE TÉCNICO
           </Text>
           <View style={s.coverDivider} />
           <Text style={s.coverTitle}>{data.metadata.title}</Text>
@@ -126,8 +125,8 @@ export function CoverPage({ data }: Props) {
               ]}
             >
               {criticalAlerts > 0
-                ? `${criticalAlerts} alerta(s) critica(s)`
-                : "Sin alertas criticas"}
+                ? `${criticalAlerts} alerta(s) crítica(s)`
+                : "Sin alertas críticas"}
             </Text>
             <Text style={[s.pill, s.pillManual]}>
               KPIs: {kpiSourceLabel(k.source)}
@@ -156,7 +155,7 @@ export function CoverPage({ data }: Props) {
           </View>
 
           {data.location.describedPlace ? (
-            <View style={{ marginTop: 22 }}>
+            <View style={{ marginTop: 20 }}>
               <Text style={s.coverMetaLabel}>Ubicación</Text>
               <Text
                 style={{
@@ -183,20 +182,57 @@ export function CoverPage({ data }: Props) {
             </View>
           ) : null}
 
-          <View style={s.coverKpiGrid}>
-            {kpis.map((k) => (
-              <View key={k.label} style={s.coverKpiCell}>
-                <Text style={s.coverKpiLabel}>{k.label}</Text>
+          {/* KPIs principales como tarjetas premium acentuadas */}
+          <View style={s.kpiRow}>
+            {mainKpis.map((kpi) => (
+              <View key={kpi.label} style={[s.kpiCard, s.kpiCardAccent]}>
+                <Text style={s.kpiCardLabel}>{kpi.label}</Text>
                 <Text>
-                  <Text style={s.coverKpiValue}>{k.value}</Text>
-                  <Text style={s.coverKpiUnit}>{" "}{k.unit}</Text>
+                  <Text style={s.kpiCardValue}>{kpi.value}</Text>
+                  <Text style={s.kpiCardUnit}>{" "}{kpi.unit}</Text>
+                </Text>
+              </View>
+            ))}
+          </View>
+
+          {/* KPIs secundarios — inventario físico */}
+          <View style={s.kpiRow}>
+            {secondaryKpis.map((kpi) => (
+              <View key={kpi.label} style={s.kpiCard}>
+                <Text style={s.kpiCardLabel}>{kpi.label}</Text>
+                <Text>
+                  <Text style={s.kpiCardValue}>{kpi.value}</Text>
+                  <Text style={s.kpiCardUnit}>{" "}{kpi.unit}</Text>
                 </Text>
               </View>
             ))}
           </View>
         </View>
 
-        <Text style={s.coverFooter}>{data.metadata.disclaimer}</Text>
+        <View>
+          {/* Banda de alcance — carácter preliminar del entregable */}
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+            {scopeBands.map((band) => (
+              <Text
+                key={band}
+                style={{
+                  fontFamily: REPORT_FONTS.dataBold,
+                  fontSize: 7.5,
+                  letterSpacing: 0.4,
+                  textTransform: "uppercase",
+                  color: REPORT_COLORS.warn,
+                  backgroundColor: "#fef3c7",
+                  borderRadius: 3,
+                  paddingVertical: 3,
+                  paddingHorizontal: 8,
+                }}
+              >
+                {band}
+              </Text>
+            ))}
+          </View>
+          <Text style={s.coverFooter}>{data.metadata.disclaimer}</Text>
+        </View>
       </View>
     </Page>
   );
