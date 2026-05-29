@@ -182,12 +182,75 @@ describe("LayoutRepairSection", () => {
             initialConflicts: 0,
             movedCount: 0,
             maxDisplacementM: 0,
+            clusterCount: 0,
+            strategy: "none",
           },
         }}
       />
     );
 
     expect(screen.getByText("No hay equipos colocados para reparar. Coloca o genera equipos primero.")).toBeDefined();
+  });
+
+  it("shows the preliminary geometric scope disclaimer", () => {
+    render(<LayoutRepairSection {...defaultProps} />);
+    expect(
+      screen.getByText(/Ajuste geometrico preliminar/i)
+    ).toBeDefined();
+  });
+
+  it("surfaces the applied strategy and block grouping on success", () => {
+    render(
+      <LayoutRepairSection
+        {...defaultProps}
+        lastRepairResult={{
+          status: "success",
+          message: "Repaired 2 conflict(s): moved 4 item(s).",
+          diagnostics: {
+            equipmentCount: 8,
+            zoneApplied: false,
+            movableCount: 8,
+            remainingConflicts: 0,
+            initialConflicts: 2,
+            movedCount: 4,
+            maxDisplacementM: 12.5,
+            clusterCount: 2,
+            strategy: "cluster-rigid",
+          },
+        }}
+      />
+    );
+    expect(
+      screen.getByText(/Se mantuvo la agrupacion por bloques cuando fue posible/i)
+    ).toBeDefined();
+    expect(screen.getByText(/2 bloque\(s\)/i)).toBeDefined();
+  });
+
+  it("reports remaining warnings on a partial repair without promising compliance", () => {
+    render(
+      <LayoutRepairSection
+        {...defaultProps}
+        lastRepairResult={{
+          status: "partial",
+          message: "Reduced conflicts from 5 to 2.",
+          diagnostics: {
+            equipmentCount: 8,
+            zoneApplied: false,
+            movableCount: 8,
+            remainingConflicts: 2,
+            initialConflicts: 5,
+            movedCount: 6,
+            maxDisplacementM: 30,
+            clusterCount: 2,
+            strategy: "cluster-recenter",
+          },
+        }}
+      />
+    );
+    expect(screen.getByText(/Quedan 2 advertencia\(s\) por revisar/i)).toBeDefined();
+    // No absolute-compliance language.
+    expect(screen.queryByText(/garantizad/i)).toBeNull();
+    expect(screen.queryByText(/óptimo/i)).toBeNull();
   });
 
   it("renders directional shift buttons and center button", () => {
