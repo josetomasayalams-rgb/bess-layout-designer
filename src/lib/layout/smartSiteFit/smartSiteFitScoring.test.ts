@@ -6,6 +6,7 @@ import {
 } from "./smartSiteFitScoring";
 import type { SmartSiteFitCandidate } from "./smartSiteFitTypes";
 import type { LocalPoint, ProjectAnchor } from "@/types/geometry";
+import { toLngLat } from "@/lib/geometry/projection";
 
 describe("SmartSiteFit Scoring", () => {
   const anchor: ProjectAnchor = { lng0: -70, lat0: -33 };
@@ -161,6 +162,122 @@ describe("SmartSiteFit Scoring", () => {
     expect(scoreCompact.shapeCompactness).toBeDefined();
     expect(scoreSingle.shapeCompactness).toBeDefined();
     expect(scoreCompact.shapeCompactness).toBeGreaterThan(scoreSingle.shapeCompactness!);
+  });
+
+  it("should reward clustered PCS and penalize a detached PCS wall (pcsIntegration)", () => {
+    // Helper: build placed equipment at an exact local position.
+    const at = (
+      x_m: number,
+      y_m: number,
+      spec: string,
+      blockId: string
+    ) => ({
+      id: `${spec}-${x_m}-${y_m}`,
+      equipmentSpecId: spec,
+      anchor: toLngLat({ x_m, y_m }, anchor),
+      rotation_deg: 0,
+      blockId,
+      groupId: blockId,
+      sourceReliability: "preliminary_assumption" as const,
+    });
+
+    const BESS = "sungrow-st2752ux-us";
+    const PCS = "sungrow-sc5000ud-mv-us-p3";
+
+    // Clustered: each PCS sits right next to its own block of BESS.
+    const clustered: SmartSiteFitCandidate = {
+      ...emptyCandidate,
+      id: "clustered",
+      placedEquipment: [
+        at(-20, 0, BESS, "block-0"),
+        at(-10, 0, BESS, "block-0"),
+        at(-5, 0, PCS, "block-0"),
+        at(10, 0, BESS, "block-1"),
+        at(20, 0, BESS, "block-1"),
+        at(25, 0, PCS, "block-1"),
+      ],
+    };
+
+    // Detached "wall": all PCS lined up far from any BESS.
+    const wall: SmartSiteFitCandidate = {
+      ...emptyCandidate,
+      id: "wall",
+      placedEquipment: [
+        at(-20, 0, BESS, "block-0"),
+        at(-10, 0, BESS, "block-0"),
+        at(10, 0, BESS, "block-1"),
+        at(20, 0, BESS, "block-1"),
+        at(-5, 45, PCS, "block-0"),
+        at(5, 45, PCS, "block-1"),
+      ],
+    };
+
+    const scoreClustered = scoreCandidate(clustered, square, anchor, 4);
+    const scoreWall = scoreCandidate(wall, square, anchor, 4);
+
+    expect(scoreClustered.pcsIntegration).toBeDefined();
+    expect(scoreWall.pcsIntegration).toBeDefined();
+    expect(scoreClustered.pcsIntegration!).toBeGreaterThan(scoreWall.pcsIntegration!);
+  });
+
+  it("should favor a wide layout on a wide terrain (terrainFit)", () => {
+    // Wide terrain: 200m wide x 40m deep.
+    const wideTerrain: LocalPoint[] = [
+      { x_m: -100, y_m: -20 },
+      { x_m: 100, y_m: -20 },
+      { x_m: 100, y_m: 20 },
+      { x_m: -100, y_m: 20 },
+    ];
+    const BESS = "sungrow-st2752ux-us";
+    const at = (x_m: number, y_m: number) => ({
+      id: `b-${x_m}-${y_m}`,
+      equipmentSpecId: BESS,
+      anchor: toLngLat({ x_m, y_m }, anchor),
+      rotation_deg: 0,
+      blockId: "block-0",
+      groupId: "block-0",
+      sourceReliability: "preliminary_assumption" as const,
+    });
+
+    // Wide layout (spread along x)
+    const wideLayout: SmartSiteFitCandidate = {
+      ...emptyCandidate,
+      id: "wide",
+      shape: {
+        id: "wide_grid",
+        kind: "wide_grid",
+        label: "Matriz Ancha",
+        description: "wide",
+        rows: 1,
+        columns: 6,
+        blocks: 1,
+        pcsPlacement: "side",
+      },
+      placedEquipment: [at(-60, 0), at(-36, 0), at(-12, 0), at(12, 0), at(36, 0), at(60, 0)],
+    };
+
+    // Deep layout (spread along y)
+    const deepLayout: SmartSiteFitCandidate = {
+      ...emptyCandidate,
+      id: "deep",
+      shape: {
+        id: "deep_grid",
+        kind: "deep_grid",
+        label: "Matriz Profunda",
+        description: "deep",
+        rows: 6,
+        columns: 1,
+        blocks: 1,
+        pcsPlacement: "side",
+      },
+      placedEquipment: [at(0, -10), at(0, -6), at(0, -2), at(0, 2), at(0, 6), at(0, 10)],
+    };
+
+    const scoreWide = scoreCandidate(wideLayout, wideTerrain, anchor, 4);
+    const scoreDeep = scoreCandidate(deepLayout, wideTerrain, anchor, 4);
+
+    expect(scoreWide.terrainFit).toBeDefined();
+    expect(scoreWide.terrainFit!).toBeGreaterThan(scoreDeep.terrainFit!);
   });
 });
 

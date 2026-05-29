@@ -69,7 +69,12 @@ export interface SmartSiteFitScore {
   rowRegularity: number;
   corridorEfficiency: number;
   ratioCompliance: number;
-  shapeCompactness?: number; // Criterio nuevo de compacidad de la forma
+  shapeCompactness?: number; // Compacidad de la forma del bloque
+  siteUtilizationPct?: number; // Ocupación del terreno en % (huella equipo / área polígono)
+  terrainFit?: number; // Coincidencia forma vs. relación ancho/largo del terreno
+  pcsIntegration?: number; // Cercanía de cada PCS/MV a su clúster BESS
+  capacityIntent?: number; // Ocupación acorde a la estrategia (max/balanced/conservative)
+  layoutAesthetics?: number; // Orden geométrico, centrado y simetría razonable
 }
 
 export interface SmartSiteFitWarning {

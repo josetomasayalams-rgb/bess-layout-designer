@@ -238,60 +238,186 @@ export function scoreCandidate(
     ratioComplianceScore = 10;
   }
 
+  // --- Shared layout geometry (used by shapeCompactness, terrainFit, layoutAesthetics) ---
+  let layoutMinX = Infinity, layoutMaxX = -Infinity;
+  let layoutMinY = Infinity, layoutMaxY = -Infinity;
+  let avgX = 0, avgY = 0;
+  for (const { rect } of rectsWithSpec) {
+    const { center } = rect;
+    if (center.x_m < layoutMinX) layoutMinX = center.x_m;
+    if (center.x_m > layoutMaxX) layoutMaxX = center.x_m;
+    if (center.y_m < layoutMinY) layoutMinY = center.y_m;
+    if (center.y_m > layoutMaxY) layoutMaxY = center.y_m;
+    avgX += center.x_m;
+    avgY += center.y_m;
+  }
+  avgX /= rectsWithSpec.length;
+  avgY /= rectsWithSpec.length;
+
+  const layoutW = layoutMaxX - layoutMinX + 9.34;
+  const layoutH = layoutMaxY - layoutMinY + 2.438;
+  const aspectRatio = Math.max(layoutW, layoutH) / Math.max(0.1, Math.min(layoutW, layoutH));
+  const layoutAspect = layoutW / Math.max(0.1, layoutH); // >1 wide, <1 deep
+
+  // Polygon centroid + bounding box
+  let polyMinX = Infinity, polyMaxX = -Infinity;
+  let polyMinY = Infinity, polyMaxY = -Infinity;
+  let polyCentroid = { x_m: 0, y_m: 0 };
+  if (polygon.length > 0) {
+    let sumX = 0, sumY = 0;
+    for (const p of polygon) {
+      sumX += p.x_m;
+      sumY += p.y_m;
+      if (p.x_m < polyMinX) polyMinX = p.x_m;
+      if (p.x_m > polyMaxX) polyMaxX = p.x_m;
+      if (p.y_m < polyMinY) polyMinY = p.y_m;
+      if (p.y_m > polyMaxY) polyMaxY = p.y_m;
+    }
+    polyCentroid = { x_m: sumX / polygon.length, y_m: sumY / polygon.length };
+  }
+  const terrainW = Math.max(0.1, polyMaxX - polyMinX);
+  const terrainH = Math.max(0.1, polyMaxY - polyMinY);
+  const terrainAspect = terrainW / terrainH; // >1 wide, <1 deep
+  const distToCentroid = Math.sqrt((avgX - polyCentroid.x_m) ** 2 + (avgY - polyCentroid.y_m) ** 2);
+
   // --- shapeCompactness (10 pts) ---
   let shapeCompactnessScore = 10;
   if (placed.length > 1) {
-    let minX = Infinity, maxX = -Infinity;
-    let minY = Infinity, maxY = -Infinity;
-    for (const { rect } of rectsWithSpec) {
-      const { center } = rect;
-      if (center.x_m < minX) minX = center.x_m;
-      if (center.x_m > maxX) maxX = center.x_m;
-      if (center.y_m < minY) minY = center.y_m;
-      if (center.y_m > maxY) maxY = center.y_m;
-    }
-    const dx = maxX - minX + 9.34;
-    const dy = maxY - minY + 2.438;
-    const aspectRatio = Math.max(dx, dy) / Math.max(0.1, Math.min(dx, dy));
-
-    // Penalize extreme aspect ratio (elongated row)
     let aspectPenalty = 0;
     if (aspectRatio > 3.0) {
       aspectPenalty = Math.min(8.0, ((aspectRatio - 3.0) / 5.0) * 8.0);
     }
 
-    // Penalize single row layout when there are many containers
     let rowPenalty = 0;
     const isSingleRow = candidate.shape?.kind === "single_row";
     if (isSingleRow && bessCount >= 8) {
       rowPenalty = 2.0;
     }
 
-    // Proximity to centroid
-    let avgX = 0, avgY = 0;
-    for (const { rect } of rectsWithSpec) {
-      avgX += rect.center.x_m;
-      avgY += rect.center.y_m;
-    }
-    avgX /= rectsWithSpec.length;
-    avgY /= rectsWithSpec.length;
-
-    let polyCentroid = { x_m: 0, y_m: 0 };
-    if (polygon.length > 0) {
-      let sumX = 0, sumY = 0;
-      for (const p of polygon) {
-        sumX += p.x_m;
-        sumY += p.y_m;
-      }
-      polyCentroid = { x_m: sumX / polygon.length, y_m: sumY / polygon.length };
-    }
-    const distToCentroid = Math.sqrt((avgX - polyCentroid.x_m) ** 2 + (avgY - polyCentroid.y_m) ** 2);
     let centroidPenalty = 0;
     if (distToCentroid >= 10.0) {
       centroidPenalty = Math.min(2.0, (distToCentroid - 10.0) / 20.0);
     }
 
     shapeCompactnessScore = Math.max(0, 10 - aspectPenalty - rowPenalty - centroidPenalty);
+  }
+
+  // --- terrainFit (10 pts): how well the layout orientation matches the terrain ---
+  // Premia coincidencia forma vs. relación ancho/largo del terreno.
+  const classify = (a: number): "wide" | "deep" | "square" =>
+    a > 1.3 ? "wide" : a < 0.77 ? "deep" : "square";
+  let terrainFitScore = 10;
+  if (placed.length > 1) {
+    const terrainClass = classify(terrainAspect);
+    const layoutClass = classify(layoutAspect);
+    if (terrainClass === layoutClass) {
+      terrainFitScore = 10;
+    } else if (terrainClass === "square" || layoutClass === "square") {
+      terrainFitScore = 6;
+    } else {
+      // wide layout on deep terrain (or vice-versa): worst alignment
+      terrainFitScore = 2;
+    }
+    // Shape-kind contradiction penalty
+    const kind = candidate.shape?.kind;
+    if (
+      (terrainClass === "wide" && kind === "deep_grid") ||
+      (terrainClass === "deep" && kind === "wide_grid")
+    ) {
+      terrainFitScore = Math.max(0, terrainFitScore - 2);
+    }
+    // Reward kinds that suit a square terrain
+    if (
+      terrainClass === "square" &&
+      (kind === "compact_grid" || kind === "two_row_block" || kind === "multi_block")
+    ) {
+      terrainFitScore = Math.min(10, terrainFitScore + 2);
+    }
+  }
+
+  // --- pcsIntegration (10 pts): PCS/MV proximity to its BESS cluster ---
+  // Penaliza PCS aislados o alineados como muralla externa.
+  let pcsIntegrationScore = 10;
+  const pcsRects = rectsWithSpec.filter((r) => r.spec?.type === "pcs_mv_station");
+  const bessRects = rectsWithSpec.filter((r) => r.spec?.type === "battery_container");
+  if (pcsRects.length > 0 && bessRects.length > 0) {
+    // Group BESS by block so each PCS only measures distance to its own cluster
+    // (O(pcs * bessPerBlock) instead of O(pcs * bess)).
+    const bessByBlock = new Map<string, typeof bessRects>();
+    for (const bess of bessRects) {
+      const key = bess.item.blockId ?? "__none__";
+      const list = bessByBlock.get(key);
+      if (list) list.push(bess);
+      else bessByBlock.set(key, [bess]);
+    }
+    let totalNearest = 0;
+    for (const pcs of pcsRects) {
+      const sameBlock =
+        pcs.item.blockId != null ? bessByBlock.get(pcs.item.blockId) : undefined;
+      const candidatesForPcs = sameBlock && sameBlock.length > 0 ? sameBlock : bessRects;
+      let nearest = Infinity;
+      for (const bess of candidatesForPcs) {
+        const dx = pcs.rect.center.x_m - bess.rect.center.x_m;
+        const dy = pcs.rect.center.y_m - bess.rect.center.y_m;
+        const d = dx * dx + dy * dy;
+        if (d < nearest) nearest = d;
+      }
+      totalNearest += Math.sqrt(nearest);
+    }
+    const avgNearest = totalNearest / pcsRects.length;
+    // Healthy cluster: PCS adjacent to its BESS (<= ~8m). Detached wall: large distance.
+    if (avgNearest <= 8) {
+      pcsIntegrationScore = 10;
+    } else if (avgNearest <= 20) {
+      pcsIntegrationScore = Math.max(4, 10 - ((avgNearest - 8) / 12) * 6);
+    } else {
+      pcsIntegrationScore = Math.max(0, 4 - ((avgNearest - 20) / 20) * 4);
+    }
+  }
+
+  // --- capacityIntent (10 pts): occupation aligned with the strategy ---
+  let capacityIntentScore = 10;
+  const occ = ratio; // occupied footprint / polygon area
+  if (placed.length > 1) {
+    if (candidate.strategy === "max_capacity") {
+      capacityIntentScore = occ >= 0.3 ? 10 : Math.max(0, (occ / 0.3) * 10);
+    } else if (candidate.strategy === "conservative") {
+      if (occ <= 0.2) {
+        capacityIntentScore = occ >= 0.08 ? 10 : (occ / 0.08) * 10;
+      } else {
+        capacityIntentScore = Math.max(0, 10 - ((occ - 0.2) / 0.25) * 10);
+      }
+    } else {
+      // balanced: reward mid occupation band
+      if (occ >= 0.18 && occ <= 0.32) {
+        capacityIntentScore = 10;
+      } else if (occ < 0.18) {
+        capacityIntentScore = (occ / 0.18) * 10;
+      } else {
+        capacityIntentScore = Math.max(0, 10 - ((occ - 0.32) / 0.3) * 10);
+      }
+    }
+  }
+
+  // --- layoutAesthetics (10 pts): order, centering, no extreme elongation ---
+  let layoutAestheticsScore = 10;
+  if (placed.length > 1) {
+    let elongationPenalty = 0;
+    if (aspectRatio > 2.5) {
+      elongationPenalty = Math.min(5, ((aspectRatio - 2.5) / 5) * 5);
+    }
+    let centeringPenalty = 0;
+    if (distToCentroid >= 8) {
+      centeringPenalty = Math.min(3, (distToCentroid - 8) / 15);
+    }
+    let bigRowPenalty = 0;
+    if (candidate.shape?.kind === "single_row" && bessCount >= 12) {
+      bigRowPenalty = 2;
+    }
+    layoutAestheticsScore = Math.max(
+      0,
+      10 - elongationPenalty - centeringPenalty - bigRowPenalty
+    );
   }
 
   const sum =
@@ -302,10 +428,14 @@ export function scoreCandidate(
     rowRegularityScore +
     corridorEfficiencyScore +
     ratioComplianceScore +
-    shapeCompactnessScore;
+    shapeCompactnessScore +
+    terrainFitScore +
+    pcsIntegrationScore +
+    capacityIntentScore +
+    layoutAestheticsScore;
 
-  // Scale back to 100 max
-  const total = (sum / 110) * 100;
+  // Scale back to 100 max (max possible raw = 150)
+  const total = (sum / 150) * 100;
 
   return {
     total: parseFloat(total.toFixed(2)),
@@ -317,6 +447,11 @@ export function scoreCandidate(
     corridorEfficiency: parseFloat(corridorEfficiencyScore.toFixed(2)),
     ratioCompliance: parseFloat(ratioComplianceScore.toFixed(2)),
     shapeCompactness: parseFloat(shapeCompactnessScore.toFixed(2)),
+    siteUtilizationPct: parseFloat((ratio * 100).toFixed(1)),
+    terrainFit: parseFloat(terrainFitScore.toFixed(2)),
+    pcsIntegration: parseFloat(pcsIntegrationScore.toFixed(2)),
+    capacityIntent: parseFloat(capacityIntentScore.toFixed(2)),
+    layoutAesthetics: parseFloat(layoutAestheticsScore.toFixed(2)),
   };
 }
 

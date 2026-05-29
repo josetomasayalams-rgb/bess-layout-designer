@@ -29,6 +29,10 @@ export function strategyLabel(strategy: SmartSiteFitStrategy, locale: "es" | "en
 
 export function explainScore(score: SmartSiteFitScore, locale: "es" | "en"): string {
   const shapeCompactnessVal = score.shapeCompactness ?? 10.0;
+  const terrainFitVal = score.terrainFit ?? 10.0;
+  const pcsIntegrationVal = score.pcsIntegration ?? 10.0;
+  const capacityIntentVal = score.capacityIntent ?? 10.0;
+  const layoutAestheticsVal = score.layoutAesthetics ?? 10.0;
   if (locale === "es") {
     return [
       `Evaluación de distribución (Total: ${score.total}/100):`,
@@ -40,6 +44,10 @@ export function explainScore(score: SmartSiteFitScore, locale: "es" | "en"): str
       `- Eficiencia en distanciamiento de pasillos: ${score.corridorEfficiency}/10`,
       `- Proporción BESS / PCS según diseño: ${score.ratioCompliance}/10`,
       `- Compacidad de la forma del bloque: ${shapeCompactnessVal}/10`,
+      `- Coincidencia forma vs. terreno: ${terrainFitVal}/10`,
+      `- Integración de PCS con su clúster BESS: ${pcsIntegrationVal}/10`,
+      `- Ocupación acorde a la estrategia: ${capacityIntentVal}/10`,
+      `- Orden geométrico y centrado: ${layoutAestheticsVal}/10`,
     ].join("\n");
   } else {
     return [
@@ -52,6 +60,10 @@ export function explainScore(score: SmartSiteFitScore, locale: "es" | "en"): str
       `- Corridor spacing efficiency: ${score.corridorEfficiency}/10`,
       `- BESS / PCS spec ratio compliance: ${score.ratioCompliance}/10`,
       `- Block shape compactness: ${shapeCompactnessVal}/10`,
+      `- Shape vs. terrain match: ${terrainFitVal}/10`,
+      `- PCS integration with its BESS cluster: ${pcsIntegrationVal}/10`,
+      `- Occupancy aligned with strategy: ${capacityIntentVal}/10`,
+      `- Geometric order and centering: ${layoutAestheticsVal}/10`,
     ].join("\n");
   }
 }
@@ -70,24 +82,66 @@ export function explainAlternative(candidate: SmartSiteFitCandidate, locale: "es
 
   const stratLabel = strategyLabel(candidate.strategy, locale);
   const shapeInfo = candidate.shape;
+  const terrainFit = candidate.score.terrainFit;
+  const compactness = candidate.score.shapeCompactness ?? 10;
+  const aesthetics = candidate.score.layoutAesthetics ?? 10;
+  const isElongated = compactness < 6 || aesthetics < 6;
 
   if (locale === "es") {
     const shapeDesc = shapeInfo
       ? ` Forma del bloque: ${shapeInfo.label} (${shapeInfo.description.toLowerCase()})`
       : "";
+    const intent =
+      candidate.strategy === "max_capacity"
+        ? "Prioriza una mayor cabida preliminar respetando las separaciones geométricas."
+        : candidate.strategy === "conservative"
+        ? "Mantiene mayor holgura, más margen perimetral y menor ocupación del terreno."
+        : "Busca una ocupación media-alta con una forma ordenada y legible.";
+    const terrainSentence =
+      terrainFit == null
+        ? ""
+        : terrainFit >= 8
+        ? " La forma se ajusta bien a la relación ancho/largo del terreno."
+        : terrainFit >= 5
+        ? " La forma se ajusta de manera aceptable a la geometría del terreno."
+        : " La forma podría no aprovechar del todo la geometría del terreno.";
+    const elongationWarning = isElongated
+      ? " Advertencia: la distribución resulta algo alargada; conviene revisar si el terreno admite una forma más compacta."
+      : "";
     return [
       `Configuración sugerida bajo la estrategia "${stratLabel}".${shapeDesc}`,
-      `Contiene un total de ${bessCount} contenedores de batería BESS y ${pcsCount} estaciones de conversión de potencia PCS.`,
-      `La puntuación técnica obtenida es de ${candidate.score.total} puntos basándose en criterios de separación perimetral, distanciamientos normativos de pasillos y utilización eficiente de la superficie disponible.`,
+      `Contiene un total de ${bessCount} contenedores de batería BESS y ${pcsCount} estaciones de conversión de potencia PCS, con cada PCS/MV asociado a su grupo de BESS.`,
+      `${intent}${terrainSentence}${elongationWarning}`,
+      `La puntuación técnica obtenida es de ${candidate.score.total} puntos según criterios de separación perimetral, distanciamientos de pasillos, integración PCS/MV y aprovechamiento de la superficie disponible.`,
+      `Resultado de predimensionamiento preliminar, sujeto a validación con el fabricante o EPC.`,
     ].join(" ");
   } else {
     const shapeDesc = shapeInfo
       ? ` Block shape: ${shapeInfo.label} (${shapeInfo.description.toLowerCase()})`
       : "";
+    const intent =
+      candidate.strategy === "max_capacity"
+        ? "Prioritizes higher preliminary capacity while respecting geometric separations."
+        : candidate.strategy === "conservative"
+        ? "Keeps more clearance, larger perimeter margin and lower terrain occupancy."
+        : "Aims for medium-high occupancy with an ordered, legible shape.";
+    const terrainSentence =
+      terrainFit == null
+        ? ""
+        : terrainFit >= 8
+        ? " The shape aligns well with the terrain width/length ratio."
+        : terrainFit >= 5
+        ? " The shape fits the terrain geometry reasonably."
+        : " The shape may not fully take advantage of the terrain geometry.";
+    const elongationWarning = isElongated
+      ? " Warning: the layout is somewhat elongated; consider whether the terrain allows a more compact shape."
+      : "";
     return [
       `Suggested configuration under the "${stratLabel}" strategy.${shapeDesc}`,
-      `Includes a total of ${bessCount} BESS battery containers and ${pcsCount} PCS power conversion stations.`,
-      `The layout achieves a technical score of ${candidate.score.total} points based on setback margins, regulatory corridor spacing, and efficient surface utilization.`,
+      `Includes a total of ${bessCount} BESS battery containers and ${pcsCount} PCS power conversion stations, with each PCS/MV tied to its BESS group.`,
+      `${intent}${terrainSentence}${elongationWarning}`,
+      `The layout achieves a technical score of ${candidate.score.total} points based on setback margins, corridor spacing, PCS/MV integration, and surface utilization.`,
+      `Preliminary pre-dimensioning result, subject to validation with the manufacturer or EPC.`,
     ].join(" ");
   }
 }
