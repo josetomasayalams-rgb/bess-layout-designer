@@ -59,8 +59,8 @@ export const equipment3DVisualProfiles: Record<
   },
   tesla_megapack_v1: {
     // Tesla Megapack 2 XL — integrated AC block: a tall, monolithic silver
-    // enclosure with subtle vertical panel divisions, dark thermal vents and
-    // the Tesla wordmark. No separate-door look (smooth front).
+    // enclosure with subtle vertical panel divisions and dark thermal vents.
+    // No brand wordmark is rendered: only the 3D structure is shown.
     id: "tesla_megapack_v1",
     displayName: "Tesla Megapack 2 XL",
     baseColor: "#c8ccd2",
@@ -70,7 +70,6 @@ export const equipment3DVisualProfiles: Record<
     ventColor: "#3f4654",
     accentColor: "#e11d2e",
     logoColor: "#1c2128",
-    logoText: "TESLA",
     showPanels: true,
     showVents: true,
     showDoors: false,

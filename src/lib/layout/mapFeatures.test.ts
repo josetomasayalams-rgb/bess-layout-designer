@@ -126,9 +126,8 @@ describe("equipment 3D map features", () => {
         (feature) => feature.properties?.detailType === "pcs-transformer-block"
       )
     ).toBe(false);
-    // Tesla profile carries a wordmark, so a brand label is rendered.
-    expect(labels.features).toHaveLength(1);
-    expect(labels.features[0].properties?.label).toBe("TESLA");
+    // Only the 3D structure is shown — no brand wordmark label.
+    expect(labels.features).toHaveLength(0);
   });
 });
 
