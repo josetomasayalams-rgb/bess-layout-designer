@@ -249,7 +249,8 @@ export function equipment3DDetailFeatures(
       !spec ||
       !profile ||
       (visualProfileId !== "sungrow_container_v1" &&
-        visualProfileId !== "sungrow_pcs_v1") ||
+        visualProfileId !== "sungrow_pcs_v1" &&
+        visualProfileId !== "tesla_megapack_v1") ||
       !is3DCapable(spec) ||
       !spec.footprint.height_m
     ) {
@@ -466,7 +467,8 @@ export function equipment3DLabelFeatures(
       !spec ||
       !profile?.logoText ||
       (visualProfileId !== "sungrow_container_v1" &&
-        visualProfileId !== "sungrow_pcs_v1") ||
+        visualProfileId !== "sungrow_pcs_v1" &&
+        visualProfileId !== "tesla_megapack_v1") ||
       !is3DCapable(spec)
     ) {
       continue;

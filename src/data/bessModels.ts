@@ -382,12 +382,19 @@ function reliabilityFor(model: BessModel): SourceReliability {
   return "pending_validation";
 }
 
-export const bessModelEquipmentSpecs: EquipmentSpec[] = bessModels.map((model) => ({
+export const bessModelEquipmentSpecs: EquipmentSpec[] = bessModels.map((model) => {
+  // Tesla Megapack ships with datasheet dimensions and a dedicated 3D profile,
+  // so it opts into the isometric visualization (other library models stay 2D
+  // until they declare their own 3D data).
+  const isTesla = /tesla/i.test(model.manufacturer);
+  return {
   id: bessEquipmentSpecId(model.id),
   type: "battery_container",
   manufacturer: model.manufacturer,
   model: model.product,
   label: `${model.manufacturer} ${model.product}`,
+  has3DModel: isTesla ? true : undefined,
+  visualProfile: isTesla ? ("tesla_megapack_v1" as const) : undefined,
   footprint: {
     length_m: model.lengthM,
     width_m: model.widthM,
@@ -407,4 +414,5 @@ export const bessModelEquipmentSpecs: EquipmentSpec[] = bessModels.map((model) =
     title: model.source,
     notes: `${model.notes} ${model.warnings.join(" ")}`,
   },
-}));
+  };
+});

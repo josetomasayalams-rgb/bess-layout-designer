@@ -94,6 +94,42 @@ describe("equipment 3D map features", () => {
     expect(details.features.length).toBeGreaterThan(8);
     expect(labels.features).toHaveLength(0);
   });
+
+  it("applies the Tesla Megapack 3D profile to integrated units", () => {
+    const teslaPlaced: PlacedEquipment[] = [
+      {
+        id: "tesla-1",
+        equipmentSpecId: "bess-tesla-megapack-2xl-4h",
+        anchor: { lng: -70, lat: -33 },
+        rotation_deg: 0,
+        sourceReliability: "preliminary_assumption",
+      },
+    ];
+
+    const features = equipmentToFeatures(teslaPlaced, anchor, null);
+    const details = equipment3DDetailFeatures(teslaPlaced, anchor);
+    const labels = equipment3DLabelFeatures(teslaPlaced, anchor);
+
+    // Integrated Tesla unit opts into the isometric view with its own profile.
+    expect(features.features[0].properties?.has3D).toBe(true);
+    expect(features.features[0].properties?.visualProfile).toBe(
+      "tesla_megapack_v1"
+    );
+    // Procedural container details are generated (panel seams, brand plate…).
+    expect(details.features.length).toBeGreaterThan(0);
+    expect(
+      details.features.every((feature) => feature.properties?.equipmentId === "tesla-1")
+    ).toBe(true);
+    // No Sungrow PCS-specific geometry on an integrated block.
+    expect(
+      details.features.some(
+        (feature) => feature.properties?.detailType === "pcs-transformer-block"
+      )
+    ).toBe(false);
+    // Tesla profile carries a wordmark, so a brand label is rendered.
+    expect(labels.features).toHaveLength(1);
+    expect(labels.features[0].properties?.label).toBe("TESLA");
+  });
 });
 
 describe("polygonToLineFeature", () => {

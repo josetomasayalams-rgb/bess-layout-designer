@@ -1,6 +1,7 @@
 export type Equipment3DVisualProfileId =
   | "sungrow_container_v1"
-  | "sungrow_pcs_v1";
+  | "sungrow_pcs_v1"
+  | "tesla_megapack_v1";
 
 export type Equipment3DVisualProfile = {
   id: Equipment3DVisualProfileId;
@@ -56,6 +57,24 @@ export const equipment3DVisualProfiles: Record<
     showVents: false,
     showDoors: false,
   },
+  tesla_megapack_v1: {
+    // Tesla Megapack 2 XL — integrated AC block: a tall, monolithic silver
+    // enclosure with subtle vertical panel divisions, dark thermal vents and
+    // the Tesla wordmark. No separate-door look (smooth front).
+    id: "tesla_megapack_v1",
+    displayName: "Tesla Megapack 2 XL",
+    baseColor: "#c8ccd2",
+    roofColor: "#e2e6ea",
+    detailColor: "#9aa1ab",
+    doorColor: "#b4bac2",
+    ventColor: "#3f4654",
+    accentColor: "#e11d2e",
+    logoColor: "#1c2128",
+    logoText: "TESLA",
+    showPanels: true,
+    showVents: true,
+    showDoors: false,
+  },
 };
 
 export function getEquipment3DVisualProfile(id?: string | null) {
@@ -70,7 +89,14 @@ export function resolveEquipment3DVisualProfileId(
   if (getEquipment3DVisualProfile(spec.visualProfile)) {
     return spec.visualProfile as Equipment3DVisualProfileId;
   }
-  if (!/sungrow/i.test(spec.manufacturer ?? "")) return null;
+  const manufacturer = spec.manufacturer ?? "";
+  if (/tesla/i.test(manufacturer)) {
+    // Tesla Megapack is a fully integrated AC block modeled as a single
+    // battery_container; there is no separate PCS profile.
+    if (spec.type === "battery_container") return "tesla_megapack_v1";
+    return null;
+  }
+  if (!/sungrow/i.test(manufacturer)) return null;
   if (spec.type === "battery_container") return "sungrow_container_v1";
   if (spec.type === "pcs_mv_station") return "sungrow_pcs_v1";
   return null;
