@@ -238,7 +238,10 @@ export function scoreCandidate(
     } else {
       ratioComplianceScore = Math.max(0, 10 - Math.abs(actualRatio - targetRatio) * 2);
     }
-  } else if (bessCount === 0 && pcsCount === 0) {
+  } else if (pcsCount === 0) {
+    // No separate PCS: either an empty layout or an integrated architecture
+    // (e.g. Tesla Megapack), where each unit carries its own inverter and there
+    // is no BESS/PCS ratio to satisfy. Treat ratio compliance as neutral/full.
     ratioComplianceScore = 10;
   }
 

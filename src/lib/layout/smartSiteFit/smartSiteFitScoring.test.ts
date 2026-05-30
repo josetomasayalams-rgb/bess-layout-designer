@@ -60,8 +60,10 @@ describe("SmartSiteFit Scoring", () => {
     expect(score.insidePolygon).toBe(25);
     expect(score.noCollisions).toBe(25);
     expect(score.boundaryMargin).toBe(10);
-    // But ratio is 0 because there's no PCS station (ratio compliance score should be 0)
-    expect(score.ratioCompliance).toBe(0);
+    // No separate PCS station: ratio compliance is neutral/full, because a
+    // layout without a PCS is either empty or an integrated architecture
+    // (e.g. Tesla Megapack) where no BESS/PCS ratio applies.
+    expect(score.ratioCompliance).toBe(10);
   });
 
   it("should rank candidates correctly by score total", () => {

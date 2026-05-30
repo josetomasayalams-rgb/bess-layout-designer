@@ -8,8 +8,10 @@ import type {
   SmartSiteFitWarning,
   SmartSiteFitAssumption,
   SmartSiteFitOverrides,
+  SmartSiteFitPreset,
 } from "./smartSiteFitTypes";
-import { getContainersPerPcsForDuration } from "./smartSiteFitPresets";
+import { getContainersPerPcsForDuration, isIntegratedPreset } from "./smartSiteFitPresets";
+import { generateIntegratedCandidates } from "./smartSiteFitIntegratedCandidates";
 import { toLngLat } from "@/lib/geometry/projection";
 import { analyzePolygon } from "./smartSiteFitGeometry";
 import {
@@ -72,9 +74,28 @@ export function generateCandidates(
   targetMWh?: number,
   maxCandidates: number = 100,
   budget: SmartSiteFitPerformanceBudget = DEFAULT_PERFORMANCE_BUDGET,
-  deadlineAt?: number
+  deadlineAt?: number,
+  preset?: SmartSiteFitPreset
 ): SmartSiteFitCandidate[] {
   if (polygon.length < 3) return [];
+
+  // Integrated-architecture presets (e.g. Tesla Megapack) have no separate PCS
+  // and no BESS/PCS ratio, so they use a self-contained unit-grid generator
+  // instead of the Sungrow block/ratio path below.
+  if (preset && isIntegratedPreset(preset)) {
+    return generateIntegratedCandidates(
+      polygon,
+      anchor,
+      durationHours,
+      strategy,
+      preset,
+      overrides,
+      targetMW,
+      targetMWh,
+      maxCandidates,
+      deadlineAt
+    );
+  }
 
   const analysis = analyzePolygon(polygon);
   const centroid = analysis.centroid;

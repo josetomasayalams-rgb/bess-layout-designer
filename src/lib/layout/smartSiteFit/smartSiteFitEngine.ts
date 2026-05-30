@@ -9,6 +9,8 @@ import { rankSmartSiteFitCandidates } from "./smartSiteFitScoring";
 import { toLocal } from "@/lib/geometry/projection";
 import { validatePolygonForSmartSiteFit } from "./smartSiteFitGeometry";
 import { DEFAULT_PERFORMANCE_BUDGET } from "./smartSiteFitPerformance";
+import { getSmartSiteFitPresetById } from "./smartSiteFitPresets";
+import type { SmartSiteFitPreset } from "./smartSiteFitTypes";
 
 export function runSmartSiteFit(input: SmartSiteFitInput): SmartSiteFitResult {
   // A duration micro-adjustment override (set when recalculating a selected
@@ -65,10 +67,14 @@ export function runSmartSiteFit(input: SmartSiteFitInput): SmartSiteFitResult {
     };
   }
 
+  // Resolve the selected BESS-system preset (Sungrow by default) so the engine
+  // can branch between separate-PCS and integrated architectures.
+  const preset = getSmartSiteFitPresetById(input.presetId);
+
   if (input.mode === "target") {
-    return runTargetSizing(input, localPolygon, anchor, durationHours, strategy);
+    return runTargetSizing(input, localPolygon, anchor, durationHours, strategy, preset);
   } else {
-    return runTerrainSizing(input, localPolygon, anchor, durationHours, strategy);
+    return runTerrainSizing(input, localPolygon, anchor, durationHours, strategy, preset);
   }
 }
 
@@ -77,7 +83,8 @@ export function runTargetSizing(
   localPolygon: LocalPoint[],
   anchor: ProjectAnchor,
   durationHours: number,
-  strategy: "max_capacity" | "balanced" | "conservative"
+  strategy: "max_capacity" | "balanced" | "conservative",
+  preset?: SmartSiteFitPreset
 ): SmartSiteFitResult {
   const targetMW = input.targetMW ?? 10;
   const targetMWh = input.targetMWh ?? (targetMW * durationHours);
@@ -97,7 +104,8 @@ export function runTargetSizing(
     targetMWh,
     100,
     DEFAULT_PERFORMANCE_BUDGET,
-    deadlineAt
+    deadlineAt,
+    preset
   );
 
   if (candidates.length === 0) {
@@ -140,7 +148,8 @@ export function runTerrainSizing(
   localPolygon: LocalPoint[],
   anchor: ProjectAnchor,
   durationHours: number,
-  strategy: "max_capacity" | "balanced" | "conservative"
+  strategy: "max_capacity" | "balanced" | "conservative",
+  preset?: SmartSiteFitPreset
 ): SmartSiteFitResult {
   // Terrain mode derives capacity from the polygon. We explore all three
   // strategies so the user gets genuinely distinct conservative / balanced /
@@ -168,7 +177,8 @@ export function runTerrainSizing(
       undefined,
       perStrategyBudget,
       DEFAULT_PERFORMANCE_BUDGET,
-      deadlineAt
+      deadlineAt,
+      preset
     );
     if (candidates.length === 0) continue;
     const ranked = rankSmartSiteFitCandidates(candidates, localPolygon, anchor, durationHours);
@@ -197,14 +207,18 @@ export function runTerrainSizing(
   // may still collapse to the same size; we de-duplicate those genuinely
   // identical layouts, keeping the higher-scoring representative, and then
   // explain to the user when fewer than three distinct alternatives are viable.
+  // Architecture-agnostic size signature: a multiset of equipmentSpecId counts.
+  // Works for Sungrow (BESS + PCS ids) and integrated presets (a single unit id)
+  // without hardcoding any catalog id.
   const sizeKey = (c: SmartSiteFitCandidate) => {
-    const bessCount = c.placedEquipment.filter(
-      (e) => e.equipmentSpecId === "sungrow-st2752ux-us"
-    ).length;
-    const pcsCount = c.placedEquipment.filter(
-      (e) => e.equipmentSpecId === "sungrow-sc5000ud-mv-us-p3"
-    ).length;
-    return `${bessCount}-${pcsCount}`;
+    const counts = new Map<string, number>();
+    for (const e of c.placedEquipment) {
+      counts.set(e.equipmentSpecId, (counts.get(e.equipmentSpecId) ?? 0) + 1);
+    }
+    return Array.from(counts.entries())
+      .sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))
+      .map(([id, n]) => `${id}:${n}`)
+      .join("|");
   };
 
   const bySize = new Map<string, SmartSiteFitCandidate>();
