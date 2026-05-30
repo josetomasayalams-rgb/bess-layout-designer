@@ -2,6 +2,7 @@ import React from "react";
 import type { SmartSiteFitCandidate } from "@/lib/layout/smartSiteFit/smartSiteFitTypes";
 import { strategyLabel, explainAlternative } from "@/lib/layout/smartSiteFit/smartSiteFitExplain";
 import { DEFAULT_PERFORMANCE_BUDGET } from "@/lib/layout/smartSiteFit/smartSiteFitPerformance";
+import { summarizePlacedEquipment } from "@/lib/layout/smartSiteFit/smartSiteFitSizing";
 import { AlertTriangle, Info, Check, Layers } from "lucide-react";
 
 interface AlternativeCardProps {
@@ -21,15 +22,15 @@ export function AlternativeCard({
 }: AlternativeCardProps) {
   const isEs = locale === "es";
 
-  const bessCount = candidate.placedEquipment.filter(
-    (e) => e.equipmentSpecId === "sungrow-st2752ux-us"
-  ).length;
-  const pcsCount = candidate.placedEquipment.filter(
-    (e) => e.equipmentSpecId === "sungrow-sc5000ud-mv-us-p3"
-  ).length;
+  // Architecture-agnostic: correct for Sungrow (separate BESS + PCS) and for
+  // integrated presets (units carry their own inverter, pcsCount === 0).
+  const summary = summarizePlacedEquipment(candidate.placedEquipment);
+  const bessCount = summary.bessCount;
+  const pcsCount = summary.pcsCount;
+  const isIntegrated = pcsCount === 0 && bessCount > 0;
 
-  const totalMW = pcsCount * 5;
-  const totalMWh = parseFloat((bessCount * 2.752).toFixed(2));
+  const totalMW = parseFloat(summary.powerMW.toFixed(1));
+  const totalMWh = parseFloat(summary.energyMWh.toFixed(2));
   const duration = totalMW > 0 ? parseFloat((totalMWh / totalMW).toFixed(1)) : 0;
   const ratio = pcsCount > 0 ? parseFloat((bessCount / pcsCount).toFixed(1)) : 0;
 
@@ -75,16 +76,26 @@ export function AlternativeCard({
 
       <div className="mt-2 grid grid-cols-3 gap-2 border-y border-slate-800/60 py-2 text-[11px]">
         <div>
-          <span className="block text-[10px] text-slate-500">BESS</span>
+          <span className="block text-[10px] text-slate-500">
+            {isIntegrated ? (isEs ? "Unidades" : "Units") : "BESS"}
+          </span>
           <span className="font-mono font-bold text-slate-350">{bessCount} u.</span>
         </div>
         <div>
-          <span className="block text-[10px] text-slate-500">PCS/MV</span>
-          <span className="font-mono font-bold text-slate-350">{pcsCount} u.</span>
+          <span className="block text-[10px] text-slate-500">
+            {isIntegrated ? (isEs ? "PCS" : "PCS") : "PCS/MV"}
+          </span>
+          <span className="font-mono font-bold text-slate-350">
+            {isIntegrated ? (isEs ? "Integrado" : "Integrated") : `${pcsCount} u.`}
+          </span>
         </div>
         <div>
-          <span className="block text-[10px] text-slate-500">Ratio</span>
-          <span className="font-mono font-bold text-slate-350">{ratio}:1</span>
+          <span className="block text-[10px] text-slate-500">
+            {isIntegrated ? (isEs ? "Arquitectura" : "Architecture") : "Ratio"}
+          </span>
+          <span className="font-mono font-bold text-slate-350">
+            {isIntegrated ? (isEs ? "Integrada" : "Integrated") : `${ratio}:1`}
+          </span>
         </div>
         <div>
           <span className="block text-[10px] text-slate-500">

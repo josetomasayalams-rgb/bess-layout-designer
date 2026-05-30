@@ -81,8 +81,6 @@ export function generateIntegratedCandidates(
   const analysis = analyzePolygon(polygon);
   const centroid = analysis.centroid;
   const dominantAngle = analysis.orientationDeg;
-  const terrainW_m = Math.max(0.1, analysis.bounds.maxX - analysis.bounds.minX);
-  const terrainH_m = Math.max(0.1, analysis.bounds.maxY - analysis.bounds.minY);
 
   // Strategy-based unit-to-unit spacing (overridable).
   let spacing = 3.0;

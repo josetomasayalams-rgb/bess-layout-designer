@@ -1,6 +1,12 @@
 import React from "react";
-import type { SmartSiteFitOverrides } from "@/lib/layout/smartSiteFit/smartSiteFitTypes";
-import { getContainersPerPcsForDuration } from "@/lib/layout/smartSiteFit/smartSiteFitPresets";
+import type {
+  SmartSiteFitOverrides,
+  SmartSiteFitPreset,
+} from "@/lib/layout/smartSiteFit/smartSiteFitTypes";
+import {
+  getContainersPerPcsForDuration,
+  isIntegratedPreset,
+} from "@/lib/layout/smartSiteFit/smartSiteFitPresets";
 import {
   deriveEquipmentCountsFromPowerEnergy,
   estimatePowerEnergyFromCounts,
@@ -20,9 +26,11 @@ interface MicroAdjustPanelProps {
   currentBessCount?: number;
   currentPcsCount?: number;
   currentDurationHours?: number;
+  /** Selected BESS-system preset; drives integrated vs. separate-PCS behavior. */
+  preset?: SmartSiteFitPreset;
 }
 
-const DURATION_OPTIONS = [2, 4, 8, 16] as const;
+const DEFAULT_DURATION_OPTIONS = [2, 4, 8, 16];
 
 export function MicroAdjustPanel({
   overrides,
@@ -35,8 +43,14 @@ export function MicroAdjustPanel({
   currentBessCount,
   currentPcsCount,
   currentDurationHours,
+  preset,
 }: MicroAdjustPanelProps) {
   const isEs = locale === "es";
+  const integrated = preset ? isIntegratedPreset(preset) : false;
+  const durationOptions =
+    integrated && preset?.supportedDurations
+      ? preset.supportedDurations
+      : DEFAULT_DURATION_OPTIONS;
 
   // Spacing defaults if not overridden
   const bessToBess = overrides.bessToBess_m ?? 3.0;
@@ -55,6 +69,8 @@ export function MicroAdjustPanel({
   const seeded = estimatePowerEnergyFromCounts({
     bessCount: currentBessCount ?? 0,
     pcsCount: currentPcsCount ?? 0,
+    preset,
+    durationHours,
   });
   const targetPowerMW = overrides.targetPowerMW ?? round2(seeded.powerMW);
   const targetEnergyMWh = overrides.targetEnergyMWh ?? round2(seeded.energyMWh);
@@ -64,6 +80,7 @@ export function MicroAdjustPanel({
     targetPowerMW: targetPowerMW > 0 ? targetPowerMW : undefined,
     targetEnergyMWh: targetEnergyMWh > 0 ? targetEnergyMWh : undefined,
     durationHours,
+    preset,
   });
 
   // Re-derive counts whenever any of MW / MWh / duration changes and persist
@@ -73,6 +90,7 @@ export function MicroAdjustPanel({
       targetPowerMW: powerMW > 0 ? powerMW : undefined,
       targetEnergyMWh: energyMWh > 0 ? energyMWh : undefined,
       durationHours: duration,
+      preset,
     });
     onUpdateOverrides({
       targetPowerMW: powerMW,
@@ -156,8 +174,8 @@ export function MicroAdjustPanel({
           <span className="block text-[11px] text-slate-400">
             {isEs ? "Duración de diseño" : "Design duration"}
           </span>
-          <div className="grid grid-cols-4 gap-1">
-            {DURATION_OPTIONS.map((d) => (
+          <div className={`grid gap-1 ${integrated ? "grid-cols-2" : "grid-cols-4"}`}>
+            {durationOptions.map((d) => (
               <button
                 key={d}
                 type="button"
@@ -168,7 +186,8 @@ export function MicroAdjustPanel({
                     : "bg-slate-900 text-slate-400 border border-slate-800 hover:border-slate-700"
                 }`}
               >
-                {d}h ({getContainersPerPcsForDuration(d)}:1)
+                {/* Integrated systems have no BESS/PCS ratio to show. */}
+                {integrated ? `${d}h` : `${d}h (${getContainersPerPcsForDuration(d)}:1)`}
               </button>
             ))}
           </div>
@@ -180,7 +199,9 @@ export function MicroAdjustPanel({
             {isEs ? "Equipos estimados (preliminar): " : "Estimated equipment (preliminary): "}
           </span>
           <span className="font-mono text-cyan-300">
-            {derived.bessCount} {isEs ? "BESS" : "BESS"} · {derived.pcsCount} PCS/MV
+            {integrated
+              ? `${derived.bessCount} ${isEs ? "unidades integradas" : "integrated units"}`
+              : `${derived.bessCount} BESS · ${derived.pcsCount} PCS/MV`}
           </span>
           <span className="block text-slate-500">
             {isEs
@@ -228,11 +249,17 @@ export function MicroAdjustPanel({
           </select>
         </div>
 
-        {/* BESS to BESS */}
+        {/* BESS to BESS (unit-to-unit for integrated systems) */}
         <div className="space-y-1">
           <div className="flex justify-between text-[11px]">
             <span className="text-slate-400">
-              {isEs ? "Separación BESS - BESS" : "BESS - BESS Separation"}
+              {integrated
+                ? isEs
+                  ? "Separación entre unidades"
+                  : "Unit - Unit Separation"
+                : isEs
+                ? "Separación BESS - BESS"
+                : "BESS - BESS Separation"}
             </span>
             <span className="font-mono font-bold text-cyan-300">{bessToBess}m</span>
           </div>
@@ -249,26 +276,28 @@ export function MicroAdjustPanel({
           />
         </div>
 
-        {/* BESS to PCS */}
-        <div className="space-y-1">
-          <div className="flex justify-between text-[11px]">
-            <span className="text-slate-400">
-              {isEs ? "Separación BESS - PCS" : "BESS - PCS Separation"}
-            </span>
-            <span className="font-mono font-bold text-cyan-300">{bessToPcs}m</span>
+        {/* BESS to PCS — only meaningful for separate-PCS architectures. */}
+        {!integrated && (
+          <div className="space-y-1">
+            <div className="flex justify-between text-[11px]">
+              <span className="text-slate-400">
+                {isEs ? "Separación BESS - PCS" : "BESS - PCS Separation"}
+              </span>
+              <span className="font-mono font-bold text-cyan-300">{bessToPcs}m</span>
+            </div>
+            <input
+              type="range"
+              min="2.5"
+              max="10.0"
+              step="0.5"
+              value={bessToPcs}
+              onChange={(e) =>
+                onUpdateOverrides({ bessToPcs_m: parseFloat(e.target.value) })
+              }
+              className="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+            />
           </div>
-          <input
-            type="range"
-            min="2.5"
-            max="10.0"
-            step="0.5"
-            value={bessToPcs}
-            onChange={(e) =>
-              onUpdateOverrides({ bessToPcs_m: parseFloat(e.target.value) })
-            }
-            className="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-500"
-          />
-        </div>
+        )}
 
         {/* Boundary Margin */}
         <div className="space-y-1">
@@ -291,26 +320,28 @@ export function MicroAdjustPanel({
           />
         </div>
 
-        {/* PCS to PCS */}
-        <div className="space-y-1">
-          <div className="flex justify-between text-[11px]">
-            <span className="text-slate-400">
-              {isEs ? "Ancho del corredor MT (PCS - PCS)" : "MV Corridor Width (PCS - PCS)"}
-            </span>
-            <span className="font-mono font-bold text-cyan-300">{pcsToPcs}m</span>
+        {/* PCS to PCS — only meaningful for separate-PCS architectures. */}
+        {!integrated && (
+          <div className="space-y-1">
+            <div className="flex justify-between text-[11px]">
+              <span className="text-slate-400">
+                {isEs ? "Ancho del corredor MT (PCS - PCS)" : "MV Corridor Width (PCS - PCS)"}
+              </span>
+              <span className="font-mono font-bold text-cyan-300">{pcsToPcs}m</span>
+            </div>
+            <input
+              type="range"
+              min="2.5"
+              max="15.0"
+              step="0.5"
+              value={pcsToPcs}
+              onChange={(e) =>
+                onUpdateOverrides({ pcsToPcs_m: parseFloat(e.target.value) })
+              }
+              className="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+            />
           </div>
-          <input
-            type="range"
-            min="2.5"
-            max="15.0"
-            step="0.5"
-            value={pcsToPcs}
-            onChange={(e) =>
-              onUpdateOverrides({ pcsToPcs_m: parseFloat(e.target.value) })
-            }
-            className="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-500"
-          />
-        </div>
+        )}
       </div>
 
       {isDirty && (

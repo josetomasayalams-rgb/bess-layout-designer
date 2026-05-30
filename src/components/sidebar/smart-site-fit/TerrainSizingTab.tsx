@@ -4,8 +4,16 @@ import type {
   SmartSiteFitResult,
   SmartSiteFitOverrides,
 } from "@/lib/layout/smartSiteFit/smartSiteFitTypes";
+import {
+  getDefaultSmartSiteFitPreset,
+  getSmartSiteFitPresetById,
+  getContainersPerPcsForDuration,
+  isIntegratedPreset,
+} from "@/lib/layout/smartSiteFit/smartSiteFitPresets";
+import { summarizePlacedEquipment } from "@/lib/layout/smartSiteFit/smartSiteFitSizing";
 import { AlternativeCard } from "./AlternativeCard";
 import { MicroAdjustPanel } from "./MicroAdjustPanel";
+import { BessSystemSelector } from "./BessSystemSelector";
 import { Map } from "lucide-react";
 
 interface TerrainSizingTabProps {
@@ -40,12 +48,31 @@ export function TerrainSizingTab({
   const isEs = locale === "es";
 
   const [duration, setDuration] = useState<number>(4);
+  const [presetId, setPresetId] = useState<string>(getDefaultSmartSiteFitPreset().id);
+
+  const preset = getSmartSiteFitPresetById(presetId);
+  const integrated = isIntegratedPreset(preset);
+  const durationOptions = preset.supportedDurations ?? [2, 4, 8, 16];
+
+  const handlePresetChange = (id: string) => {
+    setPresetId(id);
+    // Snap to the new system's default duration if it does not support the
+    // currently selected one, so the form never holds an invalid configuration.
+    const next = getSmartSiteFitPresetById(id);
+    const supported = next.supportedDurations ?? [2, 4, 8, 16];
+    if (!supported.includes(duration)) {
+      setDuration(next.defaultDurationHours);
+    }
+    // Switching the system invalidates any current preview.
+    onDiscard();
+  };
 
   const handleAnalyze = () => {
     onRunAnalysis({
       mode: "terrain",
       durationHours: duration,
       strategy: "balanced", // Start with balanced as default, candidates for all strategies will be generated
+      presetId,
     });
   };
 
@@ -53,16 +80,11 @@ export function TerrainSizingTab({
     (c) => c.id === selectedAlternativeId
   );
 
-  const selectedBessCount = selectedAlternative
-    ? selectedAlternative.placedEquipment.filter(
-        (e) => e.equipmentSpecId === "sungrow-st2752ux-us"
-      ).length
+  const selectedSummary = selectedAlternative
+    ? summarizePlacedEquipment(selectedAlternative.placedEquipment)
     : undefined;
-  const selectedPcsCount = selectedAlternative
-    ? selectedAlternative.placedEquipment.filter(
-        (e) => e.equipmentSpecId === "sungrow-sc5000ud-mv-us-p3"
-      ).length
-    : undefined;
+  const selectedBessCount = selectedSummary?.bessCount;
+  const selectedPcsCount = selectedSummary?.pcsCount;
 
   if (!hasPolygon) {
     return (
@@ -81,15 +103,26 @@ export function TerrainSizingTab({
     <div className="space-y-4">
       {!result ? (
         <div className="space-y-3">
+          {/* BESS system selector */}
+          <BessSystemSelector
+            presetId={presetId}
+            onChange={handlePresetChange}
+            locale={locale}
+          />
+
           <div className="space-y-1">
             <span className="block text-[11px] text-slate-405 text-slate-500">
               {isEs ? "Equipos predefinidos" : "Default Equipment"}
             </span>
             <div className="rounded-md border border-slate-800 bg-slate-900/50 p-2 text-xs text-slate-300">
-              Sungrow ST2752UX + SC5000UD
+              {preset.name}
             </div>
             <p className="text-[10px] text-slate-500 leading-tight">
-              {isEs
+              {integrated
+                ? isEs
+                  ? "Sistema integrado (AC); el transformador MT externo no está modelado y debe ser definido por ingeniería. No se crean PCS ni transformadores adicionales."
+                  : "Integrated AC system; the external MV transformer is not modeled and must be defined by engineering. No separate PCS or transformers are created."
+                : isEs
                 ? "El PCS integra transformador BT/MT; no se crean transformadores adicionales."
                 : "PCS integrates LV/MV transformer; no separate transformers will be created."}
             </p>
@@ -99,55 +132,31 @@ export function TerrainSizingTab({
             <span className="block text-[11px] text-slate-400">
               {isEs ? "Duración de diseño" : "Design Duration"}
             </span>
-            <div className="grid grid-cols-4 gap-1">
-              <button
-                type="button"
-                onClick={() => setDuration(2)}
-                className={`rounded-md py-1.5 text-[10px] font-semibold ${
-                  duration === 2
-                    ? "bg-cyan-600 text-white"
-                    : "bg-slate-900 text-slate-400 border border-slate-800 hover:border-slate-700"
-                }`}
-              >
-                2h (4:1)
-              </button>
-              <button
-                type="button"
-                onClick={() => setDuration(4)}
-                className={`rounded-md py-1.5 text-[10px] font-semibold ${
-                  duration === 4
-                    ? "bg-cyan-600 text-white"
-                    : "bg-slate-900 text-slate-400 border border-slate-800 hover:border-slate-700"
-                }`}
-              >
-                4h (8:1)
-              </button>
-              <button
-                type="button"
-                onClick={() => setDuration(8)}
-                className={`rounded-md py-1.5 text-[10px] font-semibold ${
-                  duration === 8
-                    ? "bg-cyan-600 text-white"
-                    : "bg-slate-900 text-slate-400 border border-slate-800 hover:border-slate-700"
-                }`}
-              >
-                8h (16:1)
-              </button>
-              <button
-                type="button"
-                onClick={() => setDuration(16)}
-                className={`rounded-md py-1.5 text-[10px] font-semibold ${
-                  duration === 16
-                    ? "bg-cyan-600 text-white"
-                    : "bg-slate-900 text-slate-400 border border-slate-800 hover:border-slate-700"
-                }`}
-              >
-                16h (32:1)
-              </button>
+            <div
+              className={`grid gap-1 ${
+                durationOptions.length <= 2 ? "grid-cols-2" : "grid-cols-4"
+              }`}
+            >
+              {durationOptions.map((hrs) => (
+                <button
+                  key={hrs}
+                  type="button"
+                  onClick={() => setDuration(hrs)}
+                  className={`rounded-md py-1.5 text-[10px] font-semibold ${
+                    duration === hrs
+                      ? "bg-cyan-600 text-white"
+                      : "bg-slate-900 text-slate-400 border border-slate-800 hover:border-slate-700"
+                  }`}
+                >
+                  {integrated
+                    ? `${hrs}h`
+                    : `${hrs}h (${getContainersPerPcsForDuration(hrs)}:1)`}
+                </button>
+              ))}
             </div>
           </div>
 
-          {(duration === 8 || duration === 16) && (
+          {!integrated && (duration === 8 || duration === 16) && (
             <div className="rounded-md border border-slate-800 bg-slate-950 p-2 text-[10px] text-slate-400 leading-tight space-y-1">
               <p>
                 {isEs
@@ -204,6 +213,7 @@ export function TerrainSizingTab({
               onApply={onApply}
               onDiscard={onDiscard}
               locale={locale}
+              preset={preset}
               currentBessCount={selectedBessCount}
               currentPcsCount={selectedPcsCount}
               currentDurationHours={duration}

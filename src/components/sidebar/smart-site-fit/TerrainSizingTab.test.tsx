@@ -53,6 +53,7 @@ describe("TerrainSizingTab", () => {
       mode: "terrain",
       durationHours: 4,
       strategy: "balanced",
+      presetId: "sungrow-st2752ux-sc5000ud",
     });
   });
 

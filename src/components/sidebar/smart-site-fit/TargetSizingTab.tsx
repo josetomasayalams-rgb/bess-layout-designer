@@ -5,8 +5,16 @@ import type {
   SmartSiteFitOverrides,
   SmartSiteFitStrategy,
 } from "@/lib/layout/smartSiteFit/smartSiteFitTypes";
+import {
+  getDefaultSmartSiteFitPreset,
+  getSmartSiteFitPresetById,
+  getContainersPerPcsForDuration,
+  isIntegratedPreset,
+} from "@/lib/layout/smartSiteFit/smartSiteFitPresets";
+import { summarizePlacedEquipment } from "@/lib/layout/smartSiteFit/smartSiteFitSizing";
 import { AlternativeCard } from "./AlternativeCard";
 import { MicroAdjustPanel } from "./MicroAdjustPanel";
+import { BessSystemSelector } from "./BessSystemSelector";
 
 interface TargetSizingTabProps {
   result: SmartSiteFitResult | null;
@@ -40,6 +48,26 @@ export function TargetSizingTab({
   const [targetMWh, setTargetMWh] = useState<number>(120);
   const [duration, setDuration] = useState<number>(4);
   const [strategy, setStrategy] = useState<SmartSiteFitStrategy>("balanced");
+  const [presetId, setPresetId] = useState<string>(getDefaultSmartSiteFitPreset().id);
+
+  const preset = getSmartSiteFitPresetById(presetId);
+  const integrated = isIntegratedPreset(preset);
+  const durationOptions = preset.supportedDurations ?? [2, 4, 8, 16];
+
+  const handlePresetChange = (id: string) => {
+    setPresetId(id);
+    // If the new system does not support the current duration, snap to its
+    // default so the form never holds an unsupported configuration.
+    const next = getSmartSiteFitPresetById(id);
+    const supported = next.supportedDurations ?? [2, 4, 8, 16];
+    if (!supported.includes(duration)) {
+      const fallback = next.defaultDurationHours;
+      setDuration(fallback);
+      setTargetMWh(targetMW * fallback);
+    }
+    // Switching the system invalidates any current preview.
+    onDiscard();
+  };
 
   const handleCalculate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,6 +77,7 @@ export function TargetSizingTab({
       targetMWh,
       durationHours: duration,
       strategy,
+      presetId,
     });
   };
 
@@ -62,21 +91,23 @@ export function TargetSizingTab({
     (c) => c.id === selectedAlternativeId
   );
 
-  const selectedBessCount = selectedAlternative
-    ? selectedAlternative.placedEquipment.filter(
-        (e) => e.equipmentSpecId === "sungrow-st2752ux-us"
-      ).length
+  const selectedSummary = selectedAlternative
+    ? summarizePlacedEquipment(selectedAlternative.placedEquipment)
     : undefined;
-  const selectedPcsCount = selectedAlternative
-    ? selectedAlternative.placedEquipment.filter(
-        (e) => e.equipmentSpecId === "sungrow-sc5000ud-mv-us-p3"
-      ).length
-    : undefined;
+  const selectedBessCount = selectedSummary?.bessCount;
+  const selectedPcsCount = selectedSummary?.pcsCount;
 
   return (
     <div className="space-y-4">
       {!result ? (
         <form onSubmit={handleCalculate} className="space-y-3">
+          {/* BESS system selector */}
+          <BessSystemSelector
+            presetId={presetId}
+            onChange={handlePresetChange}
+            locale={locale}
+          />
+
           <div className="grid grid-cols-2 gap-3">
             {/* Target Power MW */}
             <div className="space-y-1">
@@ -103,51 +134,28 @@ export function TargetSizingTab({
               <label htmlFor="target-duration" className="block text-[11px] text-slate-400">
                 {isEs ? "Duración" : "Duration"}
               </label>
-              <div id="target-duration" className="grid grid-cols-4 gap-1">
-                <button
-                  type="button"
-                  onClick={() => handleDurationChange(2)}
-                  className={`rounded-md py-1.5 text-[10px] font-semibold ${
-                    duration === 2
-                      ? "bg-cyan-600 text-white"
-                      : "bg-slate-900 text-slate-400 border border-slate-800 hover:border-slate-700"
-                  }`}
-                >
-                  2h (4:1)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDurationChange(4)}
-                  className={`rounded-md py-1.5 text-[10px] font-semibold ${
-                    duration === 4
-                      ? "bg-cyan-600 text-white"
-                      : "bg-slate-900 text-slate-400 border border-slate-800 hover:border-slate-700"
-                  }`}
-                >
-                  4h (8:1)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDurationChange(8)}
-                  className={`rounded-md py-1.5 text-[10px] font-semibold ${
-                    duration === 8
-                      ? "bg-cyan-600 text-white"
-                      : "bg-slate-900 text-slate-400 border border-slate-800 hover:border-slate-700"
-                  }`}
-                >
-                  8h (16:1)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDurationChange(16)}
-                  className={`rounded-md py-1.5 text-[10px] font-semibold ${
-                    duration === 16
-                      ? "bg-cyan-600 text-white"
-                      : "bg-slate-900 text-slate-400 border border-slate-800 hover:border-slate-700"
-                  }`}
-                >
-                  16h (32:1)
-                </button>
+              <div
+                id="target-duration"
+                className={`grid gap-1 ${
+                  durationOptions.length <= 2 ? "grid-cols-2" : "grid-cols-4"
+                }`}
+              >
+                {durationOptions.map((hrs) => (
+                  <button
+                    key={hrs}
+                    type="button"
+                    onClick={() => handleDurationChange(hrs)}
+                    className={`rounded-md py-1.5 text-[10px] font-semibold ${
+                      duration === hrs
+                        ? "bg-cyan-600 text-white"
+                        : "bg-slate-900 text-slate-400 border border-slate-800 hover:border-slate-700"
+                    }`}
+                  >
+                    {integrated
+                      ? `${hrs}h`
+                      : `${hrs}h (${getContainersPerPcsForDuration(hrs)}:1)`}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
@@ -193,7 +201,7 @@ export function TargetSizingTab({
             </div>
           </div>
 
-          {(duration === 8 || duration === 16) && (
+          {!integrated && (duration === 8 || duration === 16) && (
             <div className="rounded-md border border-slate-800 bg-slate-950 p-2 text-[10px] text-slate-400 leading-tight space-y-1">
               <p>
                 {isEs
@@ -251,6 +259,7 @@ export function TargetSizingTab({
               onApply={onApply}
               onDiscard={onDiscard}
               locale={locale}
+              preset={preset}
               currentBessCount={selectedBessCount}
               currentPcsCount={selectedPcsCount}
               currentDurationHours={duration}
