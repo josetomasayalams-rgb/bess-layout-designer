@@ -5,6 +5,18 @@ export type SmartSiteFitMode = "target" | "terrain";
 
 export type SmartSiteFitStrategy = "max_capacity" | "balanced" | "conservative";
 
+/**
+ * Physical/electrical architecture a preset models.
+ *
+ * - `bess_plus_pcs`: separate battery containers + separate PCS/MV stations
+ *   sized by a BESS-per-PCS ratio (e.g. Sungrow ST2752UX + SC5000UD-MV).
+ * - `integrated`: a single AC-coupled enclosure that bundles battery, inverter
+ *   (PCS) and thermal management (e.g. Tesla Megapack 2 XL). There is no
+ *   separate PCS and no BESS/PCS ratio. Connection to medium voltage requires
+ *   an external step-up transformer that is NOT modeled here (requires review).
+ */
+export type SmartSiteFitArchitecture = "bess_plus_pcs" | "integrated";
+
 export interface SmartSiteFitPreset {
   id: string;
   name: string;
@@ -17,6 +29,14 @@ export interface SmartSiteFitPreset {
   notes: string;
   supportedDurations?: number[];
   ratioByDuration?: Record<number, number>;
+  /** Defaults to `bess_plus_pcs` when omitted (legacy Sungrow behavior). */
+  architecture?: SmartSiteFitArchitecture;
+  /**
+   * For `integrated` presets: maps a design duration (h) to the catalog spec id
+   * of the integrated unit configured for that duration. The integrated unit
+   * carries both energy and power, so no separate PCS is created.
+   */
+  integratedUnitSpecByDuration?: Record<number, string>;
 }
 
 export type SmartSiteFitShapeKind =
@@ -70,6 +90,11 @@ export interface SmartSiteFitInput {
   durationHours?: number;
   strategy?: SmartSiteFitStrategy;
   overrides?: SmartSiteFitOverrides;
+  /**
+   * Selected BESS-system preset id (e.g. Sungrow vs Tesla). When omitted the
+   * default Sungrow preset is used, so existing callers keep their behavior.
+   */
+  presetId?: string;
 }
 
 export interface SmartSiteFitScore {
