@@ -1,5 +1,6 @@
 import type { StoreApi } from "zustand";
 import { runSmartSiteFit } from "@/lib/layout/smartSiteFit/smartSiteFitEngine";
+import { summarizePlacedEquipment } from "@/lib/layout/smartSiteFit/smartSiteFitSizing";
 import type {
   SmartSiteFitInput,
   SmartSiteFitOverrides,
@@ -133,12 +134,11 @@ export function createSmartSiteFitSlice(
         };
       }
 
-      const bessCount = candidate.placedEquipment.filter(
-        (e) => e.equipmentSpecId === "sungrow-st2752ux-us"
-      ).length;
-      const pcsCount = candidate.placedEquipment.filter(
-        (e) => e.equipmentSpecId === "sungrow-sc5000ud-mv-us-p3"
-      ).length;
+      // Architecture-agnostic counts: correct for Sungrow (BESS + separate PCS)
+      // and for integrated presets (units carry their own inverter, pcsCount 0).
+      const { bessCount, pcsCount } = summarizePlacedEquipment(
+        candidate.placedEquipment
+      );
 
       const appliedMetadata = {
         mode: lastRunInput.mode,
