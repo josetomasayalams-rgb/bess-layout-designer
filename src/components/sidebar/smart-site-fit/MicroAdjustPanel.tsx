@@ -240,12 +240,18 @@ export function MicroAdjustPanel({
               {isEs ? "Automática recomendada" : "Automatic (recommended)"}
             </option>
             <option value="single_row">{isEs ? "Fila Única" : "Single Row"}</option>
-            <option value="two_row_block">{isEs ? "Dos Hileras" : "Two Rows"}</option>
+            {!integrated && (
+              <option value="two_row_block">{isEs ? "Dos Hileras" : "Two Rows"}</option>
+            )}
             <option value="compact_grid">{isEs ? "Compacta" : "Compact Grid"}</option>
             <option value="wide_grid">{isEs ? "Ancha" : "Wide Grid"}</option>
             <option value="deep_grid">{isEs ? "Profunda" : "Deep Grid"}</option>
-            <option value="multi_block">{isEs ? "Multibloque" : "Multi-block"}</option>
-            <option value="split_blocks">{isEs ? "Bloques Separados" : "Split Blocks"}</option>
+            {!integrated && (
+              <option value="multi_block">{isEs ? "Multibloque" : "Multi-block"}</option>
+            )}
+            {!integrated && (
+              <option value="split_blocks">{isEs ? "Bloques Separados" : "Split Blocks"}</option>
+            )}
           </select>
         </div>
 

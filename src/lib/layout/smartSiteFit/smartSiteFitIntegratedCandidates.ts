@@ -127,10 +127,27 @@ export function generateIntegratedCandidates(
     const v = Math.max(1, Math.min(targetUnits, Math.round(c)));
     colVariants.add(v);
   };
-  pushCols(squareCols);
-  pushCols(squareCols * 1.6); // wider
-  pushCols(squareCols * 0.6); // deeper
-  if (targetUnits <= 8) pushCols(targetUnits); // single row option for small sizes
+
+  // Honor an explicit layout-shape preference when it is one the integrated grid
+  // can actually express; "auto" / unsupported kinds fall back to the diverse
+  // default set so the scorer still gets variety to choose from.
+  const preferredKind = overrides?.preferredShapeKind;
+  const integratedSupportsKind =
+    preferredKind === "single_row" ||
+    preferredKind === "compact_grid" ||
+    preferredKind === "wide_grid" ||
+    preferredKind === "deep_grid";
+  if (integratedSupportsKind) {
+    if (preferredKind === "single_row") pushCols(targetUnits);
+    else if (preferredKind === "wide_grid") pushCols(squareCols * 1.6);
+    else if (preferredKind === "deep_grid") pushCols(squareCols * 0.6);
+    else pushCols(squareCols); // compact_grid
+  } else {
+    pushCols(squareCols);
+    pushCols(squareCols * 1.6); // wider
+    pushCols(squareCols * 0.6); // deeper
+    if (targetUnits <= 8) pushCols(targetUnits); // single row option for small sizes
+  }
 
   const shapes: IntegratedGridShape[] = [];
   for (const columns of colVariants) {
@@ -319,8 +336,9 @@ function buildUnitGrid(
         equipmentSpecId: unitSpecId,
         anchor: lngLat,
         rotation_deg: rotationDeg,
-        groupId: "integrated-block",
-        blockId: "integrated-block",
+        groupId: `integrated-row-${r}`,
+        blockId: `integrated-row-${r}`,
+        blockIndex: r,
         classification: "preliminary_assumption",
         sourceReliability: "preliminary_assumption",
       });
