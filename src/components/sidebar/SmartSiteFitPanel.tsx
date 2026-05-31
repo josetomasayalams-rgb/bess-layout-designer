@@ -27,6 +27,24 @@ export function SmartSiteFitPanel() {
 
   const hasPolygon = polygon.length >= 3;
 
+  // Architecture-aware applied-layout banner. Integrated presets (e.g. Tesla
+  // Megapack) carry their own power conversion, so pcsCount === 0 — the banner
+  // must report integrated units instead of an misleading "0 PCS". Derived from
+  // the applied counts since the metadata has no explicit architecture flag.
+  const appliedIsIntegrated =
+    !!smartSiteFitApplied &&
+    smartSiteFitApplied.pcsCount === 0 &&
+    smartSiteFitApplied.bessCount > 0;
+  const appliedBannerText = !smartSiteFitApplied
+    ? ""
+    : appliedIsIntegrated
+    ? isEs
+      ? `Estrategia: ${smartSiteFitApplied.strategy}. Unidades integradas: ${smartSiteFitApplied.bessCount} (conversión integrada). Puntaje: ${smartSiteFitApplied.score}/100.`
+      : `Strategy: ${smartSiteFitApplied.strategy}. Integrated units: ${smartSiteFitApplied.bessCount} (integrated conversion). Score: ${smartSiteFitApplied.score}/100.`
+    : isEs
+    ? `Estrategia: ${smartSiteFitApplied.strategy}. Contenedores: ${smartSiteFitApplied.bessCount} BESS, Conversión: ${smartSiteFitApplied.pcsCount} PCS. Puntaje: ${smartSiteFitApplied.score}/100.`
+    : `Strategy: ${smartSiteFitApplied.strategy}. Containers: ${smartSiteFitApplied.bessCount} BESS, Stations: ${smartSiteFitApplied.pcsCount} PCS. Score: ${smartSiteFitApplied.score}/100.`;
+
   return (
     <CollapsibleSection
       icon={Compass}
@@ -53,9 +71,7 @@ export function SmartSiteFitPanel() {
               <span>{isEs ? "Layout predimensionado aplicado" : "Sizing layout applied"}</span>
             </div>
             <p className="text-[10px] text-slate-400 leading-normal">
-              {isEs
-                ? `Estrategia: ${smartSiteFitApplied.strategy}. Contenedores: ${smartSiteFitApplied.bessCount} BESS, Conversión: ${smartSiteFitApplied.pcsCount} PCS. Puntaje: ${smartSiteFitApplied.score}/100.`
-                : `Strategy: ${smartSiteFitApplied.strategy}. Containers: ${smartSiteFitApplied.bessCount} BESS, Stations: ${smartSiteFitApplied.pcsCount} PCS. Score: ${smartSiteFitApplied.score}/100.`}
+              {appliedBannerText}
             </p>
           </div>
         )}

@@ -109,4 +109,46 @@ describe("SmartSiteFitPanel", () => {
     // Renders up to 3 alternative cards
     expect(screen.getByText(/Layout Alternatives/i)).toBeDefined();
   });
+
+  it("shows integrated units (never '0 PCS') in the applied banner for an integrated layout", () => {
+    // Integrated presets carry their own power conversion: pcsCount === 0.
+    useProjectStore.setState({
+      smartSiteFitApplied: {
+        mode: "target",
+        strategy: "balanced",
+        score: 80,
+        bessCount: 12,
+        pcsCount: 0,
+        ratio: 0,
+        assumptions: [],
+        appliedAt: new Date().toISOString(),
+      },
+    });
+
+    render(<SmartSiteFitPanel />);
+    fireEvent.click(screen.getByText(/Smart sizing/i));
+
+    expect(screen.getByText(/Integrated units: 12/)).toBeDefined();
+    expect(screen.queryByText(/0 PCS/)).toBeNull();
+  });
+
+  it("keeps BESS + PCS counts in the applied banner for a separate-PCS layout", () => {
+    useProjectStore.setState({
+      smartSiteFitApplied: {
+        mode: "target",
+        strategy: "balanced",
+        score: 80,
+        bessCount: 24,
+        pcsCount: 3,
+        ratio: 8,
+        assumptions: [],
+        appliedAt: new Date().toISOString(),
+      },
+    });
+
+    render(<SmartSiteFitPanel />);
+    fireEvent.click(screen.getByText(/Smart sizing/i));
+
+    expect(screen.getByText(/24 BESS, Stations: 3 PCS/)).toBeDefined();
+  });
 });
