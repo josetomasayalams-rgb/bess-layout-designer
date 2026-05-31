@@ -139,12 +139,29 @@ export function generateSmartSiteFitShapes(input: {
   return shapes;
 }
 
-// Sungrow footprint constants shared by the shape builders. Kept module-local
-// so the fast estimator and the exact builder never drift apart.
-const BESS_LENGTH_M = 9.34;
-const BESS_WIDTH_M = 1.73;
-const PCS_LENGTH_M = 6.058;
-const PCS_WIDTH_M = 2.438;
+/**
+ * Equipment ids + footprints the shape builders place. Kept as a minimal local
+ * interface so this geometry module stays decoupled from the catalog; callers
+ * pass preset-resolved equipment (structurally a {@link SeparatePcsEquipment}).
+ */
+export interface ShapeEquipment {
+  bessSpecId: string;
+  pcsSpecId: string;
+  bess: { length_m: number; width_m: number };
+  pcs: { length_m: number; width_m: number };
+}
+
+/**
+ * Default Sungrow ids + footprints. Used when no preset-resolved equipment is
+ * passed, so existing callers (and the colocated tests) keep byte-identical
+ * Sungrow behavior. The live engine path passes catalog-resolved equipment.
+ */
+export const SUNGROW_SHAPE_EQUIPMENT: ShapeEquipment = {
+  bessSpecId: "sungrow-st2752ux-us",
+  pcsSpecId: "sungrow-sc5000ud-mv-us-p3",
+  bess: { length_m: 9.34, width_m: 1.73 },
+  pcs: { length_m: 6.058, width_m: 2.438 },
+};
 
 /**
  * Cheap, equipment-free bounding-box estimate of a shape's footprint. It mirrors
@@ -155,10 +172,15 @@ export function estimateShapeFootprint(
   shape: SmartSiteFitShapeCandidate,
   pcsCount: number,
   containersPerPcs: number,
-  spacing: { bessToBess: number; bessToPcs: number; pcsToPcs: number }
+  spacing: { bessToBess: number; bessToPcs: number; pcsToPcs: number },
+  equipment: ShapeEquipment = SUNGROW_SHAPE_EQUIPMENT
 ): { width_m: number; height_m: number } {
   const { bessToBess, bessToPcs, pcsToPcs } = spacing;
   const pcs = Math.max(1, pcsCount);
+  const BESS_LENGTH_M = equipment.bess.length_m;
+  const BESS_WIDTH_M = equipment.bess.width_m;
+  const PCS_LENGTH_M = equipment.pcs.length_m;
+  const PCS_WIDTH_M = equipment.pcs.width_m;
 
   switch (shape.kind) {
     case "single_row": {
@@ -231,14 +253,15 @@ export function buildShapeLayout(
   shape: SmartSiteFitShapeCandidate,
   pcsCount: number,
   containersPerPcs: number,
-  spacing: { bessToBess: number; bessToPcs: number; pcsToPcs: number }
+  spacing: { bessToBess: number; bessToPcs: number; pcsToPcs: number },
+  equipment: ShapeEquipment = SUNGROW_SHAPE_EQUIPMENT
 ): ShapeLayoutItem[] {
   const { bessToBess, bessToPcs, pcsToPcs } = spacing;
 
-  const bessLength = 9.34;
-  const bessWidth = 1.73;
-  const pcsLength = 6.058;
-  const pcsWidth = 2.438;
+  const bessLength = equipment.bess.length_m;
+  const bessWidth = equipment.bess.width_m;
+  const pcsLength = equipment.pcs.length_m;
+  const pcsWidth = equipment.pcs.width_m;
 
   const items: ShapeLayoutItem[] = [];
 
@@ -251,7 +274,7 @@ export function buildShapeLayout(
         const y = (r - (pcsCount - 1) / 2) * (blockWidth + bessToBess);
         const xPcs = -blockLength / 2 + pcsLength / 2;
         items.push({
-          equipmentSpecId: "sungrow-sc5000ud-mv-us-p3",
+          equipmentSpecId: equipment.pcsSpecId,
           x_m: xPcs,
           y_m: y,
           blockIndex: r,
@@ -260,7 +283,7 @@ export function buildShapeLayout(
         for (let b = 0; b < containersPerPcs; b++) {
           const xBess = -blockLength / 2 + pcsLength + bessToPcs + b * (bessLength + bessToBess) + bessLength / 2;
           items.push({
-            equipmentSpecId: "sungrow-st2752ux-us",
+            equipmentSpecId: equipment.bessSpecId,
             x_m: xBess,
             y_m: y,
             blockIndex: r,
@@ -281,7 +304,7 @@ export function buildShapeLayout(
         const xPcs = blockLength / 2 - pcsLength / 2;
 
         items.push({
-          equipmentSpecId: "sungrow-sc5000ud-mv-us-p3",
+          equipmentSpecId: equipment.pcsSpecId,
           x_m: xPcs,
           y_m: blockCenterY,
           blockIndex: i,
@@ -294,7 +317,7 @@ export function buildShapeLayout(
           const yBess = blockCenterY + (rIdx === 0 ? (bessWidth / 2 + bessToBess / 2) : (-bessWidth / 2 - bessToBess / 2));
 
           items.push({
-            equipmentSpecId: "sungrow-st2752ux-us",
+            equipmentSpecId: equipment.bessSpecId,
             x_m: xBess,
             y_m: yBess,
             blockIndex: i,
@@ -345,7 +368,7 @@ export function buildShapeLayout(
           const x = bessOriginX + cIdx * (bessLength + bessToBess) + bessLength / 2;
           const y = clusterCenterY + (rIdx - (subRows - 1) / 2) * (bessWidth + bessToBess);
           items.push({
-            equipmentSpecId: "sungrow-st2752ux-us",
+            equipmentSpecId: equipment.bessSpecId,
             x_m: x,
             y_m: y,
             blockIndex: i,
@@ -355,7 +378,7 @@ export function buildShapeLayout(
         // PCS/MV at the operative edge of its own cluster, vertically centered
         const xPcs = clusterCenterX + clusterLength / 2 - pcsLength / 2;
         items.push({
-          equipmentSpecId: "sungrow-sc5000ud-mv-us-p3",
+          equipmentSpecId: equipment.pcsSpecId,
           x_m: xPcs,
           y_m: clusterCenterY,
           blockIndex: i,
@@ -392,7 +415,7 @@ export function buildShapeLayout(
         // PCS is centered vertically, at the right end of the block
         const xPcs = blockCenterX + blockLength / 2 - pcsLength / 2;
         items.push({
-          equipmentSpecId: "sungrow-sc5000ud-mv-us-p3",
+          equipmentSpecId: equipment.pcsSpecId,
           x_m: xPcs,
           y_m: blockCenterY,
           blockIndex: i,
@@ -406,7 +429,7 @@ export function buildShapeLayout(
           const yBess = blockCenterY + (rIdx === 0 ? (bessWidth / 2 + bessToBess / 2) : (-bessWidth / 2 - bessToBess / 2));
 
           items.push({
-            equipmentSpecId: "sungrow-st2752ux-us",
+            equipmentSpecId: equipment.bessSpecId,
             x_m: xBess,
             y_m: yBess,
             blockIndex: i,

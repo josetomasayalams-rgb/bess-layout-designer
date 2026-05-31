@@ -15,7 +15,8 @@ export function scoreCandidate(
   candidate: SmartSiteFitCandidate,
   polygon: LocalPoint[],
   anchor: ProjectAnchor,
-  durationHours: number
+  durationHours: number,
+  targetRatio?: number
 ): SmartSiteFitScore {
   const placed = candidate.placedEquipment;
   if (placed.length === 0) {
@@ -229,14 +230,16 @@ export function scoreCandidate(
       pcsCount++;
     }
   }
-  const targetRatio = getContainersPerPcsForDuration(durationHours);
+  // The active preset's BESS/PCS ratio (preset-driven); falls back to the shared
+  // duration heuristic when no ratio is threaded in (e.g. direct test callers).
+  const effectiveTargetRatio = targetRatio ?? getContainersPerPcsForDuration(durationHours);
   let ratioComplianceScore = 0;
   if (pcsCount > 0) {
     const actualRatio = bessCount / pcsCount;
-    if (Math.abs(actualRatio - targetRatio) < 0.1) {
+    if (Math.abs(actualRatio - effectiveTargetRatio) < 0.1) {
       ratioComplianceScore = 10;
     } else {
-      ratioComplianceScore = Math.max(0, 10 - Math.abs(actualRatio - targetRatio) * 2);
+      ratioComplianceScore = Math.max(0, 10 - Math.abs(actualRatio - effectiveTargetRatio) * 2);
     }
   } else if (pcsCount === 0) {
     // No separate PCS: either an empty layout or an integrated architecture
@@ -466,11 +469,12 @@ export function rankSmartSiteFitCandidates(
   candidates: SmartSiteFitCandidate[],
   polygon: LocalPoint[],
   anchor: ProjectAnchor,
-  durationHours: number
+  durationHours: number,
+  targetRatio?: number
 ): SmartSiteFitCandidate[] {
   return candidates
     .map((c) => {
-      const score = scoreCandidate(c, polygon, anchor, durationHours);
+      const score = scoreCandidate(c, polygon, anchor, durationHours, targetRatio);
       return { ...c, score };
     })
     .sort((a, b) => b.score.total - a.score.total);

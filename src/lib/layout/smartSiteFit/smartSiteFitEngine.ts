@@ -9,7 +9,8 @@ import { rankSmartSiteFitCandidates } from "./smartSiteFitScoring";
 import { toLocal } from "@/lib/geometry/projection";
 import { validatePolygonForSmartSiteFit } from "./smartSiteFitGeometry";
 import { DEFAULT_PERFORMANCE_BUDGET } from "./smartSiteFitPerformance";
-import { getSmartSiteFitPresetById } from "./smartSiteFitPresets";
+import { getSmartSiteFitPresetById, getDefaultSmartSiteFitPreset } from "./smartSiteFitPresets";
+import { resolveContainersPerPcs } from "./smartSiteFitEquipmentResolution";
 import type { SmartSiteFitPreset } from "./smartSiteFitTypes";
 
 export function runSmartSiteFit(input: SmartSiteFitInput): SmartSiteFitResult {
@@ -126,8 +127,18 @@ export function runTargetSizing(
     };
   }
 
-  // Score and rank candidates
-  const ranked = rankSmartSiteFitCandidates(candidates, localPolygon, anchor, durationHours);
+  // Score and rank candidates using the active preset's BESS/PCS ratio.
+  const targetRatio = resolveContainersPerPcs(
+    preset ?? getDefaultSmartSiteFitPreset(),
+    durationHours
+  );
+  const ranked = rankSmartSiteFitCandidates(
+    candidates,
+    localPolygon,
+    anchor,
+    durationHours,
+    targetRatio
+  );
 
   // Keep only the single best alternative for target sizing
   const selected = ranked[0];
@@ -165,6 +176,11 @@ export function runTerrainSizing(
   // One shared deadline across all three strategies bounds total wall time.
   const perStrategyBudget = 40;
   const deadlineAt = Date.now() + DEFAULT_PERFORMANCE_BUDGET.hardTimeoutMs;
+  // The active preset's BESS/PCS ratio, shared across all three strategy runs.
+  const targetRatio = resolveContainersPerPcs(
+    preset ?? getDefaultSmartSiteFitPreset(),
+    durationHours
+  );
   const bestPerStrategy: SmartSiteFitCandidate[] = [];
   for (const s of strategies) {
     const candidates = generateCandidates(
@@ -181,7 +197,13 @@ export function runTerrainSizing(
       preset
     );
     if (candidates.length === 0) continue;
-    const ranked = rankSmartSiteFitCandidates(candidates, localPolygon, anchor, durationHours);
+    const ranked = rankSmartSiteFitCandidates(
+      candidates,
+      localPolygon,
+      anchor,
+      durationHours,
+      targetRatio
+    );
     if (ranked[0]) bestPerStrategy.push(ranked[0]);
   }
 

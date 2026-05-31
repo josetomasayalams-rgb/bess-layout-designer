@@ -3,10 +3,10 @@ import type { PlacedEquipment } from "@/types/equipment";
 import type { SmartSiteFitPreset, SmartSiteFitWarning } from "./smartSiteFitTypes";
 import {
   getDefaultSmartSiteFitPreset,
-  getContainersPerPcsForDuration,
   isIntegratedPreset,
   resolveIntegratedUnitSpecId,
 } from "./smartSiteFitPresets";
+import { resolveContainersPerPcs } from "./smartSiteFitEquipmentResolution";
 
 // O(1) spec lookup shared by the summarizer.
 const specById = new Map(equipmentCatalog.map((s) => [s.id, s]));
@@ -155,7 +155,7 @@ export function deriveEquipmentCountsFromPowerEnergy(
     return deriveIntegratedUnitCounts(input, durationHours, bessEnergyMWh, pcsPowerMW);
   }
 
-  const ratio = getContainersPerPcsForDuration(durationHours);
+  const ratio = resolveContainersPerPcs(preset, durationHours);
   const warnings: SmartSiteFitWarning[] = [];
 
   // Resolve power/energy, deriving the missing one from duration when needed.

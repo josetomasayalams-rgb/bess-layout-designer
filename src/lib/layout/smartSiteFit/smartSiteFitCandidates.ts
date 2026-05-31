@@ -10,7 +10,8 @@ import type {
   SmartSiteFitOverrides,
   SmartSiteFitPreset,
 } from "./smartSiteFitTypes";
-import { getContainersPerPcsForDuration, isIntegratedPreset } from "./smartSiteFitPresets";
+import { getDefaultSmartSiteFitPreset, isIntegratedPreset } from "./smartSiteFitPresets";
+import { resolveSeparatePcsEquipment } from "./smartSiteFitEquipmentResolution";
 import { generateIntegratedCandidates } from "./smartSiteFitIntegratedCandidates";
 import { toLngLat } from "@/lib/geometry/projection";
 import { analyzePolygon } from "./smartSiteFitGeometry";
@@ -26,14 +27,6 @@ import {
   type SmartSiteFitPerformanceBudget,
   type CandidateFastScore,
 } from "./smartSiteFitPerformance";
-
-// Sungrow footprint constants used for the equipment-free area estimate.
-const BESS_LENGTH_M = 9.34;
-const BESS_WIDTH_M = 1.73;
-const PCS_LENGTH_M = 6.058;
-const PCS_WIDTH_M = 2.438;
-const BESS_AREA_M2 = BESS_LENGTH_M * BESS_WIDTH_M;
-const PCS_AREA_M2 = PCS_LENGTH_M * PCS_WIDTH_M;
 
 interface PlacementOption {
   rotationDeg: number;
@@ -97,6 +90,18 @@ export function generateCandidates(
     );
   }
 
+  // Resolve preset-driven equipment (ids, footprints, ratings, BESS/PCS ratio)
+  // from the catalog. Defaults to Sungrow so existing callers stay byte-identical;
+  // a second separate-PCS preset honors its own datasheet here instead.
+  const effectivePreset = preset ?? getDefaultSmartSiteFitPreset();
+  const eq = resolveSeparatePcsEquipment(effectivePreset, durationHours);
+  const BESS_LENGTH_M = eq.bess.length_m;
+  const BESS_WIDTH_M = eq.bess.width_m;
+  const PCS_LENGTH_M = eq.pcs.length_m;
+  const PCS_WIDTH_M = eq.pcs.width_m;
+  const BESS_AREA_M2 = BESS_LENGTH_M * BESS_WIDTH_M;
+  const PCS_AREA_M2 = PCS_LENGTH_M * PCS_WIDTH_M;
+
   const analysis = analyzePolygon(polygon);
   const centroid = analysis.centroid;
   const dominantAngle = analysis.orientationDeg;
@@ -127,7 +132,7 @@ export function generateCandidates(
   const boundaryMargin_m = overrides?.boundaryMargin_m ?? 0;
   const spacing = { bessToBess, bessToPcs, pcsToPcs };
 
-  const bessPerPcs = getContainersPerPcsForDuration(durationHours);
+  const bessPerPcs = eq.containersPerPcs;
 
   // Block length along row for target block counting
   const blockLength = PCS_LENGTH_M + bessToPcs + bessPerPcs * (BESS_LENGTH_M + bessToBess) - bessToBess;
@@ -152,10 +157,10 @@ export function generateCandidates(
   if (forcedPcsCount !== undefined) {
     targetBlockCount = forcedPcsCount;
   } else if (isTargetMode) {
-    // 5 MW per PCS station
-    const pcsFromPower = targetMW ? Math.ceil(targetMW / 5.0) : 0;
-    // 2.752 MWh per BESS container
-    const bessNeeded = targetMWh ? Math.ceil(targetMWh / 2.752) : 0;
+    // Per-unit ratings come from the preset-resolved equipment (Sungrow defaults:
+    // ~5 MW per PCS station, 2.752 MWh per BESS container).
+    const pcsFromPower = targetMW ? Math.ceil(targetMW / eq.powerPerPcsMW) : 0;
+    const bessNeeded = targetMWh ? Math.ceil(targetMWh / eq.energyPerBessMWh) : 0;
     const pcsFromEnergy = Math.ceil(bessNeeded / bessPerPcs);
     targetBlockCount = Math.max(1, Math.max(pcsFromPower, pcsFromEnergy));
   } else {
@@ -179,26 +184,29 @@ export function generateCandidates(
   const estimatedEquipmentCount = targetBlockCount * (bessPerPcs + 1);
   const plan = getCandidateSearchPlan(estimatedEquipmentCount, strategy, budget);
 
-  // Pre-configured warnings & assumptions
-  const warnings: SmartSiteFitWarning[] = [
-    {
-      id: "sungrow-integrated-transformer",
+  // Pre-configured warnings & assumptions. The transformer note is preset-driven:
+  // only separate-PCS presets whose PCS embeds its LV/MV transformer surface it,
+  // so other manufacturers do not inherit a Sungrow-specific message.
+  const warnings: SmartSiteFitWarning[] = [];
+  if (effectivePreset.separatePcsTransformerNote) {
+    warnings.push({
+      id: "separate-pcs-transformer-note",
       severity: "info",
-      message: "SC5000UD-MV integra transformador BT/MT y no se debe crear transformador separado.",
-    },
-  ];
+      message: effectivePreset.separatePcsTransformerNote,
+    });
+  }
 
   const assumptions: SmartSiteFitAssumption[] = [
     {
       id: "bess-model",
       description: "Modelo de BESS utilizado",
-      value: "sungrow-st2752ux-us",
+      value: eq.bessSpecId,
       classification: "preliminary_assumption",
     },
     {
       id: "pcs-model",
       description: "Modelo de PCS utilizado",
-      value: "sungrow-sc5000ud-mv-us-p3",
+      value: eq.pcsSpecId,
       classification: "preliminary_assumption",
     },
     {
@@ -242,7 +250,7 @@ export function generateCandidates(
     for (const shape of shapesToTry) {
       if (shapeJobs.length >= plan.maxSkeletons) break;
 
-      const footprint = estimateShapeFootprint(shape, blocks, bessPerPcs, spacing);
+      const footprint = estimateShapeFootprint(shape, blocks, bessPerPcs, spacing, eq);
       const occupiedArea_m2 = blocks * bessPerPcs * BESS_AREA_M2 + blocks * PCS_AREA_M2;
       const fast = computeFastScore({
         estWidth_m: footprint.width_m,
@@ -330,7 +338,7 @@ export function generateCandidates(
     const startCenterY = centroid.y_m + dy;
 
     const placedEquipment: PlacedEquipment[] = [];
-    const shapeLayoutItems = buildShapeLayout(job.shape, job.blocks, bessPerPcs, spacing);
+    const shapeLayoutItems = buildShapeLayout(job.shape, job.blocks, bessPerPcs, spacing, eq);
 
     for (const item of shapeLayoutItems) {
       const rx = startCenterX + item.x_m * cos - item.y_m * sin;
