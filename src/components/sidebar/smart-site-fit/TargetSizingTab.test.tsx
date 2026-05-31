@@ -91,6 +91,47 @@ describe("TargetSizingTab", () => {
     expect(screen.getByText(/Capacity and Spacing Adjustments/i)).toBeDefined();
   });
 
+  it("lets the target power field be cleared without snapping back to 1", () => {
+    render(<TargetSizingTab {...defaultProps} />);
+
+    const power = screen.getByLabelText(/Target Power/i) as HTMLInputElement;
+    expect(power.value).toBe("30");
+
+    // Clearing the field leaves it empty (the previous bug forced it to "1").
+    fireEvent.change(power, { target: { value: "" } });
+    expect(power.value).toBe("");
+  });
+
+  it("accepts a freshly typed target power without prepending the old value", () => {
+    render(<TargetSizingTab {...defaultProps} />);
+
+    const power = screen.getByLabelText(/Target Power/i) as HTMLInputElement;
+
+    // Clear, then type 228 — must read 228, not 1228.
+    fireEvent.change(power, { target: { value: "" } });
+    fireEvent.change(power, { target: { value: "228" } });
+    expect(power.value).toBe("228");
+
+    // Side-effect preserved: energy = power × default duration (4h) = 912 MWh.
+    const energy = screen.getByLabelText(/Target Energy/i) as HTMLInputElement;
+    expect(energy.value).toBe("912");
+  });
+
+  it("runs the analysis with the typed target values", () => {
+    const onRunAnalysis = vi.fn();
+    render(<TargetSizingTab {...defaultProps} onRunAnalysis={onRunAnalysis} />);
+
+    const power = screen.getByLabelText(/Target Power/i) as HTMLInputElement;
+    fireEvent.change(power, { target: { value: "" } });
+    fireEvent.change(power, { target: { value: "228" } });
+
+    fireEvent.click(screen.getByRole("button", { name: /Calculate alternative/i }));
+
+    expect(onRunAnalysis).toHaveBeenCalledWith(
+      expect.objectContaining({ targetMW: 228, targetMWh: 912 })
+    );
+  });
+
   it("supports choosing 8h and 16h durations and shows corresponding ratios and warnings", () => {
     render(<TargetSizingTab {...defaultProps} />);
 

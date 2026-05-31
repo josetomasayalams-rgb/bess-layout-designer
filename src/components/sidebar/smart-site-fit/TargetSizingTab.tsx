@@ -15,6 +15,7 @@ import { summarizePlacedEquipment } from "@/lib/layout/smartSiteFit/smartSiteFit
 import { AlternativeCard } from "./AlternativeCard";
 import { MicroAdjustPanel } from "./MicroAdjustPanel";
 import { BessSystemSelector } from "./BessSystemSelector";
+import { NumberField } from "@/components/ui/NumberField";
 
 interface TargetSizingTabProps {
   result: SmartSiteFitResult | null;
@@ -114,18 +115,16 @@ export function TargetSizingTab({
               <label htmlFor="target-mw" className="block text-[11px] text-slate-400">
                 {isEs ? "Potencia objetivo (MW)" : "Target Power (MW)"}
               </label>
-              <input
+              <NumberField
                 id="target-mw"
-                type="number"
-                min="1"
                 value={targetMW}
-                onChange={(e) => {
-                  const val = Math.max(1, parseInt(e.target.value) || 0);
+                min={1}
+                integer
+                onChange={(val) => {
                   setTargetMW(val);
                   setTargetMWh(val * duration);
                 }}
                 className="w-full rounded-md border border-slate-800 bg-slate-900 px-3 py-1.5 font-mono text-xs text-slate-100 focus:border-cyan-500 focus:outline-none"
-                required
               />
             </div>
 
@@ -166,16 +165,13 @@ export function TargetSizingTab({
               <label htmlFor="target-mwh" className="block text-[11px] text-slate-400">
                 {isEs ? "Energía objetivo (MWh)" : "Target Energy (MWh)"}
               </label>
-              <input
+              <NumberField
                 id="target-mwh"
-                type="number"
-                min="1"
                 value={targetMWh}
-                onChange={(e) =>
-                  setTargetMWh(Math.max(1, parseInt(e.target.value) || 0))
-                }
+                min={1}
+                integer
+                onChange={(val) => setTargetMWh(val)}
                 className="w-full rounded-md border border-slate-800 bg-slate-900 px-3 py-1.5 font-mono text-xs text-slate-100 focus:border-cyan-500 focus:outline-none"
-                required
               />
             </div>
 
