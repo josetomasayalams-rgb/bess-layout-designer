@@ -1,5 +1,5 @@
 import type { SmartSiteFitCandidate, SmartSiteFitScore, SmartSiteFitStrategy } from "./smartSiteFitTypes";
-import { equipmentCatalog } from "@/data/equipmentCatalog";
+import { summarizePlacedEquipment } from "./smartSiteFitSizing";
 
 export function strategyLabel(strategy: SmartSiteFitStrategy, locale: "es" | "en"): string {
   if (locale === "es") {
@@ -27,14 +27,22 @@ export function strategyLabel(strategy: SmartSiteFitStrategy, locale: "es" | "en
   }
 }
 
-export function explainScore(score: SmartSiteFitScore, locale: "es" | "en"): string {
+export function explainScore(
+  score: SmartSiteFitScore,
+  locale: "es" | "en",
+  opts?: { isIntegrated?: boolean }
+): string {
   const shapeCompactnessVal = score.shapeCompactness ?? 10.0;
   const terrainFitVal = score.terrainFit ?? 10.0;
   const pcsIntegrationVal = score.pcsIntegration ?? 10.0;
   const capacityIntentVal = score.capacityIntent ?? 10.0;
   const layoutAestheticsVal = score.layoutAesthetics ?? 10.0;
+  // For integrated presets (Tesla Megapack) there is no separate PCS and no
+  // BESS/PCS ratio, so the ratio-compliance and PCS-integration lines are
+  // meaningless and are omitted. Default (false) keeps the legacy Sungrow text.
+  const isIntegrated = opts?.isIntegrated ?? false;
   if (locale === "es") {
-    return [
+    const lines = [
       `Evaluación de distribución (Total: ${score.total}/100):`,
       `- Ubicación dentro de límites: ${score.insidePolygon}/25`,
       `- Ausencia de colisiones: ${score.noCollisions}/25`,
@@ -42,15 +50,20 @@ export function explainScore(score: SmartSiteFitScore, locale: "es" | "en"): str
       `- Factor de ocupación del terreno: ${score.siteUtilization}/10`,
       `- Regularidad y alineación de filas: ${score.rowRegularity}/10`,
       `- Eficiencia en distanciamiento de pasillos: ${score.corridorEfficiency}/10`,
-      `- Proporción BESS / PCS según diseño: ${score.ratioCompliance}/10`,
-      `- Compacidad de la forma del bloque: ${shapeCompactnessVal}/10`,
-      `- Coincidencia forma vs. terreno: ${terrainFitVal}/10`,
-      `- Integración de PCS con su clúster BESS: ${pcsIntegrationVal}/10`,
-      `- Ocupación acorde a la estrategia: ${capacityIntentVal}/10`,
-      `- Orden geométrico y centrado: ${layoutAestheticsVal}/10`,
-    ].join("\n");
+    ];
+    if (!isIntegrated) {
+      lines.push(`- Proporción BESS / PCS según diseño: ${score.ratioCompliance}/10`);
+    }
+    lines.push(`- Compacidad de la forma del bloque: ${shapeCompactnessVal}/10`);
+    lines.push(`- Coincidencia forma vs. terreno: ${terrainFitVal}/10`);
+    if (!isIntegrated) {
+      lines.push(`- Integración de PCS con su clúster BESS: ${pcsIntegrationVal}/10`);
+    }
+    lines.push(`- Ocupación acorde a la estrategia: ${capacityIntentVal}/10`);
+    lines.push(`- Orden geométrico y centrado: ${layoutAestheticsVal}/10`);
+    return lines.join("\n");
   } else {
-    return [
+    const lines = [
       `Layout evaluation (Total: ${score.total}/100):`,
       `- Placement inside boundaries: ${score.insidePolygon}/25`,
       `- Collision check: ${score.noCollisions}/25`,
@@ -58,27 +71,27 @@ export function explainScore(score: SmartSiteFitScore, locale: "es" | "en"): str
       `- Terrain footprint utilization: ${score.siteUtilization}/10`,
       `- Regularity and alignment of rows: ${score.rowRegularity}/10`,
       `- Corridor spacing efficiency: ${score.corridorEfficiency}/10`,
-      `- BESS / PCS spec ratio compliance: ${score.ratioCompliance}/10`,
-      `- Block shape compactness: ${shapeCompactnessVal}/10`,
-      `- Shape vs. terrain match: ${terrainFitVal}/10`,
-      `- PCS integration with its BESS cluster: ${pcsIntegrationVal}/10`,
-      `- Occupancy aligned with strategy: ${capacityIntentVal}/10`,
-      `- Geometric order and centering: ${layoutAestheticsVal}/10`,
-    ].join("\n");
+    ];
+    if (!isIntegrated) {
+      lines.push(`- BESS / PCS spec ratio compliance: ${score.ratioCompliance}/10`);
+    }
+    lines.push(`- Block shape compactness: ${shapeCompactnessVal}/10`);
+    lines.push(`- Shape vs. terrain match: ${terrainFitVal}/10`);
+    if (!isIntegrated) {
+      lines.push(`- PCS integration with its BESS cluster: ${pcsIntegrationVal}/10`);
+    }
+    lines.push(`- Occupancy aligned with strategy: ${capacityIntentVal}/10`);
+    lines.push(`- Geometric order and centering: ${layoutAestheticsVal}/10`);
+    return lines.join("\n");
   }
 }
 
 export function explainAlternative(candidate: SmartSiteFitCandidate, locale: "es" | "en"): string {
-  let bessCount = 0;
-  let pcsCount = 0;
-  for (const item of candidate.placedEquipment) {
-    const spec = equipmentCatalog.find((s) => s.id === item.equipmentSpecId);
-    if (spec?.type === "battery_container") {
-      bessCount++;
-    } else if (spec?.type === "pcs_mv_station") {
-      pcsCount++;
-    }
-  }
+  // Architecture-agnostic counts from the catalog-backed summarizer (single
+  // source of truth shared with the cards, slice and banner). Integrated
+  // presets (e.g. Tesla Megapack) carry their own inverter, so pcsCount === 0.
+  const { bessCount, pcsCount } = summarizePlacedEquipment(candidate.placedEquipment);
+  const isIntegrated = pcsCount === 0 && bessCount > 0;
 
   const stratLabel = strategyLabel(candidate.strategy, locale);
   const shapeInfo = candidate.shape;
@@ -108,11 +121,19 @@ export function explainAlternative(candidate: SmartSiteFitCandidate, locale: "es
     const elongationWarning = isElongated
       ? " Advertencia: la distribución resulta algo alargada; conviene revisar si el terreno admite una forma más compacta."
       : "";
+    // Architecture-aware equipment and scoring sentences: integrated units bundle
+    // their own power conversion, so there are no separate PCS/MV stations.
+    const equipmentSentence = isIntegrated
+      ? `Agrupa ${bessCount} unidades integradas; cada unidad incluye batería y conversión de potencia integrada según el preset seleccionado. No se modelan estaciones PCS/MV ni transformadores separados en el layout preliminar; la conexión hacia el collector, la red de media tensión y el punto de interconexión se mantiene como representación conceptual.`
+      : `Contiene un total de ${bessCount} contenedores de batería BESS y ${pcsCount} estaciones de conversión de potencia PCS, con cada PCS/MV asociado a su grupo de BESS.`;
+    const scoreSentence = isIntegrated
+      ? `La puntuación técnica obtenida es de ${candidate.score.total} puntos según criterios de separación perimetral, distanciamientos entre unidades, disposición del conjunto y aprovechamiento de la superficie disponible.`
+      : `La puntuación técnica obtenida es de ${candidate.score.total} puntos según criterios de separación perimetral, distanciamientos de pasillos, integración PCS/MV y aprovechamiento de la superficie disponible.`;
     return [
       `Configuración sugerida bajo la estrategia "${stratLabel}".${shapeDesc}`,
-      `Contiene un total de ${bessCount} contenedores de batería BESS y ${pcsCount} estaciones de conversión de potencia PCS, con cada PCS/MV asociado a su grupo de BESS.`,
+      equipmentSentence,
       `${intent}${terrainSentence}${elongationWarning}`,
-      `La puntuación técnica obtenida es de ${candidate.score.total} puntos según criterios de separación perimetral, distanciamientos de pasillos, integración PCS/MV y aprovechamiento de la superficie disponible.`,
+      scoreSentence,
       `Resultado de predimensionamiento preliminar, sujeto a validación con el fabricante o EPC.`,
     ].join(" ");
   } else {
@@ -136,11 +157,17 @@ export function explainAlternative(candidate: SmartSiteFitCandidate, locale: "es
     const elongationWarning = isElongated
       ? " Warning: the layout is somewhat elongated; consider whether the terrain allows a more compact shape."
       : "";
+    const equipmentSentence = isIntegrated
+      ? `Groups ${bessCount} integrated units; each unit bundles battery and integrated power conversion per the selected preset. No separate PCS/MV stations or transformers are modeled in the preliminary layout; the connection toward the collector, the medium-voltage network and the interconnection point remains a conceptual representation.`
+      : `Includes a total of ${bessCount} BESS battery containers and ${pcsCount} PCS power conversion stations, with each PCS/MV tied to its BESS group.`;
+    const scoreSentence = isIntegrated
+      ? `The layout achieves a technical score of ${candidate.score.total} points based on setback margins, unit-to-unit spacing, overall arrangement, and surface utilization.`
+      : `The layout achieves a technical score of ${candidate.score.total} points based on setback margins, corridor spacing, PCS/MV integration, and surface utilization.`;
     return [
       `Suggested configuration under the "${stratLabel}" strategy.${shapeDesc}`,
-      `Includes a total of ${bessCount} BESS battery containers and ${pcsCount} PCS power conversion stations, with each PCS/MV tied to its BESS group.`,
+      equipmentSentence,
       `${intent}${terrainSentence}${elongationWarning}`,
-      `The layout achieves a technical score of ${candidate.score.total} points based on setback margins, corridor spacing, PCS/MV integration, and surface utilization.`,
+      scoreSentence,
       `Preliminary pre-dimensioning result, subject to validation with the manufacturer or EPC.`,
     ].join(" ");
   }
