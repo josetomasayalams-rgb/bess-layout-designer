@@ -123,6 +123,12 @@ describe("SmartSiteFit Explain", () => {
     expect(en).toContain("3 integrated units");
     expect(en.toLowerCase()).toContain("integrated power conversion");
 
+    // Names the external LV/MV step-up transformer explicitly as out of scope.
+    expect(es).toContain("transformador elevador BT/MT");
+    expect(es.toLowerCase()).toContain("externo y no se modela aquí");
+    expect(en.toLowerCase()).toContain("external lv/mv step-up transformer");
+    expect(en.toLowerCase()).toContain("not modeled here");
+
     // Must NOT carry the misleading separate-PCS narrative for integrated.
     expect(es).not.toContain("0 PCS");
     expect(es).not.toContain("0 estaciones");

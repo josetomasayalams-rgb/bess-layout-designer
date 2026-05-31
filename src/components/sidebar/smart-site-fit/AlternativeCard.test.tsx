@@ -121,6 +121,46 @@ describe("AlternativeCard", () => {
     expect(screen.queryByRole("button", { name: /Apply alternative/i })).toBeNull();
   });
 
+  it("surfaces the external-MV callout for an integrated (Tesla) alternative and dedupes the warning", () => {
+    // Integrated units resolve to battery_container in the catalog: pcsCount === 0.
+    const integratedCandidate: SmartSiteFitCandidate = {
+      ...mockCandidate,
+      id: "candidate-integrated",
+      placedEquipment: Array.from({ length: 3 }).map((_, idx) => ({
+        id: `u-${idx}`,
+        equipmentSpecId: "bess-tesla-megapack-2xl-4h",
+        anchor: { lng: -70.6 + 0.0001 * idx, lat: -33.4 },
+        rotation_deg: 0,
+        sourceReliability: "preliminary_assumption" as const,
+      })),
+      warnings: [
+        {
+          id: "integrated-external-transformer",
+          severity: "info",
+          message: "RAW_EXTERNAL_TRANSFORMER_MESSAGE",
+        },
+        { id: "other", severity: "warning", message: "Other warning" },
+      ],
+    };
+
+    render(<AlternativeCard {...defaultProps} candidate={integratedCandidate} />);
+
+    // Prominent integrated callout is shown.
+    expect(
+      screen.getByText(/External MV interface pending validation/i)
+    ).toBeDefined();
+
+    // The integrated architecture is labeled, never "0 PCS".
+    expect(screen.getAllByText("Integrated").length).toBeGreaterThan(0);
+    expect(screen.queryByText(/0 PCS/i)).toBeNull();
+
+    // The dedicated callout replaces the raw external-transformer warning in
+    // the generic list, but the warning count still reflects the full set.
+    expect(screen.queryByText("RAW_EXTERNAL_TRANSFORMER_MESSAGE")).toBeNull();
+    expect(screen.getByText("Other warning")).toBeDefined();
+    expect(screen.getByText(/2 warnings/i)).toBeDefined();
+  });
+
   it("renders ratio and duration correctly for 16h (32:1 ratio) candidate", () => {
     const highRatioCandidate: SmartSiteFitCandidate = {
       ...mockCandidate,

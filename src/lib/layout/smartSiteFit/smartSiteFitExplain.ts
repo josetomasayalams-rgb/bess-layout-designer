@@ -124,7 +124,7 @@ export function explainAlternative(candidate: SmartSiteFitCandidate, locale: "es
     // Architecture-aware equipment and scoring sentences: integrated units bundle
     // their own power conversion, so there are no separate PCS/MV stations.
     const equipmentSentence = isIntegrated
-      ? `Agrupa ${bessCount} unidades integradas; cada unidad incluye batería y conversión de potencia integrada según el preset seleccionado. No se modelan estaciones PCS/MV ni transformadores separados en el layout preliminar; la conexión hacia el collector, la red de media tensión y el punto de interconexión se mantiene como representación conceptual.`
+      ? `Agrupa ${bessCount} unidades integradas; cada unidad incluye batería y conversión de potencia integrada según el preset seleccionado. No se modelan estaciones PCS/MV ni transformadores separados en el layout preliminar; el transformador elevador BT/MT que conecta a la red de media tensión es externo y no se modela aquí. La conexión hacia el collector, la red de media tensión y el punto de interconexión se mantiene como representación conceptual.`
       : `Contiene un total de ${bessCount} contenedores de batería BESS y ${pcsCount} estaciones de conversión de potencia PCS, con cada PCS/MV asociado a su grupo de BESS.`;
     const scoreSentence = isIntegrated
       ? `La puntuación técnica obtenida es de ${candidate.score.total} puntos según criterios de separación perimetral, distanciamientos entre unidades, disposición del conjunto y aprovechamiento de la superficie disponible.`
@@ -158,7 +158,7 @@ export function explainAlternative(candidate: SmartSiteFitCandidate, locale: "es
       ? " Warning: the layout is somewhat elongated; consider whether the terrain allows a more compact shape."
       : "";
     const equipmentSentence = isIntegrated
-      ? `Groups ${bessCount} integrated units; each unit bundles battery and integrated power conversion per the selected preset. No separate PCS/MV stations or transformers are modeled in the preliminary layout; the connection toward the collector, the medium-voltage network and the interconnection point remains a conceptual representation.`
+      ? `Groups ${bessCount} integrated units; each unit bundles battery and integrated power conversion per the selected preset. No separate PCS/MV stations or transformers are modeled in the preliminary layout; the external LV/MV step-up transformer that connects to the medium-voltage network is not modeled here. The connection toward the collector, the medium-voltage network and the interconnection point remains a conceptual representation.`
       : `Includes a total of ${bessCount} BESS battery containers and ${pcsCount} PCS power conversion stations, with each PCS/MV tied to its BESS group.`;
     const scoreSentence = isIntegrated
       ? `The layout achieves a technical score of ${candidate.score.total} points based on setback margins, unit-to-unit spacing, overall arrangement, and surface utilization.`

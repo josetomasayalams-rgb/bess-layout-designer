@@ -29,6 +29,14 @@ export function AlternativeCard({
   const pcsCount = summary.pcsCount;
   const isIntegrated = pcsCount === 0 && bessCount > 0;
 
+  // For integrated presets the external-MV-interface caveat is surfaced as a
+  // dedicated prominent callout below, so it is dropped from the generic
+  // warning list to avoid showing the same caveat twice. The count badge still
+  // reflects the full warning set.
+  const visibleWarnings = isIntegrated
+    ? candidate.warnings.filter((w) => w.id !== "integrated-external-transformer")
+    : candidate.warnings;
+
   const totalMW = parseFloat(summary.powerMW.toFixed(1));
   const totalMWh = parseFloat(summary.energyMWh.toFixed(2));
   const duration = totalMW > 0 ? parseFloat((totalMWh / totalMW).toFixed(1)) : 0;
@@ -157,6 +165,24 @@ export function AlternativeCard({
         {explanation}
       </p>
 
+      {isIntegrated && (
+        <div className="mt-2 flex items-start gap-1.5 rounded-md border border-amber-500/30 bg-amber-500/10 p-2 text-[10px] leading-snug text-amber-200/90">
+          <AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0 text-amber-400" />
+          <div className="space-y-0.5">
+            <p className="font-semibold text-amber-200">
+              {isEs
+                ? "Interfaz MT externa pendiente de validación"
+                : "External MV interface pending validation"}
+            </p>
+            <p>
+              {isEs
+                ? "Las unidades integradas entregan salida en baja tensión; el transformador elevador BT/MT y la interfaz de media tensión son externos y no se modelan en este layout. Predimensionamiento preliminar: confirmar con fabricante/EPC."
+                : "Integrated units deliver low-voltage output; the LV/MV step-up transformer and the medium-voltage interface are external and not modeled in this layout. Preliminary pre-dimensioning: confirm with manufacturer/EPC."}
+            </p>
+          </div>
+        </div>
+      )}
+
       {previewSimplified && (
         <div className="mt-2 flex items-start gap-1.5 rounded-md border border-cyan-500/20 bg-cyan-500/10 p-2 text-[9.5px] leading-snug text-cyan-200/90">
           <Layers className="mt-px h-3 w-3 shrink-0 text-cyan-400" />
@@ -168,9 +194,9 @@ export function AlternativeCard({
         </div>
       )}
 
-      {candidate.warnings.length > 0 && (
+      {visibleWarnings.length > 0 && (
         <ul className="mt-2 space-y-1">
-          {candidate.warnings.slice(0, 3).map((w) => (
+          {visibleWarnings.slice(0, 3).map((w) => (
             <li
               key={w.id}
               className="flex items-start gap-1 text-[9.5px] leading-snug text-slate-400"
