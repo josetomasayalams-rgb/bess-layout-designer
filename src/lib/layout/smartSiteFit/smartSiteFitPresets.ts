@@ -18,6 +18,8 @@ export const SUNGROW_ST2752UX_SC5000UD_PRESET: SmartSiteFitPreset = {
     8: 16,
     16: 32,
   },
+  separatePcsTransformerNote:
+    "SC5000UD-MV integra transformador BT/MT y no se debe crear transformador separado.",
 };
 
 /**

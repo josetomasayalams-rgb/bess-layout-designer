@@ -29,6 +29,14 @@ export interface SmartSiteFitPreset {
   notes: string;
   supportedDurations?: number[];
   ratioByDuration?: Record<number, number>;
+  /**
+   * For separate-PCS presets whose PCS integrates its own LV/MV transformer
+   * (e.g. Sungrow SC5000UD-MV): an informational note explaining that no
+   * separate transformer is created. The engine surfaces it as an info warning.
+   * Omit when not applicable so other presets do not inherit a Sungrow-specific
+   * message.
+   */
+  separatePcsTransformerNote?: string;
   /** Defaults to `bess_plus_pcs` when omitted (legacy Sungrow behavior). */
   architecture?: SmartSiteFitArchitecture;
   /**
