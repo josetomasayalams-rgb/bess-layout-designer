@@ -161,6 +161,17 @@ describe("AlternativeCard", () => {
     expect(screen.getByText(/2 warnings/i)).toBeDefined();
   });
 
+  it("renders an SVG schematic preview with one rect per block", () => {
+    const { container } = render(<AlternativeCard {...defaultProps} />);
+
+    const previewSvg = container.querySelector('svg[role="img"]');
+    expect(previewSvg).not.toBeNull();
+
+    // 1 BESS + 1 PCS footprint → two rects in the schematic.
+    const rects = previewSvg?.querySelectorAll("rect");
+    expect(rects?.length).toBe(2);
+  });
+
   it("renders ratio and duration correctly for 16h (32:1 ratio) candidate", () => {
     const highRatioCandidate: SmartSiteFitCandidate = {
       ...mockCandidate,

@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, fireEvent, cleanup } from "@testing-library/react";
+import { render, screen, fireEvent, cleanup, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { TargetSizingTab } from "./TargetSizingTab";
 import type { SmartSiteFitResult } from "@/lib/layout/smartSiteFit/smartSiteFitTypes";
@@ -31,14 +31,30 @@ describe("TargetSizingTab", () => {
     expect(screen.getByLabelText(/Design Strategy/i)).toBeDefined();
   });
 
-  it("calls onRunAnalysis when calculate button is clicked", () => {
+  it("calls onRunAnalysis when calculate button is clicked", async () => {
     const onRunAnalysis = vi.fn();
     render(<TargetSizingTab {...defaultProps} onRunAnalysis={onRunAnalysis} />);
 
     const button = screen.getByRole("button", { name: /Calculate alternative/i });
     fireEvent.click(button);
 
-    expect(onRunAnalysis).toHaveBeenCalled();
+    // The run is deferred by one macrotask so the loading state can paint.
+    await waitFor(() => expect(onRunAnalysis).toHaveBeenCalled());
+  });
+
+  it("shows a loading indicator while the analysis is deferred", async () => {
+    render(<TargetSizingTab {...defaultProps} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Calculate alternative/i }));
+
+    // Loading state paints immediately after submit.
+    expect(screen.getByText(/Analyzing layout options/i)).toBeDefined();
+
+    // It clears once the deferred run completes (result stays null here, so the
+    // form returns).
+    await waitFor(() =>
+      expect(screen.queryByText(/Analyzing layout options/i)).toBeNull()
+    );
   });
 
   it("displays results card and micro-adjustment panel if results exist", () => {
@@ -86,9 +102,80 @@ describe("TargetSizingTab", () => {
       />
     );
 
-    expect(screen.getByText(/Generated Alternative/i)).toBeDefined();
+    expect(screen.getByText(/Layout Alternatives/i)).toBeDefined();
     expect(screen.getAllByText(/Balanced/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/Capacity and Spacing Adjustments/i)).toBeDefined();
+  });
+
+  it("renders every candidate as a selectable card (grid, not a single card)", () => {
+    const makeCandidate = (id: string, kind: "compact_grid" | "wide_grid") => ({
+      id,
+      strategy: "balanced" as const,
+      placedEquipment: [
+        {
+          id: `${id}-b1`,
+          equipmentSpecId: "sungrow-st2752ux-us",
+          anchor: { lng: -70, lat: -33 },
+          rotation_deg: 0,
+          sourceReliability: "preliminary_assumption" as const,
+        },
+      ],
+      score: {
+        total: 80,
+        insidePolygon: 25,
+        noCollisions: 25,
+        boundaryMargin: 10,
+        siteUtilization: 10,
+        rowRegularity: 5,
+        corridorEfficiency: 3,
+        ratioCompliance: 2,
+      },
+      warnings: [],
+      assumptions: [],
+      shape: {
+        id: kind,
+        kind,
+        label: kind === "compact_grid" ? "Compact Matrix" : "Wide Grid",
+        description: "",
+        rows: 1,
+        columns: 1,
+        blocks: 1,
+        pcsPlacement: "side",
+      },
+    });
+
+    const onSelectAlternative = vi.fn();
+    const multiResult: SmartSiteFitResult = {
+      success: true,
+      candidates: [
+        makeCandidate("c-1", "compact_grid"),
+        makeCandidate("c-2", "wide_grid"),
+      ],
+      selected: null,
+      warnings: [],
+      assumptions: [],
+      fallbackUsed: false,
+      message: "ok",
+    };
+
+    render(
+      <TargetSizingTab
+        {...defaultProps}
+        result={multiResult}
+        selectedAlternativeId="c-1"
+        onSelectAlternative={onSelectAlternative}
+      />
+    );
+
+    // Both alternatives are listed, and the count line reflects the grid.
+    expect(screen.getByText(/2 alternatives/i)).toBeDefined();
+    expect(screen.getAllByText("Compact Matrix").length).toBeGreaterThan(0);
+    const wide = screen.getAllByText("Wide Grid");
+    expect(wide.length).toBeGreaterThan(0);
+
+    // Clicking anywhere in the second card bubbles to its onSelect handler.
+    fireEvent.click(wide[0]);
+    expect(onSelectAlternative).toHaveBeenCalledWith("c-2");
   });
 
   it("lets the target power field be cleared without snapping back to 1", () => {
@@ -117,7 +204,7 @@ describe("TargetSizingTab", () => {
     expect(energy.value).toBe("912");
   });
 
-  it("runs the analysis with the typed target values", () => {
+  it("runs the analysis with the typed target values", async () => {
     const onRunAnalysis = vi.fn();
     render(<TargetSizingTab {...defaultProps} onRunAnalysis={onRunAnalysis} />);
 
@@ -127,8 +214,10 @@ describe("TargetSizingTab", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Calculate alternative/i }));
 
-    expect(onRunAnalysis).toHaveBeenCalledWith(
-      expect.objectContaining({ targetMW: 228, targetMWh: 912 })
+    await waitFor(() =>
+      expect(onRunAnalysis).toHaveBeenCalledWith(
+        expect.objectContaining({ targetMW: 228, targetMWh: 912 })
+      )
     );
   });
 

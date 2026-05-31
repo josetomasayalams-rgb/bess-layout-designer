@@ -164,3 +164,36 @@ export interface SmartSiteFitResult {
   message: string;
 }
 
+/**
+ * Lightweight, render-ready schematic of an alternative's block layout. It is a
+ * pure projection of `candidate.placedEquipment` into a normalized 2D frame so
+ * the UI can draw a small SVG preview of the block ordering and separation
+ * without resolving the catalog or the map. Coordinates live in a viewbox whose
+ * longer axis is `viewSize` (see `buildSmartSiteFitPreview`); `y` grows downward
+ * (SVG convention) with geographic north rendered upward.
+ */
+export interface SmartSiteFitPreviewBlock {
+  /** Battery enclosure (also integrated all-in-one units) vs separate PCS/MV. */
+  kind: "bess" | "pcs";
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  /** Source block grouping (PlacedEquipment.blockIndex) or aggregation bucket. */
+  blockIndex: number;
+}
+
+export interface SmartSiteFitPreview {
+  /** Normalized viewbox width (aspect-preserving). */
+  width: number;
+  /** Normalized viewbox height (aspect-preserving). */
+  height: number;
+  /** Site outline in the same normalized frame, when a polygon is supplied. */
+  site?: { points: Array<{ x: number; y: number }> };
+  blocks: SmartSiteFitPreviewBlock[];
+  /** Number of equipment items represented (before any aggregation). */
+  itemCount: number;
+  /** True when blocks were spatially aggregated to keep the SVG light. */
+  simplified: boolean;
+}
+

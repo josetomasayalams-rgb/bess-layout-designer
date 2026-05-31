@@ -1,8 +1,10 @@
 import React from "react";
 import type { SmartSiteFitCandidate } from "@/lib/layout/smartSiteFit/smartSiteFitTypes";
+import type { LngLat, ProjectAnchor } from "@/types/geometry";
 import { strategyLabel, explainAlternative } from "@/lib/layout/smartSiteFit/smartSiteFitExplain";
 import { DEFAULT_PERFORMANCE_BUDGET } from "@/lib/layout/smartSiteFit/smartSiteFitPerformance";
 import { summarizePlacedEquipment } from "@/lib/layout/smartSiteFit/smartSiteFitSizing";
+import { buildSmartSiteFitPreview } from "@/lib/layout/smartSiteFit/smartSiteFitPreview";
 import { AlertTriangle, Info, Check, Layers } from "lucide-react";
 
 interface AlternativeCardProps {
@@ -11,6 +13,10 @@ interface AlternativeCardProps {
   onSelect: () => void;
   onApply?: () => void;
   locale: "es" | "en";
+  /** Optional site polygon, drawn as a faint outline behind the blocks. */
+  polygon?: LngLat[];
+  /** Local frame origin for the preview projection. */
+  anchor?: ProjectAnchor;
 }
 
 export function AlternativeCard({
@@ -19,8 +25,17 @@ export function AlternativeCard({
   onSelect,
   onApply,
   locale,
+  polygon,
+  anchor,
 }: AlternativeCardProps) {
   const isEs = locale === "es";
+
+  // Render-ready schematic of the block ordering/separation, projected purely
+  // from candidate.placedEquipment so it matches what "Apply" would place.
+  const preview = React.useMemo(
+    () => buildSmartSiteFitPreview(candidate, { polygon, anchor }),
+    [candidate, polygon, anchor]
+  );
 
   // Architecture-agnostic: correct for Sungrow (separate BESS + PCS) and for
   // integrated presets (units carry their own inverter, pcsCount === 0).
@@ -124,6 +139,38 @@ export function AlternativeCard({
           <span className="font-mono font-bold text-cyan-300">{duration}h</span>
         </div>
       </div>
+
+      {preview.blocks.length > 0 && (
+        <div className="mt-2 rounded-md border border-slate-800/60 bg-slate-950/60 p-1.5">
+          <svg
+            viewBox={`0 0 ${preview.width} ${preview.height}`}
+            preserveAspectRatio="xMidYMid meet"
+            className="h-20 w-full"
+            role="img"
+            aria-label={isEs ? "Vista previa del layout" : "Layout preview"}
+          >
+            {preview.site && (
+              <polygon
+                points={preview.site.points.map((p) => `${p.x},${p.y}`).join(" ")}
+                fill="none"
+                stroke="rgb(71 85 105 / 0.7)"
+                strokeWidth={0.6}
+                strokeDasharray="2 1.5"
+              />
+            )}
+            {preview.blocks.map((b, i) => (
+              <rect
+                key={i}
+                x={b.x}
+                y={b.y}
+                width={Math.max(b.w, 0.4)}
+                height={Math.max(b.h, 0.4)}
+                fill={b.kind === "pcs" ? "rgb(251 191 36 / 0.9)" : "rgb(34 211 238 / 0.75)"}
+              />
+            ))}
+          </svg>
+        </div>
+      )}
 
       {candidate.shape && (
         <div className="mt-2 flex items-center justify-between text-[10px]">

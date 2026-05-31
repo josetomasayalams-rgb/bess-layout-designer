@@ -15,6 +15,7 @@ export function SmartSiteFitPanel() {
   const [activeTab, setActiveTab] = useState<"target" | "terrain">("target");
 
   const polygon = useProjectStore((s) => s.polygon);
+  const anchor = useProjectStore((s) => s.anchor);
   const smartSiteFit = useProjectStore((s) => s.smartSiteFit);
   const smartSiteFitApplied = useProjectStore((s) => s.smartSiteFitApplied);
 
@@ -120,6 +121,8 @@ export function SmartSiteFitPanel() {
             onApply={applySmartSiteFitAlternative}
             onDiscard={discardSmartSiteFit}
             locale={locale}
+            polygon={polygon}
+            anchor={anchor ?? undefined}
           />
         ) : (
           <TerrainSizingTab
@@ -135,6 +138,8 @@ export function SmartSiteFitPanel() {
             onApply={applySmartSiteFitAlternative}
             onDiscard={discardSmartSiteFit}
             locale={locale}
+            polygon={polygon}
+            anchor={anchor ?? undefined}
           />
         )}
       </div>

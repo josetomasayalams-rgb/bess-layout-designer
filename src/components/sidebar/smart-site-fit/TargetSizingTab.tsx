@@ -5,6 +5,7 @@ import type {
   SmartSiteFitOverrides,
   SmartSiteFitStrategy,
 } from "@/lib/layout/smartSiteFit/smartSiteFitTypes";
+import type { LngLat, ProjectAnchor } from "@/types/geometry";
 import {
   getDefaultSmartSiteFitPreset,
   getSmartSiteFitPresetById,
@@ -16,6 +17,7 @@ import { AlternativeCard } from "./AlternativeCard";
 import { MicroAdjustPanel } from "./MicroAdjustPanel";
 import { BessSystemSelector } from "./BessSystemSelector";
 import { NumberField } from "@/components/ui/NumberField";
+import { Loader2 } from "lucide-react";
 
 interface TargetSizingTabProps {
   result: SmartSiteFitResult | null;
@@ -29,6 +31,10 @@ interface TargetSizingTabProps {
   onApply: () => void;
   onDiscard: () => void;
   locale: "es" | "en";
+  /** Site polygon, passed to each preview for the optional site outline. */
+  polygon?: LngLat[];
+  /** Local frame origin for previews. */
+  anchor?: ProjectAnchor;
 }
 
 export function TargetSizingTab({
@@ -37,11 +43,14 @@ export function TargetSizingTab({
   overrides,
   isDirty,
   onRunAnalysis,
+  onSelectAlternative,
   onUpdateOverrides,
   onRecalculate,
   onApply,
   onDiscard,
   locale,
+  polygon,
+  anchor,
 }: TargetSizingTabProps) {
   const isEs = locale === "es";
 
@@ -50,6 +59,7 @@ export function TargetSizingTab({
   const [duration, setDuration] = useState<number>(4);
   const [strategy, setStrategy] = useState<SmartSiteFitStrategy>("balanced");
   const [presetId, setPresetId] = useState<string>(getDefaultSmartSiteFitPreset().id);
+  const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
 
   const preset = getSmartSiteFitPresetById(presetId);
   const integrated = isIntegratedPreset(preset);
@@ -72,14 +82,23 @@ export function TargetSizingTab({
 
   const handleCalculate = (e: React.FormEvent) => {
     e.preventDefault();
-    onRunAnalysis({
-      mode: "target",
-      targetMW,
-      targetMWh,
-      durationHours: duration,
-      strategy,
-      presetId,
-    });
+    if (isAnalyzing) return;
+    // Surface a loading state, then defer the synchronous engine by one
+    // macrotask so the spinner paints before a large layout computes (keeps the
+    // UI responsive at utility scale). A Web Worker can replace this deferral
+    // later without changing the call site.
+    setIsAnalyzing(true);
+    window.setTimeout(() => {
+      onRunAnalysis({
+        mode: "target",
+        targetMW,
+        targetMWh,
+        durationHours: duration,
+        strategy,
+        presetId,
+      });
+      setIsAnalyzing(false);
+    }, 0);
   };
 
   const handleDurationChange = (hrs: number) => {
@@ -101,6 +120,21 @@ export function TargetSizingTab({
   return (
     <div className="space-y-4">
       {!result ? (
+        isAnalyzing ? (
+          <div className="flex flex-col items-center justify-center gap-3 rounded-md border border-slate-800 bg-slate-900/40 py-10 text-center">
+            <Loader2 className="h-6 w-6 animate-spin text-cyan-400" />
+            <div className="space-y-0.5">
+              <p className="text-xs font-semibold text-slate-300">
+                {isEs ? "Analizando opciones de layout…" : "Analyzing layout options…"}
+              </p>
+              <p className="text-[10px] text-slate-500">
+                {isEs
+                  ? "Generando alternativas según la forma del terreno."
+                  : "Generating alternatives from the terrain shape."}
+              </p>
+            </div>
+          </div>
+        ) : (
         <form onSubmit={handleCalculate} className="space-y-3">
           {/* BESS system selector */}
           <BessSystemSelector
@@ -219,11 +253,12 @@ export function TargetSizingTab({
             {isEs ? "Calcular alternativa" : "Calculate alternative"}
           </button>
         </form>
+        )
       ) : (
         <div className="space-y-4">
           <div className="flex items-center justify-between border-b border-slate-850 pb-2">
             <h5 className="text-xs font-bold text-slate-400">
-              {isEs ? "Alternativa generada" : "Generated Alternative"}
+              {isEs ? "Alternativas de layout" : "Layout Alternatives"}
             </h5>
             <button
               onClick={onDiscard}
@@ -233,13 +268,27 @@ export function TargetSizingTab({
             </button>
           </div>
 
-          {selectedAlternative ? (
-            <AlternativeCard
-              candidate={selectedAlternative}
-              isSelected={true}
-              onSelect={() => {}}
-              locale={locale}
-            />
+          {result.candidates.length > 0 ? (
+            <>
+              <p className="text-[10px] text-slate-500">
+                {isEs
+                  ? `${result.candidates.length} alternativas — selecciona una para ajustarla y aplicarla.`
+                  : `${result.candidates.length} alternatives — select one to adjust and apply.`}
+              </p>
+              <div className="space-y-2.5 max-h-[420px] overflow-y-auto pr-1">
+                {result.candidates.map((candidate) => (
+                  <AlternativeCard
+                    key={candidate.id}
+                    candidate={candidate}
+                    isSelected={candidate.id === selectedAlternativeId}
+                    onSelect={() => onSelectAlternative(candidate.id)}
+                    locale={locale}
+                    polygon={polygon}
+                    anchor={anchor}
+                  />
+                ))}
+              </div>
+            </>
           ) : (
             <p className="text-xs text-slate-500">
               {isEs ? "No se generaron alternativas válidas." : "No valid alternatives generated."}

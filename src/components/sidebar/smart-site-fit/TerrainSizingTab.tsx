@@ -4,6 +4,7 @@ import type {
   SmartSiteFitResult,
   SmartSiteFitOverrides,
 } from "@/lib/layout/smartSiteFit/smartSiteFitTypes";
+import type { LngLat, ProjectAnchor } from "@/types/geometry";
 import {
   getDefaultSmartSiteFitPreset,
   getSmartSiteFitPresetById,
@@ -29,6 +30,10 @@ interface TerrainSizingTabProps {
   onApply: () => void;
   onDiscard: () => void;
   locale: "es" | "en";
+  /** Site polygon, passed to each preview for the optional site outline. */
+  polygon?: LngLat[];
+  /** Local frame origin for previews. */
+  anchor?: ProjectAnchor;
 }
 
 export function TerrainSizingTab({
@@ -44,6 +49,8 @@ export function TerrainSizingTab({
   onApply,
   onDiscard,
   locale,
+  polygon,
+  anchor,
 }: TerrainSizingTabProps) {
   const isEs = locale === "es";
 
@@ -200,6 +207,8 @@ export function TerrainSizingTab({
                 isSelected={candidate.id === selectedAlternativeId}
                 onSelect={() => onSelectAlternative(candidate.id)}
                 locale={locale}
+                polygon={polygon}
+                anchor={anchor}
               />
             ))}
           </div>

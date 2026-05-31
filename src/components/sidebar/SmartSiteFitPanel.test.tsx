@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen, fireEvent, cleanup } from "@testing-library/react";
+import { render, screen, fireEvent, cleanup, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { SmartSiteFitPanel } from "./SmartSiteFitPanel";
 import { useUiStore } from "@/store/uiStore";
@@ -52,7 +52,7 @@ describe("SmartSiteFitPanel", () => {
     expect(screen.getByText(/Please draw a terrain polygon/i)).toBeDefined();
   });
 
-  it("completes target sizing calculation flow and displays the result", () => {
+  it("completes target sizing calculation flow and displays the result", async () => {
     // Inject polygon and anchor
     useProjectStore.setState({
       polygon: [
@@ -70,13 +70,16 @@ describe("SmartSiteFitPanel", () => {
     const calcBtn = screen.getByRole("button", { name: /Calculate alternative/i });
     fireEvent.click(calcBtn);
 
-    // The store should now have a calculated result
-    const state = useProjectStore.getState();
-    expect(state.smartSiteFit.result).not.toBeNull();
-    expect(state.smartSiteFit.selectedAlternativeId).not.toBeNull();
+    // The run is deferred by one macrotask so the loading state can paint; the
+    // store is populated once it completes.
+    await waitFor(() => {
+      const state = useProjectStore.getState();
+      expect(state.smartSiteFit.result).not.toBeNull();
+      expect(state.smartSiteFit.selectedAlternativeId).not.toBeNull();
+    });
 
-    // Alternative card and adjustment panels are displayed
-    expect(screen.getByText(/Generated Alternative/i)).toBeDefined();
+    // Alternative cards and adjustment panels are displayed
+    expect(screen.getByText(/Layout Alternatives/i)).toBeDefined();
     expect(screen.getByText(/Capacity and Spacing Adjustments/i)).toBeDefined();
   });
 
