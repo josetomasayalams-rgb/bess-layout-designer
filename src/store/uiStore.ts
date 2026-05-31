@@ -51,8 +51,8 @@ export const defaultLayerVisibility: LayerVisibility = {
   collisions: true,
   outOfBounds: true,
   labels: true,
-  grid: false,
-  measurements: false,
+  grid: true,
+  measurements: true,
   mvInfrastructure: true,
   cableRoutes: true,
   accessRoads: true,
@@ -180,7 +180,7 @@ type UiState = {
   resetLayerVisibility: () => void;
 };
 
-const LAYER_STORAGE_KEY = "bess-layout-layer-visibility";
+const LAYER_STORAGE_KEY = "bess-layout-layer-visibility-v2";
 const THEME_STORAGE_KEY = "bess-layout-theme";
 
 function storedLocale(): Locale | null {
@@ -226,7 +226,7 @@ export const useUiStore = create<UiState>((set, get) => ({
   theme: "dark",
   unitSystem: DEFAULT_UNIT_SYSTEM,
   leftSidebarCollapsed: false,
-  rightSidebarCollapsed: false,
+  rightSidebarCollapsed: true,
   viewMode: "2d",
   layerVisibility: defaultLayerVisibility,
   hydrateLocale: () => {

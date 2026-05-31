@@ -126,23 +126,23 @@ describe("AppShell section shell surfaces", () => {
     expect(screen.getByTestId("bess-map")).toBeDefined();
   });
 
-  it("allows collapsing and expanding the top KPI and flow status header", () => {
+  it("starts with the top KPI and flow status header collapsed and allows expanding it", () => {
     render(<AppShell />);
 
-    // Initial state: expanded (displays "Hide top panel" in default English locale)
-    const toggleButton = screen.getByRole("button", { name: "Hide top panel" });
-    expect(toggleButton.getAttribute("aria-expanded")).toBe("true");
-
-    // Click to collapse
-    fireEvent.click(toggleButton);
-
-    // After click: collapsed (displays "Show top panel")
+    // Initial state on open: collapsed (displays "Show top panel" in default English locale)
     const collapsedButton = screen.getByRole("button", { name: "Show top panel" });
     expect(collapsedButton.getAttribute("aria-expanded")).toBe("false");
 
-    // Re-expand
+    // Click to expand
     fireEvent.click(collapsedButton);
+
+    // After click: expanded (displays "Hide top panel")
     const expandedButton = screen.getByRole("button", { name: "Hide top panel" });
     expect(expandedButton.getAttribute("aria-expanded")).toBe("true");
+
+    // Re-collapse
+    fireEvent.click(expandedButton);
+    const recollapsedButton = screen.getByRole("button", { name: "Show top panel" });
+    expect(recollapsedButton.getAttribute("aria-expanded")).toBe("false");
   });
 });

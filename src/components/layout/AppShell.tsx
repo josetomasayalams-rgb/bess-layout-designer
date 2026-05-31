@@ -35,7 +35,7 @@ const TAB_BUTTON =
 
 export function AppShell() {
   const [activeSection, setActiveSection] = useState<AppSectionId>("site");
-  const [topCollapsed, setTopCollapsed] = useState(false);
+  const [topCollapsed, setTopCollapsed] = useState(true);
   const hydrateLocale = useUiStore((s) => s.hydrateLocale);
   const hydrateTheme = useUiStore((s) => s.hydrateTheme);
   const hydrateLayerVisibility = useUiStore((s) => s.hydrateLayerVisibility);

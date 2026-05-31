@@ -89,3 +89,15 @@ describe("uiStore theme", () => {
     expect(useUiStore.getState().theme).toBe("light");
   });
 });
+
+describe("uiStore initial defaults", () => {
+  it("collapses the right sidebar and keeps the left sidebar open on open", () => {
+    expect(useUiStore.getState().rightSidebarCollapsed).toBe(true);
+    expect(useUiStore.getState().leftSidebarCollapsed).toBe(false);
+  });
+
+  it("enables the grid and measurement layers by default", () => {
+    expect(defaultLayerVisibility.grid).toBe(true);
+    expect(defaultLayerVisibility.measurements).toBe(true);
+  });
+});
