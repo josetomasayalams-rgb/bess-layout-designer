@@ -3,8 +3,12 @@ import {
   scoreCandidate,
   rankSmartSiteFitCandidates,
   selectTopSmartSiteFitAlternatives,
+  selectDiverseAlternatives,
 } from "./smartSiteFitScoring";
-import type { SmartSiteFitCandidate } from "./smartSiteFitTypes";
+import type {
+  SmartSiteFitCandidate,
+  SmartSiteFitShapeKind,
+} from "./smartSiteFitTypes";
 import type { LocalPoint, ProjectAnchor } from "@/types/geometry";
 import { toLngLat } from "@/lib/geometry/projection";
 
@@ -97,6 +101,81 @@ describe("SmartSiteFit Scoring", () => {
     const candidates = [emptyCandidate, emptyCandidate, emptyCandidate];
     const top = selectTopSmartSiteFitAlternatives(candidates, 2);
     expect(top.length).toBe(2);
+  });
+
+  // R5-A diversity selector: distinct layout families first, then orientation
+  // variants, never padding with duplicates.
+  const makeShaped = (
+    id: string,
+    kind: SmartSiteFitShapeKind,
+    total: number,
+    rotationDeg = 0
+  ): SmartSiteFitCandidate => ({
+    ...emptyCandidate,
+    id,
+    score: { ...emptyCandidate.score, total },
+    shape: {
+      id,
+      kind,
+      label: kind,
+      description: "",
+      rows: 1,
+      columns: 1,
+      blocks: 1,
+      pcsPlacement: "side",
+    },
+    placedEquipment: [
+      {
+        id: `${id}-eq`,
+        equipmentSpecId: "sungrow-st2752ux-us",
+        anchor: { lng: -70, lat: -33 },
+        rotation_deg: rotationDeg,
+        sourceReliability: "preliminary_assumption",
+      },
+    ],
+  });
+
+  it("selects one representative per shape family first, best leading", () => {
+    // Pre-sorted by score desc, as rankSmartSiteFitCandidates would emit.
+    const ranked = [
+      makeShaped("a1", "compact_grid", 90),
+      makeShaped("a2", "compact_grid", 88), // duplicate family + orientation
+      makeShaped("b1", "two_row_block", 86),
+      makeShaped("c1", "wide_grid", 84),
+      makeShaped("d1", "deep_grid", 82),
+      makeShaped("a3", "compact_grid", 80, 90), // same family, other orientation
+      makeShaped("b2", "two_row_block", 78, 90),
+      makeShaped("c2", "wide_grid", 76, 90),
+    ];
+
+    const picked = selectDiverseAlternatives(ranked, { limit: 6 });
+
+    expect(picked.length).toBe(6);
+    // Global best leads (callers pre-select picked[0]).
+    expect(picked[0].id).toBe("a1");
+    // First four slots are the four distinct families, best score first.
+    expect(picked.slice(0, 4).map((c) => c.shape!.kind)).toEqual([
+      "compact_grid",
+      "two_row_block",
+      "wide_grid",
+      "deep_grid",
+    ]);
+    // The exact duplicate (same family + orientation) is never surfaced.
+    expect(picked.some((c) => c.id === "a2")).toBe(false);
+    // Remaining slots are filled with distinct orientation variants.
+    expect(picked.some((c) => c.id === "a3")).toBe(true);
+  });
+
+  it("never pads with duplicates when only one distinct family exists", () => {
+    const ranked = Array.from({ length: 10 }).map((_, i) =>
+      makeShaped(`x${i}`, "compact_grid", 90 - i)
+    );
+
+    const picked = selectDiverseAlternatives(ranked, { limit: 8 });
+
+    // All ten share family + orientation + block count => one representative.
+    expect(picked.length).toBe(1);
+    expect(picked[0].id).toBe("x0");
   });
 
   it("should score compact_grid better than single_row on a square terrain due to shapeCompactness", () => {

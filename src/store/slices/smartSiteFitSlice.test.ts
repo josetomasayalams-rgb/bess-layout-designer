@@ -17,7 +17,7 @@ describe("smartSiteFitSlice — initial state", () => {
 });
 
 describe("smartSiteFitSlice — run target mode", () => {
-  it("generates layout alternative by target size and selects it without mutating placedEquipment", () => {
+  it("generates distinct layout alternatives by target size and selects the best without mutating placedEquipment", () => {
     const polygon: LngLat[] = [
       { lng: -70.001, lat: -33.001 },
       { lng: -69.999, lat: -33.001 },
@@ -38,7 +38,16 @@ describe("smartSiteFitSlice — run target mode", () => {
     expect(s.smartSiteFit.result).not.toBeNull();
     expect(s.smartSiteFit.result?.success).toBe(true);
     expect(s.smartSiteFit.selectedAlternativeId).not.toBeNull();
-    expect(s.smartSiteFit.result?.candidates.length).toBe(1);
+
+    // R5-A: target mode now offers several distinct alternatives (was 1).
+    const candidates = s.smartSiteFit.result!.candidates;
+    expect(candidates.length).toBeGreaterThan(1);
+    expect(candidates.length).toBeLessThanOrEqual(8);
+    // The best-scoring alternative leads and is the one pre-selected.
+    expect(s.smartSiteFit.selectedAlternativeId).toBe(candidates[0].id);
+    // Alternatives are genuinely distinct layout families.
+    expect(new Set(candidates.map((c) => c.shape?.kind)).size).toBeGreaterThan(1);
+
     expect(s.smartSiteFit.dirty).toBe(false);
     expect(s.placedEquipment).toEqual([]); // Real layout remains untouched
   });

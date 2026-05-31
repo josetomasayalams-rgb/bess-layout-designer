@@ -5,7 +5,7 @@ import type {
   SmartSiteFitCandidate,
 } from "./smartSiteFitTypes";
 import { generateCandidates } from "./smartSiteFitCandidates";
-import { rankSmartSiteFitCandidates } from "./smartSiteFitScoring";
+import { rankSmartSiteFitCandidates, selectDiverseAlternatives } from "./smartSiteFitScoring";
 import { toLocal } from "@/lib/geometry/projection";
 import { validatePolygonForSmartSiteFit } from "./smartSiteFitGeometry";
 import { DEFAULT_PERFORMANCE_BUDGET } from "./smartSiteFitPerformance";
@@ -140,13 +140,18 @@ export function runTargetSizing(
     targetRatio
   );
 
-  // Keep only the single best alternative for target sizing
-  const selected = ranked[0];
+  // R5-A: surface up to 8 genuinely distinct alternatives (different shape
+  // families / orientations) instead of only the single best layout, so the
+  // user can compare real layout options. The diversity selector keeps the
+  // global best first, so it leads and is pre-selected; each card reads its own
+  // per-candidate warnings/assumptions.
+  const alternatives = selectDiverseAlternatives(ranked, { limit: 8 });
+  const selected = alternatives[0] ?? null;
 
   return {
     success: true,
-    candidates: selected ? [selected] : [],
-    selected: selected || null,
+    candidates: alternatives,
+    selected,
     warnings: selected?.warnings ?? [],
     assumptions: selected?.assumptions ?? [],
     fallbackUsed: false,

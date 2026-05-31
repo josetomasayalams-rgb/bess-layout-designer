@@ -486,3 +486,77 @@ export function selectTopSmartSiteFitAlternatives(
 ): SmartSiteFitCandidate[] {
   return candidates.slice(0, limit);
 }
+
+/**
+ * Dominant orientation bucket of an alternative (0 = principal terrain axis,
+ * 90 = perpendicular). All equipment in a candidate shares one placement
+ * rotation, so the first item is representative. The exact dominant angle may be
+ * e.g. 37°, so we bucket to the nearest principal axis rather than the raw value.
+ */
+function diversityOrientationBucket(candidate: SmartSiteFitCandidate): 0 | 90 {
+  const raw = candidate.placedEquipment[0]?.rotation_deg ?? 0;
+  const norm = ((Math.round(raw) % 180) + 180) % 180;
+  return norm >= 45 && norm < 135 ? 90 : 0;
+}
+
+/**
+ * Diversity signature: shape family + dominant orientation + block count. Two
+ * candidates sharing a signature are near-duplicates (same layout family, same
+ * orientation), so only the higher-scoring one is worth surfacing.
+ */
+function diversitySignature(candidate: SmartSiteFitCandidate): string {
+  const kind = candidate.shape?.kind ?? "custom";
+  const blocks = candidate.shape?.blocks ?? 1;
+  return `${kind}|${diversityOrientationBucket(candidate)}|${blocks}`;
+}
+
+/**
+ * Pick up to `limit` genuinely distinct alternatives from a score-ranked list.
+ *
+ * Target sizing explores many near-identical layouts (the same shape family at
+ * slightly different rotations/shifts); surfacing eight of those is useless.
+ * This keeps one representative per shape family first — the highest-scoring,
+ * since the input is pre-sorted — then fills the remaining slots with the
+ * next-best candidates that differ by full signature (family + orientation +
+ * block count).
+ *
+ * It never pads with duplicates or invalid layouts: when the terrain only admits
+ * a handful of distinct families it returns fewer than `limit`, and the caller
+ * explains that honestly instead of showing redundant options. The first result
+ * is always the global best, so callers can pre-select `result[0]`.
+ */
+export function selectDiverseAlternatives(
+  ranked: SmartSiteFitCandidate[],
+  opts: { limit?: number } = {}
+): SmartSiteFitCandidate[] {
+  const limit = Math.max(1, opts.limit ?? 8);
+  if (ranked.length <= limit) return ranked.slice();
+
+  const result: SmartSiteFitCandidate[] = [];
+  const seenFamilies = new Set<string>();
+  const seenSignatures = new Set<string>();
+
+  // Pass 1: one representative per shape family (best score first).
+  for (const candidate of ranked) {
+    if (result.length >= limit) break;
+    const family = candidate.shape?.kind ?? "custom";
+    if (seenFamilies.has(family)) continue;
+    seenFamilies.add(family);
+    seenSignatures.add(diversitySignature(candidate));
+    result.push(candidate);
+  }
+
+  // Pass 2: fill remaining slots with distinct full signatures — a different
+  // orientation or block count of an already-shown family.
+  if (result.length < limit) {
+    for (const candidate of ranked) {
+      if (result.length >= limit) break;
+      const signature = diversitySignature(candidate);
+      if (seenSignatures.has(signature)) continue;
+      seenSignatures.add(signature);
+      result.push(candidate);
+    }
+  }
+
+  return result;
+}

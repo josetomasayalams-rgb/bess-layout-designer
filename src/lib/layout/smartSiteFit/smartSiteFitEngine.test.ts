@@ -65,6 +65,31 @@ describe("SmartSiteFit Engine", () => {
     expect(bess16 / pcs16).toBe(32);
   });
 
+  it("should surface multiple distinct target-mode alternatives (R5 diversity), best leading", () => {
+    const result = runSmartSiteFit({
+      mode: "target",
+      polygon,
+      targetMW: 50,
+      targetMWh: 200,
+      durationHours: 4,
+      strategy: "balanced",
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.selected).not.toBeNull();
+
+    // Was always a single alternative before R5; now several are offered.
+    expect(result.candidates.length).toBeGreaterThan(1);
+    expect(result.candidates.length).toBeLessThanOrEqual(8);
+
+    // The pre-selected alternative is the first (best-scoring) candidate.
+    expect(result.candidates[0].id).toBe(result.selected!.id);
+
+    // Alternatives are genuinely distinct layout families, not near-duplicates.
+    const families = result.candidates.map((c) => c.shape?.kind);
+    expect(new Set(families).size).toBeGreaterThan(1);
+  });
+
   it("should run terrain sizing mode successfully", () => {
     const result = runSmartSiteFit({
       mode: "terrain",

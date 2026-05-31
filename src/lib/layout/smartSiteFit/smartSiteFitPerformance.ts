@@ -77,7 +77,10 @@ export function getCandidateSearchPlan(
       gridShifts: [0, 10],
       blockCountFactors: [1, 0.75],
       maxSkeletons: Math.min(budget.maxCandidateEvaluations, 200),
-      expandTopN: Math.min(budget.maxExactGeometryChecks, 8),
+      // Expand enough survivors to surface one representative per shape family
+      // (R5 diversity needs >= the family count) while staying within the
+      // exact-geometry budget.
+      expandTopN: Math.min(budget.maxExactGeometryChecks, 12),
     };
   }
   return {
