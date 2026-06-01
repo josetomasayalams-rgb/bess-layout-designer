@@ -3,6 +3,7 @@ import { REPORT_COLORS, REPORT_FONTS, reportStyles as s } from "./reportStyles";
 import { documentTitle, type TechnicalReportData } from "@/lib/report/buildReportData";
 import { AlertCard, SectionPage, Table } from "./pdfPrimitives";
 import { OUTCOME_LABEL, outcomePillStyle } from "./pdfSeverityMaps";
+import { buildNextSteps, groupExclusions } from "./pdfFormatters";
 
 type ReportSectionProps = { data: TechnicalReportData };
 
@@ -121,16 +122,40 @@ export function TraceabilitySection({ data }: ReportSectionProps) {
 }
 
 export function ScopeSection({ data }: ReportSectionProps) {
+  const exclusionGroups = groupExclusions(data.exclusions);
+  const nextSteps = buildNextSteps(data);
   return (
     <SectionPage data={data} number="8" title="Alcance, exclusiones y próximos estudios">
-      <Text style={s.subTitle}>Exclusiones (fuera del alcance preliminar)</Text>
-      {data.exclusions.map((ex) => (
-        <View key={ex.id} style={s.bulletRow}>
-          <Text style={s.bulletDot}>·</Text>
-          <Text style={s.bulletText}>
-            <Text style={{ fontFamily: REPORT_FONTS.dataBold }}>{ex.scope}</Text> —{" "}
-            {ex.reason} ({ex.futureStage}).
-          </Text>
+      <Text style={s.paragraph}>
+        Este predimensionamiento no incluye los estudios de detalle listados a
+        continuación, agrupados por disciplina. El listado completo, ítem por
+        ítem, se conserva en el anexo de checklist y referencias.
+      </Text>
+
+      {exclusionGroups.map((group) => (
+        <View key={group.category}>
+          <Text style={s.groupHeader}>{group.category}</Text>
+          {group.items.slice(0, 3).map((ex) => (
+            <View key={ex.id} style={s.bulletRow}>
+              <Text style={s.bulletDot}>·</Text>
+              <Text style={s.bulletText}>
+                <Text style={{ fontFamily: REPORT_FONTS.dataBold }}>{ex.scope}</Text>
+              </Text>
+            </View>
+          ))}
+          {group.items.length > 3 ? (
+            <Text style={s.note}>
+              + {group.items.length - 3} ítem(s) adicional(es) en el anexo.
+            </Text>
+          ) : null}
+        </View>
+      ))}
+
+      <Text style={s.subTitle}>Próximos pasos recomendados</Text>
+      {nextSteps.map((step, i) => (
+        <View key={i} style={s.stepRow}>
+          <Text style={s.stepNumber}>{i + 1}</Text>
+          <Text style={s.stepText}>{step}</Text>
         </View>
       ))}
 
@@ -199,6 +224,19 @@ export function ScopeSection({ data }: ReportSectionProps) {
         </View>
       ))}
 
+      <Text style={s.note}>
+        El checklist completo de ingeniería de detalle y las referencias
+        documentales citadas se encuentran en el anexo correspondiente.
+      </Text>
+
+      <Text style={s.note}>{data.metadata.disclaimer}</Text>
+    </SectionPage>
+  );
+}
+
+export function EngineeringAnnexSection({ data }: ReportSectionProps) {
+  return (
+    <SectionPage data={data} number="A2" title="Anexo: checklist de ingeniería y referencias">
       <Text style={s.subTitle}>Checklist de ingeniería de detalle</Text>
       <Table
         cols={[

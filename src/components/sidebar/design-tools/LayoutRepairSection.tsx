@@ -1,8 +1,9 @@
 "use client";
 
-import { AlertTriangle, CheckCircle2, Compass, SquarePen, Wrench } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Compass, Move, SquarePen, Wrench } from "lucide-react";
 import { formatLength, formatNumber } from "@/lib/units/formatUnits";
 import type { Locale } from "@/lib/i18n";
+import type { RepairStrategy } from "@/lib/layout/layoutRepair";
 import type { TerrainFitResult } from "@/lib/layout/repairLayoutToSite";
 import type { PlacedEquipment } from "@/types/equipment";
 import type { LngLat } from "@/types/geometry";
@@ -23,6 +24,8 @@ export interface LayoutRepairSectionProps {
       initialConflicts: number;
       movedCount: number;
       maxDisplacementM: number;
+      clusterCount: number;
+      strategy: RepairStrategy;
     };
   } | null;
   terrainFitPreview: {
@@ -36,14 +39,38 @@ export interface LayoutRepairSectionProps {
   onPreviewFit: () => void;
   onApplyFit: () => void;
   onRevertFit: () => void;
+  onShiftLayout: (dxM: number, dyM: number) => void;
+  onCenterLayout: () => void;
   isEs: boolean;
   locale: Locale;
 }
+
+const SHIFT_STEP_M = 10;
 
 function repairStatusClass(status: "success" | "partial" | "error") {
   if (status === "success") return "border-emerald-500/30 bg-emerald-500/10 text-emerald-100";
   if (status === "partial") return "border-amber-500/40 bg-amber-500/10 text-amber-100";
   return "border-rose-500/40 bg-rose-500/10 text-rose-100";
+}
+
+/** Etiqueta preliminar de la estrategia geometrica aplicada por la reparacion. */
+function repairStrategyLabel(strategy: RepairStrategy, isEs: boolean): string | null {
+  switch (strategy) {
+    case "cluster-rigid":
+      return isEs
+        ? "Se mantuvo la agrupacion por bloques cuando fue posible."
+        : "Block grouping was preserved where possible.";
+    case "cluster-recenter":
+      return isEs
+        ? "Se reordenaron los bloques y se recentro el conjunto dentro del terreno."
+        : "Blocks were reordered and the set re-centered within the site.";
+    case "per-node":
+      return isEs
+        ? "Se reordenaron los equipos individualmente (sin metadata de bloque)."
+        : "Equipment was reordered individually (no block metadata).";
+    default:
+      return null;
+  }
 }
 
 function terrainFitWarningText(warning: string, isEs: boolean) {
@@ -74,6 +101,8 @@ export function LayoutRepairSection({
   onPreviewFit,
   onApplyFit,
   onRevertFit,
+  onShiftLayout,
+  onCenterLayout,
   isEs,
   locale,
 }: LayoutRepairSectionProps) {
@@ -201,6 +230,11 @@ export function LayoutRepairSection({
                 ? "Repair zone"
                 : "Repair all"}
             </button>
+            <p className="text-[10px] leading-snug text-slate-600">
+              {isEs
+                ? "Ajuste geometrico preliminar: corrige equipos fuera del terreno, colisiones, separaciones y margen al deslinde. No corrige estudios electricos ni reemplaza ingenieria de detalle."
+                : "Preliminary geometric adjustment: corrects equipment outside the site, collisions, spacing and setback. It does not resolve electrical studies nor replace detailed engineering."}
+            </p>
 
             <div className="rounded-md border border-cyan-500/20 bg-cyan-500/5 p-2">
               <div className="flex items-center gap-1.5">
@@ -339,6 +373,31 @@ export function LayoutRepairSection({
               {isEs ? "Reparacion" : "Repair"} · {lastRepairResult.status}
             </div>
             <div>{repairText}</div>
+            {lastRepairResult.status !== "error"
+              ? (() => {
+                  const label = repairStrategyLabel(
+                    lastRepairResult.diagnostics.strategy,
+                    isEs
+                  );
+                  return label ? <div className="mt-1 opacity-90">{label}</div> : null;
+                })()
+              : null}
+            {lastRepairResult.status !== "error" &&
+            lastRepairResult.diagnostics.remainingConflicts > 0 ? (
+              <div className="mt-1 opacity-90">
+                {isEs
+                  ? `Quedan ${formatNumber(
+                      lastRepairResult.diagnostics.remainingConflicts,
+                      0,
+                      locale
+                    )} advertencia(s) por revisar.`
+                  : `${formatNumber(
+                      lastRepairResult.diagnostics.remainingConflicts,
+                      0,
+                      locale
+                    )} warning(s) remain to review.`}
+              </div>
+            ) : null}
             {lastRepairResult.diagnostics.movedCount > 0 ? (
               <div className="mt-1 font-mono">
                 {formatNumber(
@@ -352,10 +411,90 @@ export function LayoutRepairSection({
                   locale,
                 })}{" "}
                 {isEs ? "max" : "max"}
+                {lastRepairResult.diagnostics.clusterCount > 0
+                  ? ` · ${formatNumber(
+                      lastRepairResult.diagnostics.clusterCount,
+                      0,
+                      locale
+                    )} ${isEs ? "bloque(s)" : "block(s)"}`
+                  : ""}
               </div>
             ) : null}
           </div>
         ) : null}
+      </div>
+
+      {/* ── Layout shift controls ──────────────────────────────── */}
+      <div className="space-y-2 rounded-lg border border-slate-700/50 bg-slate-900/50 p-2">
+        <div className="flex items-center gap-1.5">
+          <Move className="h-3.5 w-3.5 text-slate-400" aria-hidden="true" />
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+            {isEs ? "Ajuste fino de posición" : "Fine position adjustment"}
+          </span>
+        </div>
+        <p className="text-[10px] leading-snug text-slate-600">
+          {isEs
+            ? `Mueve el layout completo paso a paso (${SHIFT_STEP_M} m). Verifica advertencias tras mover.`
+            : `Move the whole layout step by step (${SHIFT_STEP_M} m). Check warnings after repositioning.`}
+        </p>
+        {/* Directional pad */}
+        <div className="grid grid-cols-3 gap-1">
+          <div />
+          <button
+            type="button"
+            aria-label={isEs ? "Mover norte" : "Move north"}
+            disabled={placedCount === 0}
+            onClick={() => onShiftLayout(0, SHIFT_STEP_M)}
+            className="flex items-center justify-center rounded border border-slate-700 bg-slate-900 py-1.5 text-[11px] text-slate-300 hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            ↑
+          </button>
+          <div />
+          <button
+            type="button"
+            aria-label={isEs ? "Mover oeste" : "Move west"}
+            disabled={placedCount === 0}
+            onClick={() => onShiftLayout(-SHIFT_STEP_M, 0)}
+            className="flex items-center justify-center rounded border border-slate-700 bg-slate-900 py-1.5 text-[11px] text-slate-300 hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            ←
+          </button>
+          <button
+            type="button"
+            aria-label={isEs ? "Centrar layout en sitio" : "Center layout in site"}
+            disabled={placedCount === 0 || polygonLength < 3}
+            onClick={onCenterLayout}
+            title={isEs ? "Centrar layout en el polígono" : "Center layout on polygon"}
+            className="flex items-center justify-center rounded border border-cyan-600/40 bg-cyan-600/10 py-1.5 text-[11px] font-medium text-cyan-300 hover:border-cyan-400 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            ⌖
+          </button>
+          <button
+            type="button"
+            aria-label={isEs ? "Mover este" : "Move east"}
+            disabled={placedCount === 0}
+            onClick={() => onShiftLayout(SHIFT_STEP_M, 0)}
+            className="flex items-center justify-center rounded border border-slate-700 bg-slate-900 py-1.5 text-[11px] text-slate-300 hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            →
+          </button>
+          <div />
+          <button
+            type="button"
+            aria-label={isEs ? "Mover sur" : "Move south"}
+            disabled={placedCount === 0}
+            onClick={() => onShiftLayout(0, -SHIFT_STEP_M)}
+            className="flex items-center justify-center rounded border border-slate-700 bg-slate-900 py-1.5 text-[11px] text-slate-300 hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            ↓
+          </button>
+          <div />
+        </div>
+        <p className="text-[9px] leading-snug text-slate-700">
+          {isEs
+            ? "↑ N  ↓ S  ← O  → E  ⌖ Centrar  · Paso: 10 m"
+            : "↑ N  ↓ S  ← W  → E  ⌖ Center  · Step: 10 m"}
+        </p>
       </div>
     </div>
   );

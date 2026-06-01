@@ -9,12 +9,21 @@ export const SEVERITY_PILL: Record<string, keyof typeof s> = {
 };
 
 export const OUTCOME_LABEL: Record<string, { label: string; style: keyof typeof s }> = {
-  pass: { label: "PASS", style: "pillPass" },
-  violation: { label: "VIOLATION", style: "pillViolation" },
-  manual_check: { label: "MANUAL", style: "pillManual" },
-  pending_validation: { label: "PENDING", style: "pillPending" },
-  not_evaluable: { label: "N/A", style: "pillOut" },
-  out_of_scope: { label: "OUT", style: "pillOut" },
+  pass: { label: "Cumple", style: "pillPass" },
+  violation: { label: "Incumple", style: "pillViolation" },
+  manual_check: { label: "Revisión", style: "pillManual" },
+  pending_validation: { label: "Pendiente", style: "pillPending" },
+  not_evaluable: { label: "No evaluable", style: "pillOut" },
+  out_of_scope: { label: "Fuera de alcance", style: "pillOut" },
+};
+
+/** Spanish, lower-noise labels for effective severity codes shown in tables. */
+export const SEVERITY_LABEL_ES: Record<string, string> = {
+  blocking: "Bloqueante",
+  warning: "Aviso",
+  info: "Informativa",
+  checklist: "Checklist",
+  out_of_scope: "Fuera",
 };
 
 export function outcomePillStyle(style: keyof typeof s) {

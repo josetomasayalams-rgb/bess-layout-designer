@@ -9,6 +9,7 @@ import { LayoutComparisonPanel } from "@/components/sidebar/LayoutComparisonPane
 import { MVArchitecturePanel } from "@/components/sidebar/MVArchitecturePanel";
 import { ParametricTerrainPanel } from "@/components/sidebar/ParametricTerrainPanel";
 import { RegulatoryConfigPanel } from "@/components/sidebar/RegulatoryConfigPanel";
+import { SmartSiteFitPanel } from "@/components/sidebar/SmartSiteFitPanel";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import { useProjectStore } from "@/store/projectStore";
 import { useUiStore } from "@/store/uiStore";
@@ -78,9 +79,11 @@ export function ConfigurationSidebar() {
           <ParametricTerrainPanel />
         </CollapsibleSection>
 
+        <SmartSiteFitPanel />
+
+        <PreliminaryDesignToolsPanel />
         <BessModelLibraryPanel />
         <CaseStudyPanel />
-        <PreliminaryDesignToolsPanel />
         <MVArchitecturePanel />
         <LayoutComparisonPanel />
         <EquipmentCatalogPanel />

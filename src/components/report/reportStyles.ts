@@ -343,4 +343,258 @@ export const reportStyles = StyleSheet.create({
     marginTop: 2,
     textAlign: "center",
   },
+
+  // ──────── KPI cards (executive dashboard) ────────
+  kpiRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 6,
+    marginBottom: 6,
+  },
+  kpiCard: {
+    flexGrow: 1,
+    flexBasis: "22%",
+    minWidth: 96,
+    borderWidth: 0.5,
+    borderColor: REPORT_COLORS.rule,
+    borderRadius: 4,
+    backgroundColor: REPORT_COLORS.paperAlt,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+  },
+  kpiCardAccent: {
+    borderTopWidth: 2,
+    borderTopColor: REPORT_COLORS.accent,
+  },
+  kpiCardLabel: {
+    fontFamily: REPORT_FONTS.dataBold,
+    fontSize: 6.5,
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+    color: REPORT_COLORS.muted,
+  },
+  kpiCardValue: {
+    fontFamily: REPORT_FONTS.bodyBold,
+    fontSize: 16,
+    color: REPORT_COLORS.ink,
+    marginTop: 3,
+  },
+  kpiCardUnit: {
+    fontFamily: REPORT_FONTS.data,
+    fontSize: 8,
+    color: REPORT_COLORS.muted,
+  },
+
+  // ──────── Executive hero ────────
+  heroBox: {
+    borderLeftWidth: 3,
+    borderLeftColor: REPORT_COLORS.accent,
+    backgroundColor: REPORT_COLORS.paperAlt,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginBottom: 8,
+  },
+  heroResult: {
+    fontFamily: REPORT_FONTS.bodyBold,
+    fontSize: 11.5,
+    color: REPORT_COLORS.ink,
+    lineHeight: 1.35,
+  },
+  maturityRow: {
+    flexDirection: "row",
+    gap: 6,
+    marginTop: 6,
+    marginBottom: 8,
+    flexWrap: "wrap",
+  },
+  maturityBadge: {
+    borderRadius: 3,
+    paddingVertical: 2,
+    paddingHorizontal: 7,
+    fontFamily: REPORT_FONTS.dataBold,
+    fontSize: 7.5,
+    letterSpacing: 0.4,
+    backgroundColor: "#e0f2fe",
+    color: "#075985",
+  },
+
+  // ──────── Status summary chips ────────
+  statusChipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: 4,
+    marginBottom: 6,
+  },
+  statusChip: {
+    borderRadius: 3,
+    borderWidth: 0.5,
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    minWidth: 70,
+  },
+  statusChipCount: {
+    fontFamily: REPORT_FONTS.bodyBold,
+    fontSize: 13,
+  },
+  statusChipLabel: {
+    fontFamily: REPORT_FONTS.dataBold,
+    fontSize: 6.5,
+    letterSpacing: 0.4,
+    textTransform: "uppercase",
+  },
+
+  // ──────── Electrical chain stages ────────
+  stageRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    marginTop: 6,
+    marginBottom: 8,
+  },
+  stageBox: {
+    borderWidth: 0.6,
+    borderColor: REPORT_COLORS.accent,
+    borderRadius: 4,
+    backgroundColor: "#eff6ff",
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    minWidth: 78,
+  },
+  stageLabel: {
+    fontFamily: REPORT_FONTS.dataBold,
+    fontSize: 7.5,
+    color: REPORT_COLORS.ink,
+  },
+  stageSub: {
+    fontFamily: REPORT_FONTS.data,
+    fontSize: 6,
+    color: REPORT_COLORS.muted,
+    marginTop: 1,
+  },
+  stageConnector: {
+    fontFamily: REPORT_FONTS.dataBold,
+    fontSize: 12,
+    color: REPORT_COLORS.accent,
+    marginHorizontal: 4,
+  },
+
+  // ──────── Numbered next-steps list ────────
+  stepRow: {
+    flexDirection: "row",
+    gap: 7,
+    marginBottom: 4,
+    alignItems: "flex-start",
+  },
+  stepNumber: {
+    fontFamily: REPORT_FONTS.dataBold,
+    fontSize: 8,
+    color: REPORT_COLORS.paper,
+    backgroundColor: REPORT_COLORS.accent,
+    borderRadius: 7,
+    width: 14,
+    height: 14,
+    textAlign: "center",
+    paddingTop: 2,
+  },
+  stepText: {
+    flex: 1,
+    fontSize: 9,
+  },
+
+  // ──────── Grouped exclusion category ────────
+  groupHeader: {
+    fontFamily: REPORT_FONTS.dataBold,
+    fontSize: 8.5,
+    letterSpacing: 0.4,
+    textTransform: "uppercase",
+    color: REPORT_COLORS.accent,
+    marginTop: 8,
+    marginBottom: 3,
+  },
+
+  // ──────── SLD (single-line diagram) frame ────────
+  sldWrap: {
+    marginTop: 6,
+    marginBottom: 4,
+    borderWidth: 0.5,
+    borderColor: REPORT_COLORS.rule,
+    borderRadius: 4,
+    backgroundColor: REPORT_COLORS.paperAlt,
+    padding: 6,
+  },
+
+  // ──────── Section header (numbered chip) ────────
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 9,
+    paddingBottom: 5,
+    borderBottomWidth: 1,
+    borderBottomColor: REPORT_COLORS.accent,
+  },
+  sectionNumberChip: {
+    fontFamily: REPORT_FONTS.dataBold,
+    fontSize: 9.5,
+    color: REPORT_COLORS.paper,
+    backgroundColor: REPORT_COLORS.accent,
+    borderRadius: 3,
+    paddingVertical: 2,
+    paddingHorizontal: 6,
+    textAlign: "center",
+  },
+  sectionHeaderTitle: {
+    flex: 1,
+    fontFamily: REPORT_FONTS.bodyBold,
+    fontSize: 14,
+    color: REPORT_COLORS.ink,
+  },
+
+  // ──────── Alert card (left accent bar + severity badge) ────────
+  alertCard: {
+    flexDirection: "row",
+    borderWidth: 0.5,
+    borderRadius: 4,
+    marginBottom: 7,
+    overflow: "hidden",
+  },
+  alertAccentBar: {
+    width: 3,
+  },
+  alertBody: {
+    flex: 1,
+    paddingVertical: 7,
+    paddingHorizontal: 9,
+  },
+  alertHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 3,
+  },
+  alertBadge: {
+    borderRadius: 2,
+    paddingVertical: 1,
+    paddingHorizontal: 5,
+    fontFamily: REPORT_FONTS.dataBold,
+    fontSize: 6.5,
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+  },
+  alertTitle: {
+    flex: 1,
+    fontFamily: REPORT_FONTS.dataBold,
+    fontSize: 9,
+    color: REPORT_COLORS.ink,
+  },
+  alertMessage: {
+    fontSize: 8.5,
+  },
+  alertRecommendation: {
+    marginTop: 3,
+    fontSize: 8,
+    color: REPORT_COLORS.muted,
+  },
 });

@@ -1,5 +1,6 @@
 import { FormEvent, useState } from "react";
 import { Search } from "lucide-react";
+import { parseLatLng } from "@/lib/geometry/parseCoordinate";
 
 type CoordinateSearchProps = {
   placeholder: string;
@@ -19,7 +20,7 @@ export function CoordinateSearch({
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const coordinates = parseCoordinates(value);
+    const coordinates = parseLatLng(value);
 
     if (!coordinates) {
       setError(invalidMessage);
@@ -57,17 +58,4 @@ export function CoordinateSearch({
       ) : null}
     </form>
   );
-}
-
-function parseCoordinates(value: string) {
-  const matches = value.match(/-?\d+(?:\.\d+)?/g);
-  if (!matches || matches.length < 2) return null;
-
-  const lat = Number(matches[0]);
-  const lng = Number(matches[1]);
-
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
-
-  return { lat, lng };
 }

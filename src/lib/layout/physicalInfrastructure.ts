@@ -277,6 +277,13 @@ export function generateConceptualPhysicalInfrastructure(args: {
     });
   }
 
+  // Integrated / low-voltage layout: grouped blocks exist but there is no
+  // pcs_mv_station anywhere, so the layout collects in low voltage (BT) and can
+  // only reach medium voltage through an EXTERNAL step-up transformer that is
+  // not modeled here. Sungrow layouts always carry a pcs_mv_station, so this is
+  // false for them and their conceptual MV routing is unchanged.
+  const isIntegratedLv = stations.length === 0 && connectionPoints.length > 0;
+
   // Generate main access roads
   const perimeterRoad = createPerimeterAccessRoad({
     polygon: args.polygon,
@@ -304,7 +311,9 @@ export function generateConceptualPhysicalInfrastructure(args: {
     const mvYard = rectZone({
       id: "zone-mv-yard-01",
       type: "mv_yard",
-      label: "Sectioning center 33 kV",
+      label: isIntegratedLv
+        ? "Interfaz MT externa (transformador elevador no modelado)"
+        : "Sectioning center 33 kV",
       center: mvYardCenter,
       lengthM: 34,
       widthM: Math.max(22, Math.min(90, Math.max(22, bbox.maxY - bbox.minY) * 0.22)),
@@ -332,13 +341,15 @@ export function generateConceptualPhysicalInfrastructure(args: {
 
       cableRoutes.push({
         id: `route-mt-${String(index + 1).padStart(2, "0")}`,
-        voltageLevel: "MT",
-        voltageKv: 33,
+        voltageLevel: isIntegratedLv ? "BT" : "MT",
+        voltageKv: isIntegratedLv ? undefined : 33,
         fromEntityId: cp.id,
         toEntityId: mvYard.id,
         path: routePath,
         corridorWidth_m: args.cableCorridorWidthM ?? 3,
-        cableType: "Conceptual 18/33 kV MV collector corridor",
+        cableType: isIntegratedLv
+          ? "Corredor colector BT conceptual (bloque AC integrado)"
+          : "Conceptual 18/33 kV MV collector corridor",
         installMethod: "buried",
         estimatedLength_m: Math.round(totalLength * 10) / 10,
         classification: cp.classification ?? "preliminary_assumption",
@@ -349,9 +360,11 @@ export function generateConceptualPhysicalInfrastructure(args: {
           {
             documentId: "__none__",
             confidence: cp.blockId ? "inferred" : "assumption",
-            note: cp.blockId
-              ? `Conceptual MV route from block ${cp.blockId} connection point to sectioning center`
-              : "Conceptual MV route generated from loose station position to sectioning center",
+            note: isIntegratedLv
+              ? `Corredor colector conceptual en baja tensión (BT) desde el bloque AC integrado ${cp.blockId ?? cp.id} hacia la interfaz MT. La elevación a media tensión requiere un transformador elevador externo NO modelado en esta herramienta.`
+              : cp.blockId
+                ? `Conceptual MV route from block ${cp.blockId} connection point to sectioning center`
+                : "Conceptual MV route generated from loose station position to sectioning center",
           },
         ],
       });
@@ -375,7 +388,9 @@ export function generateConceptualPhysicalInfrastructure(args: {
         {
           documentId: "__none__",
           confidence: "assumption",
-          note: "Conceptual tie route from sectioning center to POI",
+          note: isIntegratedLv
+            ? "Corredor conceptual en media tensión (MT) desde la interfaz MT externa (aguas abajo del transformador elevador no modelado) hacia el POI."
+            : "Conceptual tie route from sectioning center to POI",
         },
       ],
     });
@@ -417,6 +432,12 @@ export function generateConceptualPhysicalInfrastructure(args: {
   if (blockCount === 0) {
     warnings.push(
       "No se detectaron bloques de equipos agrupados en el layout. Se recomienda utilizar el generador automático en bloques para optimizar el trazado MT."
+    );
+  }
+
+  if (isIntegratedLv) {
+    warnings.push(
+      "Bloque AC integrado: la salida de los equipos es en baja tensión (BT). El corredor colector mostrado es conceptual en BT; la conexión a media tensión requiere un transformador elevador externo NO modelado en esta herramienta (requiere validación). El tramo interfaz MT → POI se representa de forma conceptual en MT."
     );
   }
 

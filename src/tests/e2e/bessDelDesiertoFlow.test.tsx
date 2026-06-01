@@ -92,7 +92,7 @@ describe("E2E Validation & Report Flow for BESS del Desierto Preset", () => {
     });
 
     // 1. Verify Cover Page information
-    expect(screen.getByText("BESS PRELIMINARY PREDESIGN · DOSSIER")).toBeDefined();
+    expect(screen.getByText("BESS PRELIMINARY PREDESIGN · TECHNICAL REPORT")).toBeDefined();
     expect(screen.getByText("BESS preliminary predesign report")).toBeDefined();
     expect(screen.getByText("BESS del Desierto")).toBeDefined();
 

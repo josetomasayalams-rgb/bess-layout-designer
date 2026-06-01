@@ -13,6 +13,32 @@
   --color-critical: #f43f5e;
 }
 
+/* Light theme — toggled from the top bar (uiStore.setTheme). The app ships
+   dark by default; the light variant flips the base page tokens so the toggle
+   has a visible, persistent effect without restyling every panel. */
+html.light {
+  --background: #f8fafc;
+  --foreground: #0f172b;
+  color-scheme: light;
+
+  /* The UI is built almost entirely on hardcoded `slate-*` utilities, which
+     Tailwind v4 compiles to `var(--color-slate-N)`. Rather than restyle every
+     component, light mode mirrors the slate ramp: dark backgrounds (950/900)
+     become light, and light text (100/200/300) becomes dark. Accent colors
+     (cyan, emerald, amber, rose) are intentionally left unchanged. */
+  --color-slate-950: #f8fafc;
+  --color-slate-900: #f1f5f9;
+  --color-slate-800: #e2e8f0;
+  --color-slate-700: #cad5e2;
+  --color-slate-600: #90a1b9;
+  --color-slate-500: #62748e;
+  --color-slate-400: #45556c;
+  --color-slate-300: #314158;
+  --color-slate-200: #1d293d;
+  --color-slate-100: #0f172b;
+  --color-slate-50: #020618;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

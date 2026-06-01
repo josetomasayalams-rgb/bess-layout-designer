@@ -27,7 +27,8 @@ import {
   PRELIMINARY_TOOL_GROUP_PREFIX,
 } from "@/lib/layout/preliminaryLayoutGenerator";
 import { repairLayout as runLayoutRepair } from "@/lib/layout/layoutRepair";
-import type { LngLat } from "@/types/geometry";
+import { toLocal, toLngLat } from "@/lib/geometry/projection";
+import type { LngLat, LocalPoint } from "@/types/geometry";
 import type { PlacedEquipment } from "@/types/equipment";
 import {
   DEFAULT_CONCEPTUAL_LAYOUT_POINT,
@@ -70,6 +71,8 @@ export type EquipmentSlice = {
   insertPreliminaryToolLayout: ProjectState["insertPreliminaryToolLayout"];
   regularizePreliminaryToolLayout: ProjectState["regularizePreliminaryToolLayout"];
   repairLayout: ProjectState["repairLayout"];
+  shiftLayout: ProjectState["shiftLayout"];
+  centerLayoutInSite: ProjectState["centerLayoutInSite"];
   clearToolResult: () => void;
   clearRepairResult: () => void;
   removeEquipment: (id: string) => void;
@@ -77,6 +80,15 @@ export type EquipmentSlice = {
   selectEquipment: (id: string | null) => void;
   selectCaseStudy: (id: string | null) => void;
 };
+
+function localCentroid(points: LocalPoint[]): LocalPoint {
+  if (points.length === 0) return { x_m: 0, y_m: 0 };
+  const sum = points.reduce(
+    (acc, p) => ({ x_m: acc.x_m + p.x_m, y_m: acc.y_m + p.y_m }),
+    { x_m: 0, y_m: 0 }
+  );
+  return { x_m: sum.x_m / points.length, y_m: sum.y_m / points.length };
+}
 
 export function createEquipmentSlice(
   set: StoreApi<ProjectState>["setState"],
@@ -385,6 +397,57 @@ export function createEquipmentSlice(
         layoutEdit: emptyLayoutEditState,
         terrainFitPreview: emptyTerrainFitPreviewState,
         lastRepairResult: result,
+      }));
+    },
+
+    shiftLayout: (dxM, dyM) => {
+      const { anchor, placedEquipment } = get();
+      if (!anchor || placedEquipment.length === 0) return;
+      const shifted = placedEquipment.map((item) => {
+        if (item.locked) return item;
+        const local = toLocal(item.anchor, anchor);
+        return {
+          ...item,
+          anchor: toLngLat({ x_m: local.x_m + dxM, y_m: local.y_m + dyM }, anchor),
+        };
+      });
+      set((state) => ({
+        ...recordHistory(state),
+        placedEquipment: shifted,
+        cableRoutes: [],
+        accessRoads: [],
+        previewTerrain: null,
+        layoutEdit: emptyLayoutEditState,
+        terrainFitPreview: emptyTerrainFitPreviewState,
+      }));
+    },
+
+    centerLayoutInSite: () => {
+      const { anchor, polygon, placedEquipment } = get();
+      if (!anchor || polygon.length < 3 || placedEquipment.length === 0) return;
+      const movers = placedEquipment.filter((item) => !item.locked);
+      if (movers.length === 0) return;
+      const polyLocal = polygon.map((p) => toLocal(p, anchor));
+      const polyCenter = localCentroid(polyLocal);
+      const layoutCenter = localCentroid(movers.map((item) => toLocal(item.anchor, anchor)));
+      const dxM = polyCenter.x_m - layoutCenter.x_m;
+      const dyM = polyCenter.y_m - layoutCenter.y_m;
+      const shifted = placedEquipment.map((item) => {
+        if (item.locked) return item;
+        const local = toLocal(item.anchor, anchor);
+        return {
+          ...item,
+          anchor: toLngLat({ x_m: local.x_m + dxM, y_m: local.y_m + dyM }, anchor),
+        };
+      });
+      set((state) => ({
+        ...recordHistory(state),
+        placedEquipment: shifted,
+        cableRoutes: [],
+        accessRoads: [],
+        previewTerrain: null,
+        layoutEdit: emptyLayoutEditState,
+        terrainFitPreview: emptyTerrainFitPreviewState,
       }));
     },
 

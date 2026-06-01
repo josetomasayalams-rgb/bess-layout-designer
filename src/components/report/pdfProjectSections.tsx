@@ -2,43 +2,116 @@ import { Image, Line, Path, Polygon, Svg, Text, View } from "@react-pdf/renderer
 import { REPORT_COLORS, REPORT_FONTS, reportStyles as s } from "./reportStyles";
 import type { TechnicalReportData } from "@/lib/report/buildReportData";
 import { svgPolygonPath } from "@/lib/report/buildSiteSvg";
-import { fmtInt, fmtNum, kpiSourceLabel } from "./pdfFormatters";
+import {
+  buildNextSteps,
+  fmtInt,
+  fmtNum,
+  kpiSourceLabel,
+  maturityLevel,
+  resultSentence,
+} from "./pdfFormatters";
 import { AlertCard, DefGrid, SectionPage, Table } from "./pdfPrimitives";
 
 type ReportSectionProps = { data: TechnicalReportData };
 
 export function ExecutiveSection({ data }: ReportSectionProps) {
   const k = data.reportKpis;
-  const ev = data.regulatoryEvaluation;
-  const critical = data.consistencyAlerts.filter((a) => a.severity === "critical");
+  const maturity = maturityLevel(data);
+  const topAlerts = data.consistencyAlerts.slice(0, 3);
+  const nextSteps = buildNextSteps(data);
+
+  const heroKpis = [
+    {
+      label: "Potencia POI",
+      value: k.poiPowerMW === null ? "—" : fmtNum(k.poiPowerMW, 0),
+      unit: "MW",
+    },
+    {
+      label: "Energía comercial útil",
+      value: k.commercialEnergyMWh === null ? "—" : fmtNum(k.commercialEnergyMWh, 0),
+      unit: "MWh",
+    },
+    {
+      label: "Duración nominal",
+      value: k.durationHours === null ? "—" : fmtNum(k.durationHours, 1),
+      unit: "h",
+    },
+    {
+      label: "Área del sitio",
+      value: fmtNum(data.siteMetrics.areaHa, 1),
+      unit: "ha",
+    },
+  ];
+
   return (
-    <SectionPage data={data} number="1" title="Resumen técnico ejecutivo">
-      <Text style={s.paragraph}>
-        Informe preliminar de predimensionamiento BESS basado en el layout físico,
-        catálogo de equipos y reglas de validación disponibles en la app. Los KPIs
-        se muestran desde objetivos documentados cuando existen; si el modelo no
-        está sincronizado, se derivan del inventario físico y se marca una alerta.
+    <SectionPage data={data} number="1" title="Resumen ejecutivo">
+      {/* Frase de resultado */}
+      <View style={s.heroBox}>
+        <Text style={s.heroResult}>{resultSentence(data)}</Text>
+      </View>
+
+      {/* Estado de madurez del prediseño */}
+      <View style={s.maturityRow}>
+        <Text style={s.maturityBadge}>{maturity.label}</Text>
+        <Text
+          style={{
+            fontFamily: REPORT_FONTS.bodyItalic,
+            fontSize: 8.5,
+            color: REPORT_COLORS.muted,
+            flex: 1,
+          }}
+        >
+          {maturity.description}
+        </Text>
+      </View>
+
+      {/* KPIs principales */}
+      <View style={s.kpiRow}>
+        {heroKpis.map((kpi) => (
+          <View key={kpi.label} style={[s.kpiCard, s.kpiCardAccent]}>
+            <Text style={s.kpiCardLabel}>{kpi.label}</Text>
+            <Text>
+              <Text style={s.kpiCardValue}>{kpi.value}</Text>
+              <Text style={s.kpiCardUnit}>{" "}{kpi.unit}</Text>
+            </Text>
+          </View>
+        ))}
+      </View>
+      <Text style={s.note}>
+        Fuente de KPIs: {kpiSourceLabel(k.source)}. Inventario físico:{" "}
+        {fmtInt(k.containers)} contenedores · {fmtInt(k.stations)} estaciones PCS/MV ·{" "}
+        {fmtInt(k.feeders)} feeders MT.
       </Text>
 
-      <DefGrid
-        items={[
-          { label: "Estado general", value: critical.length > 0 ? "Con alertas críticas" : "Preliminar consistente" },
-          { label: "Fuente KPIs", value: kpiSourceLabel(k.source) },
-          { label: "Contenedores / estaciones", value: `${fmtInt(k.containers)} / ${fmtInt(k.stations)}` },
-          { label: "Energía bruta / usable", value: `${fmtNum(k.grossEnergyMWh, 1)} / ${fmtNum(k.usableEnergyMWh, 1)} MWh` },
-          { label: "Potencia instalada", value: `${fmtNum(k.installedPowerMVA, 0)} MVA` },
-          { label: "Reglas con violación", value: ev ? fmtInt(ev.totals.violation) : "sin perfil" },
-        ]}
-      />
-
-      <Text style={s.subTitle}>Alertas principales</Text>
-      {data.consistencyAlerts.length === 0 ? (
-        <Text style={s.note}>No se detectaron contradicciones internas entre layout y reporte.</Text>
+      {/* Top-3 alertas accionables */}
+      <Text style={s.subTitle}>Alertas accionables principales</Text>
+      {topAlerts.length === 0 ? (
+        <Text style={s.note}>
+          No se detectaron contradicciones internas entre layout y reporte en esta
+          revisión preliminar.
+        </Text>
       ) : (
-        data.consistencyAlerts.slice(0, 4).map((alert) => (
-          <AlertCard key={alert.id} {...alert} />
-        ))
+        <>
+          {topAlerts.map((alert) => (
+            <AlertCard key={alert.id} {...alert} />
+          ))}
+          {data.consistencyAlerts.length > topAlerts.length ? (
+            <Text style={s.note}>
+              Se muestran las {topAlerts.length} alertas principales. El detalle
+              completo está en la sección de alertas críticas y pendientes técnicos.
+            </Text>
+          ) : null}
+        </>
       )}
+
+      {/* Próximos pasos recomendados */}
+      <Text style={s.subTitle}>Próximos pasos recomendados</Text>
+      {nextSteps.map((step, i) => (
+        <View key={i} style={s.stepRow}>
+          <Text style={s.stepNumber}>{i + 1}</Text>
+          <Text style={s.stepText}>{step}</Text>
+        </View>
+      ))}
     </SectionPage>
   );
 }
@@ -188,13 +261,32 @@ export function DesignSection({ data }: ReportSectionProps) {
 export function LayoutSection({ data }: ReportSectionProps) {
   const svg = data.siteSvg;
   const k = data.reportKpis;
+
+  // Área ocupada estimada por la huella de los equipos colocados.
+  const occupiedM2 = data.equipmentInventory.reduce(
+    (acc, row) => acc + row.count * row.lengthM * row.widthM,
+    0,
+  );
+  const occupationPct =
+    data.siteMetrics.areaM2 > 0 ? (occupiedM2 / data.siteMetrics.areaM2) * 100 : 0;
+  const densityPerHa =
+    data.siteMetrics.areaHa > 0 ? k.containers / data.siteMetrics.areaHa : 0;
+
+  const legend = [
+    { color: "#1f3a8a", label: "Contenedor BESS" },
+    { color: "#92400e", label: "Estación PCS/MV" },
+    { color: "#dbeafe", label: "Área del sitio" },
+  ];
+
   return (
     <SectionPage data={data} number="4" title="Layout físico y ocupación del terreno">
       <DefGrid
         items={[
-          { label: "Área disponible", value: `${data.siteMetrics.areaM2.toFixed(0)} m² · ${data.siteMetrics.areaHa.toFixed(3)} ha` },
-          { label: "Inventario BESS", value: `${fmtInt(k.containers)} contenedores` },
-          { label: "Estaciones PCS/MV", value: fmtInt(k.stations) },
+          { label: "Área disponible", value: `${data.siteMetrics.areaM2.toFixed(0)} m² · ${data.siteMetrics.areaHa.toFixed(2)} ha` },
+          { label: "Área ocupada (huella)", value: `${occupiedM2.toFixed(0)} m² · ${occupationPct.toFixed(1)} %` },
+          { label: "Densidad BESS", value: `${fmtNum(densityPerHa, 1)} contenedores/ha` },
+          { label: "Relación BESS / PCS-MV", value: k.containersPerStation !== null ? fmtNum(k.containersPerStation, 2) : "—" },
+          { label: "Bloques BESS-PCS", value: fmtInt(k.blocks) },
           { label: "Estado datos", value: k.source === "layout_inventory" ? "Derivado del layout" : "Sincronizado" },
         ]}
       />
@@ -265,8 +357,41 @@ export function LayoutSection({ data }: ReportSectionProps) {
           </Svg>
           <Text style={s.imageCaption}>
             Diagrama esquemático del sitio (norte arriba, escala indicada).
-            Vista referencial, no reemplaza planos IFC.
+            Vista referencial preliminar, no reemplaza planos IFC.
           </Text>
+          {/* Leyenda visual */}
+          <View
+            style={{
+              flexDirection: "row",
+              flexWrap: "wrap",
+              gap: 12,
+              marginTop: 4,
+              paddingHorizontal: 4,
+            }}
+          >
+            {legend.map((item) => (
+              <View
+                key={item.label}
+                style={{ flexDirection: "row", alignItems: "center", gap: 4 }}
+              >
+                <View
+                  style={{
+                    width: 9,
+                    height: 9,
+                    backgroundColor: item.color,
+                    borderWidth: 0.5,
+                    borderColor: REPORT_COLORS.rule,
+                  }}
+                />
+                <Text style={{ fontSize: 7.5, color: REPORT_COLORS.muted }}>
+                  {item.label}
+                </Text>
+              </View>
+            ))}
+            <Text style={{ fontSize: 7.5, color: REPORT_COLORS.muted }}>
+              N = Norte · barra de escala en metros
+            </Text>
+          </View>
         </View>
       ) : (
         <Text style={s.note}>

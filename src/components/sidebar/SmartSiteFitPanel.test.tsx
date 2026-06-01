@@ -1,0 +1,105 @@
+import React from "react";
+import { render, screen, fireEvent, cleanup, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { SmartSiteFitPanel } from "./SmartSiteFitPanel";
+import { useUiStore } from "@/store/uiStore";
+import { useProjectStore } from "@/store/projectStore";
+import { resetProjectStore } from "@/store/slices/_testHelpers";
+
+beforeEach(() => {
+  resetProjectStore();
+  useUiStore.setState({ locale: "en" });
+});
+
+afterEach(() => {
+  cleanup();
+});
+
+describe("SmartSiteFitPanel", () => {
+  it("renders without crashing and displays header and disclaimer", () => {
+    render(<SmartSiteFitPanel />);
+
+    // Renders title and subtitle
+    expect(screen.getByText(/Smart sizing/i)).toBeDefined();
+    expect(screen.getByText(/By target capacity/i)).toBeDefined();
+
+    // Expand the CollapsibleSection by clicking its header to render children
+    fireEvent.click(screen.getByText(/Smart sizing/i));
+
+    // Renders disclaimer text (in English by default)
+    expect(screen.getByText(/Preliminary sizing/i)).toBeDefined();
+  });
+
+  it("completes target sizing calculation flow and displays the result", async () => {
+    // Inject polygon and anchor
+    useProjectStore.setState({
+      polygon: [
+        { lng: -70, lat: -33 },
+        { lng: -70.001, lat: -33 },
+        { lng: -70.001, lat: -33.001 },
+        { lng: -70, lat: -33.001 },
+      ],
+      anchor: { lng0: -70, lat0: -33 },
+    });
+
+    render(<SmartSiteFitPanel />);
+    fireEvent.click(screen.getByText(/Smart sizing/i));
+
+    const calcBtn = screen.getByRole("button", { name: /Calculate alternative/i });
+    fireEvent.click(calcBtn);
+
+    // The run is deferred by one macrotask so the loading state can paint; the
+    // store is populated once it completes.
+    await waitFor(() => {
+      const state = useProjectStore.getState();
+      expect(state.smartSiteFit.result).not.toBeNull();
+      expect(state.smartSiteFit.selectedAlternativeId).not.toBeNull();
+    });
+
+    // Alternative cards and adjustment panels are displayed
+    expect(screen.getByText(/Layout Alternatives/i)).toBeDefined();
+    expect(screen.getByText(/Capacity and Spacing Adjustments/i)).toBeDefined();
+  });
+
+  it("shows integrated units (never '0 PCS') in the applied banner for an integrated layout", () => {
+    // Integrated presets carry their own power conversion: pcsCount === 0.
+    useProjectStore.setState({
+      smartSiteFitApplied: {
+        mode: "target",
+        strategy: "balanced",
+        score: 80,
+        bessCount: 12,
+        pcsCount: 0,
+        ratio: 0,
+        assumptions: [],
+        appliedAt: new Date().toISOString(),
+      },
+    });
+
+    render(<SmartSiteFitPanel />);
+    fireEvent.click(screen.getByText(/Smart sizing/i));
+
+    expect(screen.getByText(/Integrated units: 12/)).toBeDefined();
+    expect(screen.queryByText(/0 PCS/)).toBeNull();
+  });
+
+  it("keeps BESS + PCS counts in the applied banner for a separate-PCS layout", () => {
+    useProjectStore.setState({
+      smartSiteFitApplied: {
+        mode: "target",
+        strategy: "balanced",
+        score: 80,
+        bessCount: 24,
+        pcsCount: 3,
+        ratio: 8,
+        assumptions: [],
+        appliedAt: new Date().toISOString(),
+      },
+    });
+
+    render(<SmartSiteFitPanel />);
+    fireEvent.click(screen.getByText(/Smart sizing/i));
+
+    expect(screen.getByText(/24 BESS, Stations: 3 PCS/)).toBeDefined();
+  });
+});

@@ -3,7 +3,6 @@
 import { Info, MapPinned, Ruler, Settings2 } from "lucide-react";
 import { BessModelLibraryPanel } from "@/components/sidebar/BessModelLibraryPanel";
 import { BessParkSummaryPanel } from "@/components/sidebar/BessParkSummaryPanel";
-import { BessQuickSizingPanel } from "@/components/sidebar/BessQuickSizingPanel";
 import { CaseStudyPanel } from "@/components/sidebar/CaseStudyPanel";
 import { EquipmentCatalogPanel } from "@/components/sidebar/EquipmentCatalogPanel";
 import { LayoutComparisonPanel } from "@/components/sidebar/LayoutComparisonPanel";
@@ -12,6 +11,7 @@ import { ParametricTerrainPanel } from "@/components/sidebar/ParametricTerrainPa
 import { PreliminaryDesignToolsPanel } from "@/components/sidebar/PreliminaryDesignToolsPanel";
 import { RegulatoryCompliancePanel } from "@/components/sidebar/RegulatoryCompliancePanel";
 import { RegulatoryConfigPanel } from "@/components/sidebar/RegulatoryConfigPanel";
+import { SmartSiteFitPanel } from "@/components/sidebar/SmartSiteFitPanel";
 import { TechnicalReportPanel } from "@/components/sidebar/TechnicalReportPanel";
 import { WarningsPanel } from "@/components/sidebar/WarningsPanel";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
@@ -45,11 +45,11 @@ const SECTION_COPY: Record<
   equipment: {
     es: {
       title: "Equipos",
-      description: "Catalogos, modelos y dimensionamiento preliminar.",
+      description: "Catalogos, modelos y biblioteca de equipos.",
     },
     en: {
       title: "Equipment",
-      description: "Catalogs, models and preliminary sizing.",
+      description: "Catalogs, models and equipment library.",
     },
   },
   layout: {
@@ -142,8 +142,8 @@ function useSectionCue(
     return {
       label: isEs ? "Sin equipos colocados" : "No placed equipment",
       text: isEs
-        ? "Selecciona un modelo o usa sizing preliminar; esta seccion no coloca equipos por si sola."
-        : "Select a model or use preliminary sizing; this section does not place equipment by itself.",
+        ? "Selecciona o revisa modelos del catalogo; el dimensionamiento vive ahora en la seccion Layout."
+        : "Select or review catalog models; sizing tools now live in the Layout section.",
     };
   }
 
@@ -198,10 +198,7 @@ function renderSectionPanels(
 
   if (activeSection === "equipment") {
     return region === "primary" ? (
-      <>
-        <BessModelLibraryPanel />
-        <BessQuickSizingPanel />
-      </>
+      <BessModelLibraryPanel />
     ) : (
       <EquipmentCatalogPanel />
     );
@@ -210,6 +207,7 @@ function renderSectionPanels(
   if (activeSection === "layout") {
     return region === "primary" ? (
       <>
+        <SmartSiteFitPanel />
         <PreliminaryDesignToolsPanel />
         <MVArchitecturePanel />
       </>

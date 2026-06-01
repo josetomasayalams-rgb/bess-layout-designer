@@ -33,6 +33,7 @@ import {
   TraceabilitySection,
   ScopeSection,
   RegulatoryAnnexSection,
+  EngineeringAnnexSection,
 } from "./pdfTraceabilityScopeSections";
 
 function buildMinimalReportData() {
@@ -123,10 +124,10 @@ describe("pdfChrome — PageHeader / PageFooter", () => {
 // ──────────────────────────────────────────────────────────────────
 
 describe("pdfProjectSections — section numbers and titles", () => {
-  it("ExecutiveSection → 1. Resumen técnico ejecutivo", () => {
+  it("ExecutiveSection → 1. Resumen ejecutivo", () => {
     expectSectionPage(callSection(ExecutiveSection), {
       number: "1",
-      title: "Resumen técnico ejecutivo",
+      title: "Resumen ejecutivo",
     });
   });
 
@@ -157,10 +158,10 @@ describe("pdfProjectSections — section numbers and titles", () => {
 // ──────────────────────────────────────────────────────────────────
 
 describe("pdfElectricalRegulatorySections — section numbers and titles", () => {
-  it("ElectricalSection → 5. Arquitectura eléctrica preliminar", () => {
+  it("ElectricalSection → 5. Arquitectura eléctrica conceptual", () => {
     expectSectionPage(callSection(ElectricalSection), {
       number: "5",
-      title: "Arquitectura eléctrica preliminar",
+      title: "Arquitectura eléctrica conceptual",
     });
   });
 
@@ -204,6 +205,13 @@ describe("pdfTraceabilityScopeSections — section numbers and titles", () => {
       title: "Anexo: tabla completa de reglas",
     });
   });
+
+  it("EngineeringAnnexSection → A2. Anexo: checklist de ingeniería y referencias", () => {
+    expectSectionPage(callSection(EngineeringAnnexSection), {
+      number: "A2",
+      title: "Anexo: checklist de ingeniería y referencias",
+    });
+  });
 });
 
 // ──────────────────────────────────────────────────────────────────
@@ -223,6 +231,7 @@ describe("PDF sections — aggregate", () => {
       TraceabilitySection,
       ScopeSection,
       RegulatoryAnnexSection,
+      EngineeringAnnexSection,
     ];
     for (const Section of sections) {
       const el = callSection(Section);

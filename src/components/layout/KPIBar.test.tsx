@@ -42,6 +42,42 @@ describe("KPIBar", () => {
     expect(screen.getByText("Pending")).toBeDefined();
   });
 
+  it("shows a numeric power from placed PCS/MV when no design target is set", () => {
+    useProjectStore.setState({
+      placedEquipment: [
+        {
+          id: "pcs-1",
+          equipmentSpecId: "sungrow-sc5000ud-mv-us-p3",
+          anchor: { lng: -70, lat: -33 },
+          rotation_deg: 0,
+          sourceReliability: "preliminary_assumption",
+        },
+        {
+          id: "pcs-2",
+          equipmentSpecId: "sungrow-sc5000ud-mv-us-p3",
+          anchor: { lng: -70.001, lat: -33 },
+          rotation_deg: 0,
+          sourceReliability: "preliminary_assumption",
+        },
+      ],
+    });
+
+    render(<KPIBar />);
+    const region = screen.getByRole("region", { name: "Project KPIs" });
+    // Two PCS × 5 MVA = 10 MW (preliminary apparent-power proxy).
+    expect(within(region).getByText("10.0")).toBeDefined();
+  });
+
+  it("prefers the declared design power target over placed equipment", () => {
+    useProjectStore.setState({
+      designTargets: { powerMW: { value: 250, unit: "MW", evidence: [] } },
+    });
+
+    render(<KPIBar />);
+    const region = screen.getByRole("region", { name: "Project KPIs" });
+    expect(within(region).getByText("250.0")).toBeDefined();
+  });
+
   it("shows the configured exclusion count", () => {
     render(<KPIBar />);
 

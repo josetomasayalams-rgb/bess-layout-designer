@@ -24,7 +24,7 @@ describe("SectionRail", () => {
     expect(screen.getByRole("button", { name: "2. Equipos" })).toBeDefined();
     expect(screen.getByRole("button", { name: "3. Layout" })).toBeDefined();
     expect(
-      screen.getByRole("button", { name: "4. Cumplimiento" })
+      screen.getByRole("button", { name: "4. Reglas" })
     ).toBeDefined();
     expect(screen.getByRole("button", { name: "5. Reporte" })).toBeDefined();
   });

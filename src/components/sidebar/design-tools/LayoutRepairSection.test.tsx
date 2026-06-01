@@ -20,6 +20,8 @@ describe("LayoutRepairSection", () => {
     onPreviewFit: vi.fn(),
     onApplyFit: vi.fn(),
     onRevertFit: vi.fn(),
+    onShiftLayout: vi.fn(),
+    onCenterLayout: vi.fn(),
     isEs: true,
     locale: "es" as const,
   };
@@ -180,11 +182,137 @@ describe("LayoutRepairSection", () => {
             initialConflicts: 0,
             movedCount: 0,
             maxDisplacementM: 0,
+            clusterCount: 0,
+            strategy: "none",
           },
         }}
       />
     );
 
     expect(screen.getByText("No hay equipos colocados para reparar. Coloca o genera equipos primero.")).toBeDefined();
+  });
+
+  it("shows the preliminary geometric scope disclaimer", () => {
+    render(<LayoutRepairSection {...defaultProps} />);
+    expect(
+      screen.getByText(/Ajuste geometrico preliminar/i)
+    ).toBeDefined();
+  });
+
+  it("surfaces the applied strategy and block grouping on success", () => {
+    render(
+      <LayoutRepairSection
+        {...defaultProps}
+        lastRepairResult={{
+          status: "success",
+          message: "Repaired 2 conflict(s): moved 4 item(s).",
+          diagnostics: {
+            equipmentCount: 8,
+            zoneApplied: false,
+            movableCount: 8,
+            remainingConflicts: 0,
+            initialConflicts: 2,
+            movedCount: 4,
+            maxDisplacementM: 12.5,
+            clusterCount: 2,
+            strategy: "cluster-rigid",
+          },
+        }}
+      />
+    );
+    expect(
+      screen.getByText(/Se mantuvo la agrupacion por bloques cuando fue posible/i)
+    ).toBeDefined();
+    expect(screen.getByText(/2 bloque\(s\)/i)).toBeDefined();
+  });
+
+  it("reports remaining warnings on a partial repair without promising compliance", () => {
+    render(
+      <LayoutRepairSection
+        {...defaultProps}
+        lastRepairResult={{
+          status: "partial",
+          message: "Reduced conflicts from 5 to 2.",
+          diagnostics: {
+            equipmentCount: 8,
+            zoneApplied: false,
+            movableCount: 8,
+            remainingConflicts: 2,
+            initialConflicts: 5,
+            movedCount: 6,
+            maxDisplacementM: 30,
+            clusterCount: 2,
+            strategy: "cluster-recenter",
+          },
+        }}
+      />
+    );
+    expect(screen.getByText(/Quedan 2 advertencia\(s\) por revisar/i)).toBeDefined();
+    // No absolute-compliance language.
+    expect(screen.queryByText(/garantizad/i)).toBeNull();
+    expect(screen.queryByText(/óptimo/i)).toBeNull();
+  });
+
+  it("renders directional shift buttons and center button", () => {
+    render(<LayoutRepairSection {...defaultProps} />);
+
+    expect(screen.getByRole("button", { name: /Mover norte/i })).toBeDefined();
+    expect(screen.getByRole("button", { name: /Mover sur/i })).toBeDefined();
+    expect(screen.getByRole("button", { name: /Mover oeste/i })).toBeDefined();
+    expect(screen.getByRole("button", { name: /Mover este/i })).toBeDefined();
+    expect(screen.getByRole("button", { name: /Centrar layout/i })).toBeDefined();
+  });
+
+  it("calls onShiftLayout with correct delta when north button clicked", () => {
+    const onShiftLayout = vi.fn();
+    render(<LayoutRepairSection {...defaultProps} onShiftLayout={onShiftLayout} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Mover norte/i }));
+    expect(onShiftLayout).toHaveBeenCalledWith(0, 10);
+  });
+
+  it("calls onShiftLayout with correct delta when south button clicked", () => {
+    const onShiftLayout = vi.fn();
+    render(<LayoutRepairSection {...defaultProps} onShiftLayout={onShiftLayout} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Mover sur/i }));
+    expect(onShiftLayout).toHaveBeenCalledWith(0, -10);
+  });
+
+  it("calls onShiftLayout with correct delta when east button clicked", () => {
+    const onShiftLayout = vi.fn();
+    render(<LayoutRepairSection {...defaultProps} onShiftLayout={onShiftLayout} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Mover este/i }));
+    expect(onShiftLayout).toHaveBeenCalledWith(10, 0);
+  });
+
+  it("calls onShiftLayout with correct delta when west button clicked", () => {
+    const onShiftLayout = vi.fn();
+    render(<LayoutRepairSection {...defaultProps} onShiftLayout={onShiftLayout} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Mover oeste/i }));
+    expect(onShiftLayout).toHaveBeenCalledWith(-10, 0);
+  });
+
+  it("calls onCenterLayout when center button clicked", () => {
+    const onCenterLayout = vi.fn();
+    render(<LayoutRepairSection {...defaultProps} onCenterLayout={onCenterLayout} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Centrar layout/i }));
+    expect(onCenterLayout).toHaveBeenCalled();
+  });
+
+  it("disables shift buttons when placedCount is 0", () => {
+    render(<LayoutRepairSection {...defaultProps} placedCount={0} />);
+
+    expect(screen.getByRole("button", { name: /Mover norte/i }).getAttribute("disabled")).toBe("");
+    expect(screen.getByRole("button", { name: /Mover sur/i }).getAttribute("disabled")).toBe("");
+  });
+
+  it("disables center button when polygon is not defined", () => {
+    render(<LayoutRepairSection {...defaultProps} polygonLength={0} />);
+
+    expect(screen.getByRole("button", { name: /Centrar layout/i }).getAttribute("disabled")).toBe("");
   });
 });

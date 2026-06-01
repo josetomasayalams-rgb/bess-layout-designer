@@ -20,9 +20,6 @@ vi.mock("@/components/sidebar/BessModelLibraryPanel", () => ({
   BessModelLibraryPanel: () => <section data-testid="model-library-panel" />,
 }));
 
-vi.mock("@/components/sidebar/BessQuickSizingPanel", () => ({
-  BessQuickSizingPanel: () => <section data-testid="quick-sizing-panel" />,
-}));
 
 vi.mock("@/components/sidebar/CaseStudyPanel", () => ({
   CaseStudyPanel: () => <section data-testid="case-study-panel" />,
@@ -106,7 +103,6 @@ describe("AppShell section shell surfaces", () => {
     fireEvent.click(screen.getByRole("button", { name: "2. Equipment" }));
 
     expect(screen.getByTestId("model-library-panel")).toBeDefined();
-    expect(screen.getByTestId("quick-sizing-panel")).toBeDefined();
     expect(screen.getByTestId("equipment-catalog-panel")).toBeDefined();
     expect(screen.queryByTestId("case-study-panel")).toBeNull();
   });
@@ -128,5 +124,25 @@ describe("AppShell section shell surfaces", () => {
     fireEvent.click(screen.getByRole("button", { name: "5. Report" }));
     expect(screen.getByTestId("report-panel")).toBeDefined();
     expect(screen.getByTestId("bess-map")).toBeDefined();
+  });
+
+  it("starts with the top KPI and flow status header collapsed and allows expanding it", () => {
+    render(<AppShell />);
+
+    // Initial state on open: collapsed (displays "Show top panel" in default English locale)
+    const collapsedButton = screen.getByRole("button", { name: "Show top panel" });
+    expect(collapsedButton.getAttribute("aria-expanded")).toBe("false");
+
+    // Click to expand
+    fireEvent.click(collapsedButton);
+
+    // After click: expanded (displays "Hide top panel")
+    const expandedButton = screen.getByRole("button", { name: "Hide top panel" });
+    expect(expandedButton.getAttribute("aria-expanded")).toBe("true");
+
+    // Re-collapse
+    fireEvent.click(expandedButton);
+    const recollapsedButton = screen.getByRole("button", { name: "Show top panel" });
+    expect(recollapsedButton.getAttribute("aria-expanded")).toBe("false");
   });
 });

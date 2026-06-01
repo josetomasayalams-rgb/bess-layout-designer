@@ -89,6 +89,16 @@ import type {
   ProjectAssumption,
   ProjectDesignTargets,
 } from "@/types/project";
+import type {
+  SmartSiteFitInput,
+  SmartSiteFitResult,
+  SmartSiteFitOverrides,
+  SmartSiteFitMode,
+  SmartSiteFitStrategy,
+  SmartSiteFitAssumption,
+  SmartSiteFitLayoutMode,
+  SmartSiteFitManualLayoutSpec,
+} from "@/lib/layout/smartSiteFit/smartSiteFitTypes";
 
 export type InteractionMode =
   | "select"
@@ -150,6 +160,43 @@ export type ComparisonState = {
 
 export const emptyComparison: ComparisonState = { A: null, B: null };
 
+export type SmartSiteFitPreviewState = {
+  result: SmartSiteFitResult | null;
+  selectedAlternativeId: string | null;
+  overrides: SmartSiteFitOverrides;
+  dirty: boolean;
+  lastRunInput: SmartSiteFitInput | null;
+  lastRunAt: string | null;
+};
+
+export type SmartSiteFitAppliedMetadata = {
+  mode: SmartSiteFitMode;
+  strategy: SmartSiteFitStrategy;
+  score: number;
+  bessCount: number;
+  pcsCount: number;
+  ratio: number;
+  assumptions: SmartSiteFitAssumption[];
+  appliedAt: string;
+  layoutMode?: SmartSiteFitLayoutMode;
+  manualLayoutSpec?: SmartSiteFitManualLayoutSpec;
+};
+
+export type SmartSiteFitApplyResult = {
+  success: boolean;
+  message: string;
+  placedCount: number;
+};
+
+export const emptySmartSiteFitPreviewState: SmartSiteFitPreviewState = {
+  result: null,
+  selectedAlternativeId: null,
+  overrides: {},
+  dirty: false,
+  lastRunInput: null,
+  lastRunAt: null,
+};
+
 /**
  * Default map view center for projects that have not yet drawn a
  * polygon (Santiago, Chile). Used as the initial value of
@@ -191,8 +238,16 @@ export type ProjectState = {
   layoutEdit: LayoutEditState;
   terrainFitPreview: TerrainFitPreviewState;
   comparison: ComparisonState;
+  smartSiteFit: SmartSiteFitPreviewState;
+  smartSiteFitApplied: SmartSiteFitAppliedMetadata | null;
   past: ProjectSnapshot[];
   future: ProjectSnapshot[];
+  /**
+   * Free-text project name (metadata). Entered in the terrain-sizing panel
+   * and threaded into the technical report header. Intentionally NOT part of
+   * `ProjectSnapshot` — undo/redo never restore it; `resetProject` clears it.
+   */
+  projectName: string;
 
   // ──────────────────────────────────────────────────────────────────
   // Fase 1 — slices nuevos para arquitectura eléctrica y trazabilidad.
@@ -220,6 +275,7 @@ export type ProjectState = {
   addPolygonVertex: (p: LngLat) => void;
   finishPolygon: () => void;
   clearPolygon: () => void;
+  setPolygonFromCoordinates: (vertices: LngLat[]) => void;
   setMapViewCenter: (center: LngLat) => void;
   createPreviewTerrain: (
     input: Omit<ParametricTerrainInput, "center"> & { center?: LngLat | null }
@@ -258,6 +314,10 @@ export type ProjectState = {
     input: Omit<PreliminaryLayoutRequest, "anchor" | "startPoint" | "polygon" | "fitInsidePolygon">
   ) => void;
   repairLayout: (rules: LayoutRepairRules) => void;
+  /** Shifts all non-locked placed equipment by (dxM, dyM) meters in local ENU coords. */
+  shiftLayout: (dxM: number, dyM: number) => void;
+  /** Centers all non-locked placed equipment on the polygon centroid. Requires polygon >= 3 vertices. */
+  centerLayoutInSite: () => void;
   clearToolResult: () => void;
   clearRepairResult: () => void;
   removeEquipment: (id: string) => void;
@@ -284,7 +344,18 @@ export type ProjectState = {
   clearAlternative: (slot: ComparisonSlot) => void;
   restoreAlternative: (slot: ComparisonSlot) => void;
 
+  runSmartSiteFitAnalysis: (input: SmartSiteFitInput) => void;
+  selectSmartSiteFitAlternative: (alternativeId: string) => void;
+  updateSmartSiteFitOverrides: (
+    overrides: Partial<SmartSiteFitOverrides>
+  ) => void;
+  recalculateSmartSiteFitPreview: () => void;
+  applySmartSiteFitAlternative: () => SmartSiteFitApplyResult;
+  discardSmartSiteFit: () => void;
+
   setMode: (mode: InteractionMode) => void;
+  /** Sets the free-text project-name metadata field. */
+  setProjectName: (name: string) => void;
   loadDemoProject: () => void;
   resetProject: () => void;
   undo: () => void;

@@ -29,6 +29,8 @@ export function PreliminaryDesignToolsPanel() {
     (s) => s.regularizePreliminaryToolLayout
   );
   const repairLayout = useProjectStore((s) => s.repairLayout);
+  const shiftLayout = useProjectStore((s) => s.shiftLayout);
+  const centerLayoutInSite = useProjectStore((s) => s.centerLayoutInSite);
   const lastRepairResult = useProjectStore((s) => s.lastRepairResult);
   const terrainFitPreview = useProjectStore((s) => s.terrainFitPreview);
   const previewFitLayoutToTerrain = useProjectStore(
@@ -152,6 +154,8 @@ export function PreliminaryDesignToolsPanel() {
           onPreviewFit={() => previewFitLayoutToTerrain(repairRules)}
           onApplyFit={applyTerrainFitPreview}
           onRevertFit={revertTerrainFitPreview}
+          onShiftLayout={shiftLayout}
+          onCenterLayout={centerLayoutInSite}
           isEs={isEs}
           locale={locale}
         />

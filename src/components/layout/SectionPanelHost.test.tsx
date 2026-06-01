@@ -12,10 +12,6 @@ vi.mock("@/components/sidebar/BessModelLibraryPanel", () => ({
   BessModelLibraryPanel: () => <section data-testid="model-library-panel" />,
 }));
 
-vi.mock("@/components/sidebar/BessQuickSizingPanel", () => ({
-  BessQuickSizingPanel: () => <section data-testid="quick-sizing-panel" />,
-}));
-
 vi.mock("@/components/sidebar/CaseStudyPanel", () => ({
   CaseStudyPanel: () => <section data-testid="case-study-panel" />,
 }));
@@ -58,6 +54,10 @@ vi.mock("@/components/sidebar/WarningsPanel", () => ({
   WarningsPanel: () => <section data-testid="warnings-panel" />,
 }));
 
+vi.mock("@/components/sidebar/SmartSiteFitPanel", () => ({
+  SmartSiteFitPanel: () => <section data-testid="smart-site-fit-panel" />,
+}));
+
 function resetStores() {
   useUiStore.setState({ locale: "en" });
   useProjectStore.setState({
@@ -81,7 +81,6 @@ describe("SectionPanelHost", () => {
     );
 
     expect(screen.getByTestId("model-library-panel")).toBeDefined();
-    expect(screen.getByTestId("quick-sizing-panel")).toBeDefined();
     expect(screen.getByTestId("equipment-catalog-panel")).toBeDefined();
   });
 
@@ -172,7 +171,9 @@ describe("SectionPanelHost", () => {
       </>
     );
 
+    expect(screen.getByTestId("smart-site-fit-panel")).toBeDefined();
     expect(screen.getByTestId("preliminary-design-panel")).toBeDefined();
+    expect(screen.getByTestId("mv-architecture-panel")).toBeDefined();
     expect(screen.getByTestId("layout-comparison-panel")).toBeDefined();
   });
 });

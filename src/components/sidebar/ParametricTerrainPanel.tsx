@@ -1,8 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, MousePointer2, RotateCw, SquarePen, X } from "lucide-react";
+import {
+  CheckCircle2,
+  ListPlus,
+  MapPin,
+  MousePointer2,
+  RotateCw,
+  SquarePen,
+  X,
+} from "lucide-react";
 import { useProjectStore } from "@/store/projectStore";
+import { parseLatLng } from "@/lib/geometry/parseCoordinate";
 import { useUiStore } from "@/store/uiStore";
 import {
   formatAreaDual,
@@ -10,6 +19,7 @@ import {
   formatLength,
   formatNumber,
 } from "@/lib/units/formatUnits";
+import { NumberField } from "@/components/ui/NumberField";
 import {
   dimensionsFromAreaRatio,
   type ParametricTerrainShape,
@@ -55,12 +65,26 @@ export function ParametricTerrainPanel() {
   const interactionMode = useProjectStore((state) => state.interactionMode);
   const startDrawingPolygon = useProjectStore((state) => state.startDrawingPolygon);
   const finishPolygon = useProjectStore((state) => state.finishPolygon);
+  const setPolygonFromCoordinates = useProjectStore(
+    (state) => state.setPolygonFromCoordinates
+  );
   const createPreviewTerrain = useProjectStore((state) => state.createPreviewTerrain);
   const updatePreviewTerrain = useProjectStore((state) => state.updatePreviewTerrain);
   const applyPreviewTerrain = useProjectStore((state) => state.applyPreviewTerrain);
   const cancelPreviewTerrain = useProjectStore((state) => state.cancelPreviewTerrain);
+  const projectName = useProjectStore((state) => state.projectName);
+  const setProjectName = useProjectStore((state) => state.setProjectName);
 
-  const [mode, setMode] = useState<"draw" | "parametric">("draw");
+  const [mode, setMode] = useState<"draw" | "parametric" | "coordinates">(
+    "draw"
+  );
+  // All coordinates are typed/pasted into one textarea, one "lat, lng" per
+  // line, so a whole list can be copy-pasted in a single block (max 15 lines).
+  const [coordText, setCoordText] = useState("");
+  const [coordFeedback, setCoordFeedback] = useState<{
+    kind: "success" | "error";
+    text: string;
+  } | null>(null);
   const [shape, setShape] = useState<ParametricTerrainShape>("rectangle");
   const [sizingMode, setSizingMode] =
     useState<ParametricTerrainSizingMode>("area-ratio");
@@ -149,6 +173,64 @@ export function ParametricTerrainPanel() {
     if (previewTerrain) updatePreviewTerrain({ rotationDeg: nextRotation });
   };
 
+  const MIN_COORDS = 3;
+  const MAX_COORDS = 15;
+
+  // Non-empty, trimmed lines from the textarea (blank lines are ignored so a
+  // pasted block with stray newlines still works).
+  const coordLines = coordText
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line !== "");
+  const validCoordCount = coordLines.filter(
+    (line) => parseLatLng(line) !== null
+  ).length;
+
+  const createPolygonFromCoordinates = () => {
+    if (coordLines.length > MAX_COORDS) {
+      setCoordFeedback({
+        kind: "error",
+        text: isEs
+          ? `Maximo ${MAX_COORDS} coordenadas (una por linea). Ingresaste ${coordLines.length}.`
+          : `Maximum ${MAX_COORDS} coordinates (one per line). You entered ${coordLines.length}.`,
+      });
+      return;
+    }
+
+    const vertices: { lng: number; lat: number }[] = [];
+    for (const line of coordLines) {
+      const parsed = parseLatLng(line);
+      if (parsed === null) {
+        setCoordFeedback({
+          kind: "error",
+          text: isEs
+            ? `Coordenada invalida: "${line}". Usa lat, lon (latitud -90 a 90, longitud -180 a 180).`
+            : `Invalid coordinate: "${line}". Use lat, lng (latitude -90 to 90, longitude -180 to 180).`,
+        });
+        return;
+      }
+      vertices.push({ lng: parsed.lng, lat: parsed.lat });
+    }
+
+    if (vertices.length < MIN_COORDS) {
+      setCoordFeedback({
+        kind: "error",
+        text: isEs
+          ? "Ingresa al menos 3 coordenadas validas."
+          : "Enter at least 3 valid coordinates.",
+      });
+      return;
+    }
+
+    setPolygonFromCoordinates(vertices);
+    setCoordFeedback({
+      kind: "success",
+      text: isEs
+        ? `Poligono creado desde ${vertices.length} coordenadas.`
+        : `Polygon created from ${vertices.length} coordinates.`,
+    });
+  };
+
   return (
     <div className="mt-3 space-y-3 rounded-lg border border-cyan-500/20 bg-cyan-500/5 p-3">
       <div>
@@ -162,7 +244,24 @@ export function ParametricTerrainPanel() {
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
+      <label className="block text-[11px] text-slate-500">
+        {isEs ? "Nombre del proyecto" : "Project name"}
+        <input
+          type="text"
+          value={projectName}
+          maxLength={120}
+          placeholder={isEs ? "Ej. Planta BESS Atacama" : "e.g. Atacama BESS Plant"}
+          onChange={(event) => setProjectName(event.target.value)}
+          className={inputClass}
+        />
+        <span className="mt-1 block text-[10px] leading-snug text-slate-600">
+          {isEs
+            ? "Se usa en el encabezado del reporte tecnico."
+            : "Used in the technical report header."}
+        </span>
+      </label>
+
+      <div className="grid grid-cols-3 gap-2">
         <button
           type="button"
           onClick={() => setMode("draw")}
@@ -187,6 +286,18 @@ export function ParametricTerrainPanel() {
           <MousePointer2 className="h-3.5 w-3.5" aria-hidden="true" />
           {isEs ? "Por parametros" : "By parameters"}
         </button>
+        <button
+          type="button"
+          onClick={() => setMode("coordinates")}
+          className={`${buttonClass} ${
+            mode === "coordinates"
+              ? "border-cyan-400 bg-cyan-400/15 text-cyan-100"
+              : "border-slate-700 bg-slate-900 text-slate-300 hover:border-cyan-500/60"
+          }`}
+        >
+          <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
+          {isEs ? "Por coordenadas" : "Coordinate polygon"}
+        </button>
       </div>
 
       {mode === "draw" ? (
@@ -203,6 +314,56 @@ export function ParametricTerrainPanel() {
               ? "Dibujar terreno"
               : "Draw terrain"}
         </button>
+      ) : mode === "coordinates" ? (
+        <div className="space-y-3">
+          <p className="text-[10px] leading-snug text-slate-500">
+            {isEs
+              ? "Pega o escribe una coordenada por linea (lat, lon), hasta 15. Puedes copiarlas desde otra fuente y pegarlas todas de una vez. El poligono se crea en el orden ingresado."
+              : "Paste or type one coordinate per line (lat, lng), up to 15. You can copy them from another source and paste them all at once. The polygon is built in the entered order."}
+          </p>
+
+          <label className="block text-[11px] text-slate-500">
+            {isEs ? "Coordenadas (una por linea)" : "Coordinates (one per line)"}
+            <textarea
+              value={coordText}
+              onChange={(event) => {
+                setCoordText(event.target.value);
+                setCoordFeedback(null);
+              }}
+              rows={6}
+              spellCheck={false}
+              placeholder={"-33.45, -70.66\n-33.46, -70.66\n-33.46, -70.65"}
+              className={`${inputClass} min-h-[7rem] resize-y font-mono leading-relaxed`}
+            />
+          </label>
+
+          <div className="text-[10px] text-slate-600">
+            {isEs
+              ? `${validCoordCount}/${MAX_COORDS} coordenadas validas detectadas`
+              : `${validCoordCount}/${MAX_COORDS} valid coordinates detected`}
+          </div>
+
+          <button
+            type="button"
+            onClick={createPolygonFromCoordinates}
+            className={`${buttonClass} w-full border-emerald-400/40 bg-emerald-400/10 text-emerald-100 hover:border-emerald-300`}
+          >
+            <ListPlus className="h-3.5 w-3.5" aria-hidden="true" />
+            {isEs ? "Crear poligono" : "Create polygon"}
+          </button>
+
+          {coordFeedback ? (
+            <div
+              className={`rounded-md border p-2 text-[10px] leading-snug ${
+                coordFeedback.kind === "success"
+                  ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-100"
+                  : "border-amber-600/40 bg-amber-500/10 text-amber-100"
+              }`}
+            >
+              {coordFeedback.text}
+            </div>
+          ) : null}
+        </div>
       ) : (
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-2">
@@ -245,13 +406,11 @@ export function ParametricTerrainPanel() {
           <div className="grid grid-cols-2 gap-2">
             <label className="text-[11px] text-slate-500">
               {isEs ? "Area" : "Area"}
-              <input
-                type="number"
+              <NumberField
                 min={0.01}
                 step={0.1}
                 value={areaHa}
-                onChange={(event) => {
-                  const nextAreaHa = Number(event.target.value);
+                onChange={(nextAreaHa) => {
                   setAreaHa(nextAreaHa);
                   syncDerivedDimensions({ areaHa: nextAreaHa });
                 }}
@@ -261,13 +420,11 @@ export function ParametricTerrainPanel() {
             </label>
             <label className="text-[11px] text-slate-500">
               {isEs ? "Relacion L/A" : "L/W ratio"}
-              <input
-                type="number"
+              <NumberField
                 min={0.1}
                 step={0.1}
                 value={aspectRatio}
-                onChange={(event) => {
-                  const nextAspectRatio = Number(event.target.value);
+                onChange={(nextAspectRatio) => {
                   setAspectRatio(nextAspectRatio);
                   syncDerivedDimensions({ aspectRatio: nextAspectRatio });
                 }}
@@ -277,13 +434,11 @@ export function ParametricTerrainPanel() {
             </label>
             <label className="text-[11px] text-slate-500">
               {isEs ? "Largo" : "Length"}
-              <input
-                type="number"
+              <NumberField
                 min={1}
                 step={1}
                 value={lengthM}
-                onChange={(event) => {
-                  const nextLengthM = Number(event.target.value);
+                onChange={(nextLengthM) => {
                   setLengthM(nextLengthM);
                   syncDerivedDimensions({ lengthM: nextLengthM });
                 }}
@@ -294,13 +449,11 @@ export function ParametricTerrainPanel() {
             </label>
             <label className="text-[11px] text-slate-500">
               {isEs ? "Ancho" : "Width"}
-              <input
-                type="number"
+              <NumberField
                 min={1}
                 step={1}
                 value={widthM}
-                onChange={(event) => {
-                  const nextWidthM = Number(event.target.value);
+                onChange={(nextWidthM) => {
                   setWidthM(nextWidthM);
                   syncDerivedDimensions({ widthM: nextWidthM });
                 }}
@@ -311,24 +464,23 @@ export function ParametricTerrainPanel() {
             </label>
             <label className="text-[11px] text-slate-500">
               {isEs ? "Vertices" : "Vertices"}
-              <input
-                type="number"
+              <NumberField
                 min={3}
                 max={24}
                 step={1}
+                integer
                 value={vertexCount}
-                onChange={(event) => setVertexCount(Number(event.target.value))}
+                onChange={(next) => setVertexCount(next)}
                 disabled={shape !== "regular-polygon"}
                 className={inputClass}
               />
             </label>
             <label className="text-[11px] text-slate-500">
               {isEs ? "Rotacion" : "Rotation"}
-              <input
-                type="number"
+              <NumberField
                 step={1}
                 value={displayedRotationDeg}
-                onChange={(event) => setRotation(Number(event.target.value))}
+                onChange={(next) => setRotation(next)}
                 className={inputClass}
               />
               <span className="mt-1 block text-[10px] text-slate-600">°</span>

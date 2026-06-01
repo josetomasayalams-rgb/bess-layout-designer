@@ -59,4 +59,32 @@ describe("lifecycleSlice — resetProject", () => {
     expect(s.anchor).toBeNull();
     expect(s.interactionMode).toBe("select");
   });
+
+  it("clears the project name", () => {
+    useProjectStore.getState().setProjectName("Planta BESS Atacama");
+    expect(useProjectStore.getState().projectName).toBe("Planta BESS Atacama");
+
+    useProjectStore.getState().resetProject();
+    expect(useProjectStore.getState().projectName).toBe("");
+  });
+});
+
+describe("lifecycleSlice — setProjectName", () => {
+  it("defaults to an empty string", () => {
+    expect(useProjectStore.getState().projectName).toBe("");
+  });
+
+  it("stores the provided name verbatim", () => {
+    useProjectStore.getState().setProjectName("  Subestación Norte  ");
+    expect(useProjectStore.getState().projectName).toBe("  Subestación Norte  ");
+  });
+
+  it("is metadata only — does not touch layout content or push history", () => {
+    useProjectStore.getState().setProjectName("Proyecto X");
+    const s = useProjectStore.getState();
+    expect(s.placedEquipment).toEqual([]);
+    expect(s.polygon).toEqual([]);
+    expect(s.past).toEqual([]);
+    expect(s.future).toEqual([]);
+  });
 });

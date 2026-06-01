@@ -187,9 +187,26 @@ export function KPIBar({
   const hasPlaced = placed.length > 0;
   const containers = summary.battery_container_count;
   const stationCount = summary.pcs_count;
+  // Integrated presets (e.g. Tesla Megapack) keep the PCS/inverter inside the
+  // unit, so there is no separate PCS/MV station to count. Surface "integrated"
+  // instead of a misleading "0". Conceptual only.
+  const isIntegrated = summary.is_integrated_architecture ?? false;
+  const integratedUnitCount = summary.integrated_unit_count ?? 0;
 
+  // Power preference: declared design target first, then the approximate
+  // apparent power of the placed PCS/MV inventory (≈ MW, preliminary). This
+  // keeps the chip numeric whenever there is enough information instead of a
+  // bare dash.
   const targetPowerMW = designTargets?.powerMW?.value;
-  const powerValue = targetPowerMW ? formatNumber(targetPowerMW, 1) : "—";
+  const placedPowerMW =
+    summary.total_apparent_power_mva > 0
+      ? summary.total_apparent_power_mva
+      : undefined;
+  const effectivePowerMW = targetPowerMW ?? placedPowerMW;
+  const powerValue =
+    effectivePowerMW !== undefined && effectivePowerMW > 0
+      ? formatNumber(effectivePowerMW, 1)
+      : "—";
 
   const energyValue =
     summary.total_energy_mwh_dc_bol > 0
@@ -308,8 +325,17 @@ export function KPIBar({
       id: "kpi-pcs",
       cluster: "layout",
       label: "PCS/MV",
-      value: String(stationCount),
-      tone: "neutral",
+      value: isIntegrated
+        ? isEs
+          ? "Integrado"
+          : "Integrated"
+        : String(stationCount),
+      tone: isIntegrated ? "info" : "neutral",
+      tooltip: isIntegrated
+        ? isEs
+          ? `PCS/inversor integrado en la unidad (${integratedUnitCount} u.); sin estación PCS/MV separada. Conceptual.`
+          : `PCS/inverter integrated in the unit (${integratedUnitCount} u.); no separate PCS/MV station. Conceptual.`
+        : undefined,
     },
     {
       id: "kpi-compliance",

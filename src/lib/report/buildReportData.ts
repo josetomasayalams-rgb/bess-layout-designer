@@ -103,6 +103,14 @@ export type ReportKpis = {
   blocks: number;
   buses: number;
   containersPerStation: number | null;
+  /**
+   * True when installed power comes from integrated AC units (no separate
+   * PCS/MV station in the layout), e.g. Tesla Megapack. Conceptual only; the
+   * external MV step-up transformer is not modeled.
+   */
+  isIntegrated: boolean;
+  /** Count of integrated AC units when isIntegrated is true; otherwise 0. */
+  integratedUnitCount: number;
 };
 
 export type ReportConsistencyAlert = {
@@ -527,7 +535,8 @@ function deriveKpisFromLayout(args: {
   let containers = 0;
   let stationsFromLayout = 0;
   let grossEnergyMWh = 0;
-  let installedPowerMVA = 0;
+  let pcsPowerMVA = 0;
+  let batteryPowerMVA = 0;
 
   for (const item of args.placed) {
     const spec = equipmentCatalog.find((entry) => entry.id === item.equipmentSpecId);
@@ -535,12 +544,25 @@ function deriveKpisFromLayout(args: {
     if (spec.type === "battery_container") {
       containers += 1;
       grossEnergyMWh += spec.electrical?.energy_mwh_dc_bol ?? 0;
+      // Integrated units (e.g. Tesla Megapack) carry their AC power on the unit
+      // itself; separate-PCS containers (Sungrow) carry none, so this stays 0
+      // for them and the integrated branch below is never taken.
+      batteryPowerMVA += spec.electrical?.apparent_power_mva ?? 0;
     }
     if (spec.type === "pcs_mv_station") {
       stationsFromLayout += 1;
-      installedPowerMVA += spec.electrical?.apparent_power_mva ?? 0;
+      pcsPowerMVA += spec.electrical?.apparent_power_mva ?? 0;
     }
   }
+
+  // Architecture-aware installed power: separate-PCS layouts (Sungrow) are sized
+  // by their PCS apparent power; integrated layouts (Tesla) by the unit AC
+  // power. Identical to prior behaviour whenever a PCS/MV station is present.
+  const isIntegrated =
+    stationsFromLayout === 0 && containers > 0 && batteryPowerMVA > 0;
+  const integratedUnitCount = isIntegrated ? containers : 0;
+  const installedPowerMVA =
+    stationsFromLayout > 0 ? pcsPowerMVA : batteryPowerMVA;
 
   const stations =
     args.conversionStations.length > 0 ? args.conversionStations.length : stationsFromLayout;
@@ -574,14 +596,17 @@ function deriveKpisFromLayout(args: {
     normalizedTargets.powerMW = evidencedDerived(
       installedPowerMVA,
       "MW",
-      "Estimated from placed PCS/MV apparent power. Active power and power factor require validation."
+      isIntegrated
+        ? "Estimated from placed integrated-unit AC power (PCS/inverter integrated in the unit; external MV step-up transformer not modeled). Active power and power factor require validation."
+        : "Estimated from placed PCS/MV apparent power. Active power and power factor require validation."
     );
     alerts.push({
       id: "RPT-SYNC-001",
       severity: "critical",
       title: "Potencia de portada derivada desde layout",
-      message:
-        "El proyecto no tenía potencia POI persistida, pero el layout contiene estaciones PCS/MV. El reporte usa potencia instalada aproximada para evitar un KPI falso en cero.",
+      message: isIntegrated
+        ? "El proyecto no tenía potencia POI persistida, pero el layout contiene unidades integradas (PCS/inversor integrado en la unidad). El reporte usa potencia instalada aproximada para evitar un KPI falso en cero."
+        : "El proyecto no tenía potencia POI persistida, pero el layout contiene estaciones PCS/MV. El reporte usa potencia instalada aproximada para evitar un KPI falso en cero.",
       recommendation:
         "Cargar o sincronizar la arquitectura v1.2 / preset técnico antes de emitir un informe formal.",
     });
@@ -672,6 +697,8 @@ function deriveKpisFromLayout(args: {
       blocks,
       buses,
       containersPerStation,
+      isIntegrated,
+      integratedUnitCount,
     },
   };
 }

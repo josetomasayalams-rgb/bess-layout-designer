@@ -74,6 +74,7 @@ export type PolygonSlice = {
   addPolygonVertex: (p: LngLat) => void;
   finishPolygon: () => void;
   clearPolygon: () => void;
+  setPolygonFromCoordinates: (vertices: LngLat[]) => void;
   setMapViewCenter: (center: LngLat) => void;
 };
 
@@ -115,6 +116,39 @@ export function createPolygonSlice(
         layoutEdit: emptyLayoutEditState,
         terrainFitPreview: emptyTerrainFitPreviewState,
       })),
+
+    setPolygonFromCoordinates: (vertices) =>
+      set((state) => {
+        // Drop a trailing vertex that merely repeats the first (already-closed
+        // input); the working polygon is implicitly closed by the renderer.
+        const cleaned = [...vertices];
+        if (cleaned.length >= 2) {
+          const first = cleaned[0];
+          const last = cleaned[cleaned.length - 1];
+          if (first.lng === last.lng && first.lat === last.lat) {
+            cleaned.pop();
+          }
+        }
+        if (cleaned.length < 3) return {};
+
+        const centroidLng =
+          cleaned.reduce((sum, p) => sum + p.lng, 0) / cleaned.length;
+        const centroidLat =
+          cleaned.reduce((sum, p) => sum + p.lat, 0) / cleaned.length;
+
+        return {
+          ...recordHistory(state),
+          polygon: cleaned,
+          anchor: { lng0: cleaned[0].lng, lat0: cleaned[0].lat },
+          mapViewCenter: { lng: centroidLng, lat: centroidLat },
+          interactionMode: "select",
+          previewTerrain: null,
+          selectedEquipmentId: null,
+          pendingPlacementSpecId: null,
+          layoutEdit: emptyLayoutEditState,
+          terrainFitPreview: emptyTerrainFitPreviewState,
+        };
+      }),
 
     setMapViewCenter: (center) => set({ mapViewCenter: center }),
   };

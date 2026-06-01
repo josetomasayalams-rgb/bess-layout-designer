@@ -97,6 +97,16 @@ export function EquipmentCatalogPanel() {
                       })}`
                     : null}
                 </div>
+                {spec.type === "pcs_mv_station" ? (
+                  <div className="mt-1.5 space-y-0.5">
+                    <div className="inline-flex items-center gap-1 rounded border border-violet-500/30 bg-violet-500/10 px-1.5 py-0.5 text-[9px] font-medium text-violet-300">
+                      {t.equipment.integratedTransformerNote}
+                    </div>
+                    <div className="text-[9px] leading-snug text-slate-600">
+                      {t.equipment.bessRatio2h} · {t.equipment.bessRatio4h}
+                    </div>
+                  </div>
+                ) : null}
                 <Badge
                   variant={reliabilityVariant(spec.source.reliability)}
                   className="mt-2"

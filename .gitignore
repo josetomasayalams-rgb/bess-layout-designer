@@ -48,4 +48,7 @@ next-env.d.ts
 # Ruflo / Claude Flow runtime artifacts
 ruvector.db
 .claude-flow/
+.swarm/
+agentdb.rvf
+agentdb.rvf.lock
 

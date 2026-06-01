@@ -8,10 +8,10 @@
  *
  * All four components are byte-equivalent to their originals in
  * `ReportDocument.tsx` of commit `a334552` (lines 32–170 of head pre-extract):
- *   - SectionPage  → lines 32–57
- *   - Table        → lines 70–115 (with local `Col` type at lines 63–68)
- *   - DefGrid      → lines 117–132
- *   - AlertCard    → lines 134–170
+ *   - SectionPage  - lines 32–57
+ *   - Table        - lines 70–115 (with local `Col` type at lines 63–68)
+ *   - DefGrid      - lines 117–132
+ *   - AlertCard    - lines 134–170
  *
  * `SectionPage` depends on `PageHeader` and `PageFooter` from `./pdfChrome`.
  * That dependency is one-directional: `pdfPrimitives` imports from
@@ -25,11 +25,7 @@
 
 import type React from "react";
 import { Page, Text, View } from "@react-pdf/renderer";
-import {
-  REPORT_COLORS,
-  REPORT_FONTS,
-  reportStyles as s,
-} from "./reportStyles";
+import { REPORT_COLORS, reportStyles as s } from "./reportStyles";
 import { PageFooter, PageHeader } from "./pdfChrome";
 import type { TechnicalReportData } from "@/lib/report/buildReportData";
 
@@ -52,11 +48,10 @@ export function SectionPage({
     <Page size="A4" style={s.page}>
       <PageHeader data={data} />
       <View>
-        <Text style={s.sectionTitle}>
-          <Text style={s.sectionNumber}>{number}.</Text>
-          {"  "}
-          {title}
-        </Text>
+        <View style={s.sectionHeader}>
+          <Text style={s.sectionNumberChip}>{number}</Text>
+          <Text style={s.sectionHeaderTitle}>{title}</Text>
+        </View>
         {children}
       </View>
       <PageFooter data={data} />
@@ -150,29 +145,47 @@ export function AlertCard({
   message: string;
   recommendation: string;
 }) {
-  const color =
-    severity === "critical"
-      ? REPORT_COLORS.danger
-      : severity === "warning"
-        ? REPORT_COLORS.warn
-        : REPORT_COLORS.accent;
+  const tone = {
+    critical: {
+      color: REPORT_COLORS.danger,
+      bg: "#fff1f2",
+      badgeBg: "#fee2e2",
+      badgeFg: REPORT_COLORS.danger,
+      label: "Crítico",
+    },
+    warning: {
+      color: REPORT_COLORS.warn,
+      bg: "#fffbeb",
+      badgeBg: "#fef3c7",
+      badgeFg: REPORT_COLORS.warn,
+      label: "Aviso",
+    },
+    info: {
+      color: REPORT_COLORS.accent,
+      bg: "#eff6ff",
+      badgeBg: "#e0f2fe",
+      badgeFg: "#075985",
+      label: "Informativo",
+    },
+  }[severity];
+
   return (
-    <View
-      style={{
-        borderWidth: 0.8,
-        borderColor: color,
-        backgroundColor: severity === "critical" ? "#fff1f2" : "#fffbeb",
-        padding: 8,
-        marginBottom: 7,
-      }}
-    >
-      <Text style={{ fontFamily: REPORT_FONTS.dataBold, fontSize: 9, color }}>
-        {severity.toUpperCase()} · {title}
-      </Text>
-      <Text style={{ marginTop: 3, fontSize: 8.5 }}>{message}</Text>
-      <Text style={{ marginTop: 3, fontSize: 8, color: REPORT_COLORS.muted }}>
-        Acción recomendada: {recommendation}
-      </Text>
+    <View style={[s.alertCard, { borderColor: tone.color, backgroundColor: tone.bg }]}>
+      <View style={[s.alertAccentBar, { backgroundColor: tone.color }]} />
+      <View style={s.alertBody}>
+        <View style={s.alertHeaderRow}>
+          <Text
+            style={[s.alertBadge, { backgroundColor: tone.badgeBg, color: tone.badgeFg }]}
+          >
+            {tone.label}
+          </Text>
+          <Text style={s.alertTitle}>{title}</Text>
+        </View>
+        <Text style={s.alertMessage}>{message}</Text>
+        <Text style={s.alertRecommendation}>
+          Acción recomendada: {recommendation}
+        </Text>
+      </View>
     </View>
   );
 }

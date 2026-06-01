@@ -171,6 +171,33 @@ function sampleBetween(min: number, max: number): number[] {
   return [0, 0.25, 0.5, 0.75, 1].map((fraction) => min + (max - min) * fraction);
 }
 
+function centroid(points: LocalPoint[]): LocalPoint {
+  if (points.length === 0) return { x_m: 0, y_m: 0 };
+  const sum = points.reduce(
+    (acc, p) => ({ x_m: acc.x_m + p.x_m, y_m: acc.y_m + p.y_m }),
+    { x_m: 0, y_m: 0 }
+  );
+  return { x_m: sum.x_m / points.length, y_m: sum.y_m / points.length };
+}
+
+/**
+ * Score a candidate placement: lower is better.
+ * Prioritizes proximity of layout centroid to polygon centroid,
+ * with a small area tiebreaker.
+ */
+function candidatePlacementScore(
+  shiftedItems: RelativeItem[],
+  polygonCentroid: LocalPoint,
+  areaM2: number
+): number {
+  const layoutCentroid = centroid(shiftedItems.map((item) => item.center));
+  const distToCenter = Math.hypot(
+    layoutCentroid.x_m - polygonCentroid.x_m,
+    layoutCentroid.y_m - polygonCentroid.y_m
+  );
+  return distToCenter + areaM2 * 1e-5;
+}
+
 function validateCandidate(args: {
   items: RelativeItem[];
   polygon: LocalPoint[];
@@ -544,6 +571,7 @@ export function generatePreliminaryLayout(
 
   const localPolygon = request.polygon.map((point) => toLocal(point, request.anchor));
   const polygonBBox = bboxOfPolygon(localPolygon);
+  const polygonCentroid = centroid(localPolygon);
   const setbackM = request.rules.bessToPropertyLine_m;
 
   const searchPlacement = (
@@ -551,6 +579,7 @@ export function generatePreliminaryLayout(
     orientationDegList: number[]
   ): RelativeLayout | null => {
     let found: RelativeLayout | null = null;
+    let foundScore = Infinity;
     for (const orientationDeg of orientationDegList) {
       for (const blockColumns of columnsList) {
         const layout = buildRelativeLayout({
@@ -570,8 +599,36 @@ export function generatePreliminaryLayout(
         const minDy = polygonBBox.minY + setbackM - layoutBBox.minY;
         const maxDy = polygonBBox.maxY - setbackM - layoutBBox.maxY;
 
-        for (const dx of sampleBetween(minDx, maxDx)) {
-          for (const dy of sampleBetween(minDy, maxDy)) {
+        // Compute centroid-targeting dx/dy: align layout bbox center to polygon centroid.
+        const layoutBBoxCenterX = (layoutBBox.minX + layoutBBox.maxX) / 2;
+        const layoutBBoxCenterY = (layoutBBox.minY + layoutBBox.maxY) / 2;
+        const centroidDx = polygonCentroid.x_m - layoutBBoxCenterX;
+        const centroidDy = polygonCentroid.y_m - layoutBBoxCenterY;
+
+        const clamp = (v: number, lo: number, hi: number) =>
+          Math.max(lo, Math.min(hi, v));
+
+        // Build dx candidates: uniform samples + clamped centroid target.
+        const baseDxSamples = sampleBetween(minDx, maxDx);
+        const dxCandidates =
+          minDx <= maxDx
+            ? [
+                ...baseDxSamples,
+                clamp(centroidDx, minDx, maxDx),
+              ].filter((v, i, arr) => arr.indexOf(v) === i)
+            : baseDxSamples;
+
+        const baseDySamples = sampleBetween(minDy, maxDy);
+        const dyCandidates =
+          minDy <= maxDy
+            ? [
+                ...baseDySamples,
+                clamp(centroidDy, minDy, maxDy),
+              ].filter((v, i, arr) => arr.indexOf(v) === i)
+            : baseDySamples;
+
+        for (const dx of dxCandidates) {
+          for (const dy of dyCandidates) {
             const shifted = layout.items.map((item) => ({
               ...item,
               center: translatePoint(item.center, dx, dy),
@@ -582,10 +639,13 @@ export function generatePreliminaryLayout(
                 items: shifted,
                 polygon: localPolygon,
                 rules: request.rules,
-              }) &&
-              (!found || layout.areaM2 < found.areaM2)
+              })
             ) {
-              found = { ...layout, items: shifted };
+              const score = candidatePlacementScore(shifted, polygonCentroid, layout.areaM2);
+              if (score < foundScore) {
+                found = { ...layout, items: shifted };
+                foundScore = score;
+              }
             }
           }
         }

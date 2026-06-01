@@ -158,4 +158,98 @@ describe("generateConceptualPhysicalInfrastructure", () => {
     expect(result.diagnostics.warnings?.some(w => w.includes("PCC/POI"))).toBe(true);
     expect(result.diagnostics.warnings?.some(w => w.includes("bloques de equipos"))).toBe(true);
   });
+
+  it("labels integrated (no-PCS) blocks as low-voltage collectors with an external-transformer note", () => {
+    const placed: PlacedEquipment[] = [
+      {
+        id: "u1",
+        equipmentSpecId: "bess-tesla-megapack-2xl-4h",
+        anchor: toLngLat({ x_m: 0, y_m: 0 }, anchor),
+        rotation_deg: 0,
+        sourceReliability: "preliminary_assumption",
+        blockId: "integrated-row-0",
+        blockIndex: 0,
+        classification: "preliminary_assumption",
+      },
+      {
+        id: "u2",
+        equipmentSpecId: "bess-tesla-megapack-2xl-4h",
+        anchor: toLngLat({ x_m: 12, y_m: 0 }, anchor),
+        rotation_deg: 0,
+        sourceReliability: "preliminary_assumption",
+        blockId: "integrated-row-0",
+        blockIndex: 0,
+        classification: "preliminary_assumption",
+      },
+      {
+        id: "u3",
+        equipmentSpecId: "bess-tesla-megapack-2xl-4h",
+        anchor: toLngLat({ x_m: 0, y_m: 12 }, anchor),
+        rotation_deg: 0,
+        sourceReliability: "preliminary_assumption",
+        blockId: "integrated-row-1",
+        blockIndex: 1,
+        classification: "preliminary_assumption",
+      },
+    ];
+
+    const result = generateConceptualPhysicalInfrastructure({
+      anchor,
+      polygon: [],
+      placed,
+      hasPoi: true,
+    });
+
+    // No PCS station anywhere → low-voltage collector treatment.
+    expect(result.diagnostics.stationCount).toBe(0);
+    expect(result.diagnostics.blockCount).toBe(2);
+
+    const collectors = result.cableRoutes.filter((r) => r.id !== "route-mt-poi-01");
+    expect(collectors).toHaveLength(2);
+    for (const route of collectors) {
+      expect(route.voltageLevel).toBe("BT");
+      expect(route.voltageKv).toBeUndefined();
+      expect(route.cableType).toContain("BT");
+      expect(
+        route.evidence?.some((e) => e.note?.includes("transformador elevador externo"))
+      ).toBe(true);
+    }
+
+    // The interface → POI tie stays conceptual MV (downstream of the external step-up).
+    const poiRoute = result.cableRoutes.find((r) => r.id === "route-mt-poi-01");
+    expect(poiRoute?.voltageLevel).toBe("MT");
+    expect(poiRoute?.voltageKv).toBe(33);
+
+    // The MV yard is relabeled as an external interface, not a sectioning center.
+    const mvYard = result.layoutZones.find((z) => z.type === "mv_yard");
+    expect(mvYard?.label).toContain("Interfaz MT");
+
+    // A diagnostics warning surfaces the unmodeled external transformer.
+    expect(
+      result.diagnostics.warnings?.some((w) => w.includes("transformador elevador externo"))
+    ).toBe(true);
+  });
+
+  it("keeps Sungrow PCS collectors at medium voltage (regression)", () => {
+    const result = generateConceptualPhysicalInfrastructure({
+      anchor,
+      polygon: [],
+      placed: [
+        equipment("bess-01", "sungrow-st2752ux-us", 0, 0),
+        equipment("pcs-01", "sungrow-sc5000ud-mv-us-p3", 30, 0),
+      ],
+    });
+
+    const collectors = result.cableRoutes.filter((r) => r.id !== "route-mt-poi-01");
+    expect(collectors.length).toBeGreaterThan(0);
+    for (const route of collectors) {
+      expect(route.voltageLevel).toBe("MT");
+      expect(route.voltageKv).toBe(33);
+    }
+    const mvYard = result.layoutZones.find((z) => z.type === "mv_yard");
+    expect(mvYard?.label).toContain("Sectioning");
+    expect(
+      result.diagnostics.warnings?.some((w) => w.includes("transformador elevador externo"))
+    ).toBe(false);
+  });
 });
