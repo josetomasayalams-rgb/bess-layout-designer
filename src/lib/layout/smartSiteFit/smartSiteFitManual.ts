@@ -252,3 +252,231 @@ export function buildManualSungrowLayout(
     },
   };
 }
+
+export type BuildManualTeslaLayoutParams = {
+  bessCount: number;
+  durationHours: number;
+  containersWide?: number;
+  containersLong?: number;
+  rowsPerGroup?: number;
+  groupCount?: number;
+  groupSeparation_m?: number;
+  rowSeparation_m?: number;
+  bessToBess_m?: number;
+  orientationDeg?: number;
+};
+
+export type BuildManualTeslaLayoutResult = {
+  items: ShapeLayoutItem[];
+  warnings: SmartSiteFitWarning[];
+  assumptions: SmartSiteFitAssumption[];
+  meta: {
+    layoutMode: "manual";
+    architecture: "integrated";
+    pcsCount: 0;
+    bessCount: number;
+    groupCount: number;
+    rowsPerGroup: number;
+    containersWide: number;
+    containersLong: number;
+  };
+};
+
+/**
+ * Builds a manual BESS layout for Tesla Megapack 2 XL (integrated architecture)
+ * using custom parametric constraints and local coordinates.
+ */
+export function buildManualTeslaLayout(
+  params: BuildManualTeslaLayoutParams
+): BuildManualTeslaLayoutResult {
+  const warnings: SmartSiteFitWarning[] = [];
+
+  // Normalization & Defaults
+  const bessCount = Math.max(0, params.bessCount);
+
+  let containersWide = params.containersWide !== undefined ? params.containersWide : 4;
+  if (containersWide <= 0) {
+    containersWide = 1;
+    warnings.push({
+      id: "manual-layout-adjusted-counts",
+      severity: "info",
+      message: "Ancho de contenedores (containersWide) inválido o menor a 1. Ajustado a 1.",
+    });
+  }
+
+  let groupCount = params.groupCount !== undefined ? params.groupCount : 1;
+  if (groupCount <= 0) {
+    groupCount = 1;
+    warnings.push({
+      id: "manual-layout-adjusted-counts",
+      severity: "info",
+      message: "Número de grupos (groupCount) inválido o menor a 1. Ajustado a 1.",
+    });
+  }
+
+  let containersLong = params.containersLong !== undefined ? params.containersLong : 0;
+  let rowsPerGroup = params.rowsPerGroup !== undefined ? params.rowsPerGroup : 0;
+
+  if (containersLong <= 0 && rowsPerGroup <= 0) {
+    rowsPerGroup = 1;
+    containersLong = Math.ceil(bessCount / (containersWide * groupCount * rowsPerGroup));
+    if (containersLong <= 0) {
+      containersLong = 1;
+    }
+  } else if (containersLong > 0 && rowsPerGroup <= 0) {
+    const blockCount = Math.ceil(bessCount / (containersWide * containersLong));
+    rowsPerGroup = Math.ceil(blockCount / groupCount);
+  } else if (containersLong <= 0 && rowsPerGroup > 0) {
+    containersLong = Math.ceil(bessCount / (containersWide * groupCount * rowsPerGroup));
+    if (containersLong <= 0) {
+      containersLong = 1;
+    }
+  }
+
+  // If specified grid capacity is too small, extend vertical blocks (rowsPerGroup)
+  const blockCapacity = containersWide * containersLong;
+  const blockCount = Math.ceil(bessCount / blockCapacity);
+  if (groupCount * rowsPerGroup < blockCount) {
+    const originalRows = rowsPerGroup;
+    rowsPerGroup = Math.ceil(blockCount / groupCount);
+    warnings.push({
+      id: "manual-layout-adjusted-counts",
+      severity: "warning",
+      message: `El grid de bloques especificado (${groupCount}x${originalRows}) no es suficiente para ${bessCount} contenedores en bloques de ${containersWide}x${containersLong}. Se aumentó a ${groupCount}x${rowsPerGroup} bloques.`,
+    });
+  }
+
+  // Spacing overrides or defaults
+  const bessToBess = params.bessToBess_m !== undefined ? params.bessToBess_m : 3.0;
+  const groupSeparation = params.groupSeparation_m !== undefined ? params.groupSeparation_m : 6.0;
+  const rowSeparation = params.rowSeparation_m !== undefined ? params.rowSeparation_m : 6.0;
+  const orientationDeg = params.orientationDeg !== undefined ? params.orientationDeg : 0;
+
+  // Resolve Tesla Megapack 2 XL specs by duration
+  const bessSpecId =
+    params.durationHours === 2
+      ? "bess-tesla-megapack-2xl-2h"
+      : "bess-tesla-megapack-2xl-4h";
+
+  const bessLength = 8.8;
+  const bessWidth = 1.65;
+
+  const items: ShapeLayoutItem[] = [];
+
+  // Add integrated warnings
+  warnings.push({
+    id: "integrated-external-transformer",
+    severity: "info",
+    message: "La conexión a media tensión requiere un transformador elevador externo no incluido (requiere revisión técnica).",
+  });
+  warnings.push({
+    id: "integrated-no-separate-pcs",
+    severity: "info",
+    message: "Tesla Megapack es una solución con PCS integrado. No se generan estaciones PCS o transformadores independientes.",
+  });
+
+  if (bessCount === 0) {
+    return {
+      items,
+      warnings,
+      assumptions: [],
+      meta: {
+        layoutMode: "manual",
+        architecture: "integrated",
+        pcsCount: 0,
+        bessCount: 0,
+        groupCount,
+        rowsPerGroup,
+        containersWide,
+        containersLong,
+      },
+    };
+  }
+
+  // Dimensions of a single BESS block grid
+  const blockW = containersWide * (bessLength + bessToBess) - bessToBess;
+  const blockH = containersLong * (bessWidth + bessToBess) - bessToBess;
+
+  let bessPlaced = 0;
+  for (let b = 0; b < blockCount; b++) {
+    const blockCol = b % groupCount;
+    const blockRow = Math.floor(b / groupCount);
+
+    const blockOriginX = blockCol * (blockW + groupSeparation);
+    const blockOriginY = blockRow * (blockH + rowSeparation);
+
+    for (let r = 0; r < containersLong; r++) {
+      for (let c = 0; c < containersWide; c++) {
+        if (bessPlaced >= bessCount) break;
+
+        const xBess = blockOriginX + c * (bessLength + bessToBess) + bessLength / 2;
+        const yBess = blockOriginY + r * (bessWidth + bessToBess) + bessWidth / 2;
+
+        items.push({
+          equipmentSpecId: bessSpecId,
+          x_m: xBess,
+          y_m: yBess,
+          blockIndex: b,
+        });
+
+        bessPlaced++;
+      }
+      if (bessPlaced >= bessCount) break;
+    }
+  }
+
+  // Center around (0,0) and apply global orientation rotation
+  if (items.length > 0) {
+    let sumX = 0;
+    let sumY = 0;
+    for (const item of items) {
+      sumX += item.x_m;
+      sumY += item.y_m;
+    }
+    const cx = sumX / items.length;
+    const cy = sumY / items.length;
+
+    const rad = (orientationDeg * Math.PI) / 180;
+    const cos = Math.cos(rad);
+    const sin = Math.sin(rad);
+
+    for (const item of items) {
+      const dx = item.x_m - cx;
+      const dy = item.y_m - cy;
+
+      item.x_m = dx * cos - dy * sin;
+      item.y_m = dx * sin + dy * cos;
+    }
+  }
+
+  const assumptions: SmartSiteFitAssumption[] = [
+    {
+      id: "bess-model",
+      description: "Modelo de BESS utilizado",
+      value: bessSpecId,
+      classification: "certified_data",
+    },
+    {
+      id: "pcs-model",
+      description: "Modelo de PCS utilizado",
+      value: "integrated",
+      classification: "certified_data",
+    },
+  ];
+
+  return {
+    items,
+    warnings,
+    assumptions,
+    meta: {
+      layoutMode: "manual",
+      architecture: "integrated",
+      pcsCount: 0,
+      bessCount,
+      groupCount,
+      rowsPerGroup,
+      containersWide,
+      containersLong,
+    },
+  };
+}
