@@ -76,6 +76,19 @@ export interface SmartSiteFitShapeCandidate {
   targetAspectRatio?: number;
 }
 
+export type SmartSiteFitLayoutMode = "auto" | "manual";
+
+export interface SmartSiteFitManualLayoutSpec {
+  shapeKind?: SmartSiteFitShapeKind;
+  containersWide?: number;
+  containersLong?: number;
+  rowsPerGroup?: number;
+  groupCount?: number;
+  groupSeparation_m?: number;
+  rowSeparation_m?: number;
+  orientationDeg?: number;
+}
+
 export interface SmartSiteFitOverrides {
   bessToBess_m?: number;
   bessToPcs_m?: number;
@@ -94,6 +107,15 @@ export interface SmartSiteFitOverrides {
   // deriveEquipmentCountsFromPowerEnergy and kept for display/state.
   targetPowerMW?: number;
   targetEnergyMWh?: number;
+  // Manual layout mode overrides
+  layoutMode?: SmartSiteFitLayoutMode;
+  manualShapeKind?: SmartSiteFitShapeKind;
+  containersWide?: number;
+  containersLong?: number;
+  rowsPerGroup?: number;
+  groupCount?: number;
+  groupSeparation_m?: number;
+  rowSeparation_m?: number;
 }
 
 export interface SmartSiteFitInput {

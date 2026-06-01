@@ -96,6 +96,8 @@ import type {
   SmartSiteFitMode,
   SmartSiteFitStrategy,
   SmartSiteFitAssumption,
+  SmartSiteFitLayoutMode,
+  SmartSiteFitManualLayoutSpec,
 } from "@/lib/layout/smartSiteFit/smartSiteFitTypes";
 
 export type InteractionMode =
@@ -176,6 +178,8 @@ export type SmartSiteFitAppliedMetadata = {
   ratio: number;
   assumptions: SmartSiteFitAssumption[];
   appliedAt: string;
+  layoutMode?: SmartSiteFitLayoutMode;
+  manualLayoutSpec?: SmartSiteFitManualLayoutSpec;
 };
 
 export type SmartSiteFitApplyResult = {
@@ -238,6 +242,12 @@ export type ProjectState = {
   smartSiteFitApplied: SmartSiteFitAppliedMetadata | null;
   past: ProjectSnapshot[];
   future: ProjectSnapshot[];
+  /**
+   * Free-text project name (metadata). Entered in the terrain-sizing panel
+   * and threaded into the technical report header. Intentionally NOT part of
+   * `ProjectSnapshot` — undo/redo never restore it; `resetProject` clears it.
+   */
+  projectName: string;
 
   // ──────────────────────────────────────────────────────────────────
   // Fase 1 — slices nuevos para arquitectura eléctrica y trazabilidad.
@@ -344,6 +354,8 @@ export type ProjectState = {
   discardSmartSiteFit: () => void;
 
   setMode: (mode: InteractionMode) => void;
+  /** Sets the free-text project-name metadata field. */
+  setProjectName: (name: string) => void;
   loadDemoProject: () => void;
   resetProject: () => void;
   undo: () => void;
