@@ -6,3 +6,4 @@ export * from "./smartSiteFitScoring";
 export * from "./smartSiteFitExplain";
 export * from "./smartSiteFitCandidates";
 export * from "./smartSiteFitEngine";
+export * from "./smartSiteFitManual";
