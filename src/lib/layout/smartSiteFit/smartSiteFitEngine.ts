@@ -140,12 +140,15 @@ export function runTargetSizing(
     targetRatio
   );
 
-  // R5-A: surface up to 8 genuinely distinct alternatives (different shape
+  // R5-A: surface 8–12 genuinely distinct alternatives (different shape
   // families / orientations) instead of only the single best layout, so the
   // user can compare real layout options. The diversity selector keeps the
   // global best first, so it leads and is pre-selected; each card reads its own
-  // per-candidate warnings/assumptions.
-  const alternatives = selectDiverseAlternatives(ranked, { limit: 8 });
+  // per-candidate warnings/assumptions. The `min` floor tops the list up to 8
+  // with the next-best fully-placed (in-bounds, collision-free) variants when
+  // the terrain admits them; it never pads with invalid layouts, so genuinely
+  // constrained sites may still surface fewer than 8.
+  const alternatives = selectDiverseAlternatives(ranked, { limit: 12, min: 8 });
   const selected = alternatives[0] ?? null;
 
   return {

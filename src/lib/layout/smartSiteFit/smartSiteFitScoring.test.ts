@@ -178,6 +178,56 @@ describe("SmartSiteFit Scoring", () => {
     expect(picked[0].id).toBe("x0");
   });
 
+  // A fully-placed (in-bounds, collision-free) variant of makeShaped. The floor
+  // fill only tops up with these, never with the score-0 layouts above.
+  const makeValidShaped = (
+    id: string,
+    kind: SmartSiteFitShapeKind,
+    total: number,
+    rotationDeg = 0
+  ): SmartSiteFitCandidate => {
+    const base = makeShaped(id, kind, total, rotationDeg);
+    return {
+      ...base,
+      score: { ...base.score, insidePolygon: 25, noCollisions: 25 },
+    };
+  };
+
+  it("tops the floor up to `min` with valid placement variants of one family", () => {
+    // 16 fully-placed candidates: one family, one orientation bucket, distinct
+    // rotations. Diversity alone surfaces a single representative (shared
+    // signature), but a floor of 8 tops up with the next-best valid variants.
+    const ranked = Array.from({ length: 16 }).map((_, i) =>
+      makeValidShaped(`v${i}`, "compact_grid", 90 - i, i * 2)
+    );
+
+    const picked = selectDiverseAlternatives(ranked, { limit: 12, min: 8 });
+
+    // Exactly the floor — not the full limit — since only one family/orientation
+    // exists; we never flood the user with 12 near-identical cards.
+    expect(picked.length).toBe(8);
+    expect(picked.every((c) => c.shape!.kind === "compact_grid")).toBe(true);
+    // Best score leads, and each surfaced variant is a distinct rotation.
+    expect(picked[0].id).toBe("v0");
+    expect(
+      new Set(picked.map((c) => Math.round(c.placedEquipment[0].rotation_deg))).size
+    ).toBe(8);
+  });
+
+  it("never pads the floor with invalid (out-of-bounds/colliding) layouts", () => {
+    // Structurally identical to the valid case above, but every candidate is
+    // invalid (insidePolygon/noCollisions = 0). The floor must NOT be filled: a
+    // single family representative is all the terrain honestly supports.
+    const ranked = Array.from({ length: 16 }).map((_, i) =>
+      makeShaped(`x${i}`, "compact_grid", 90 - i, i * 2)
+    );
+
+    const picked = selectDiverseAlternatives(ranked, { limit: 12, min: 8 });
+
+    expect(picked.length).toBe(1);
+    expect(picked[0].id).toBe("x0");
+  });
+
   it("should score compact_grid better than single_row on a square terrain due to shapeCompactness", () => {
     // Generate candidates for 32 BESS and 4 PCS
     const pcsCount = 4;

@@ -39,10 +39,11 @@ describe("smartSiteFitSlice — run target mode", () => {
     expect(s.smartSiteFit.result?.success).toBe(true);
     expect(s.smartSiteFit.selectedAlternativeId).not.toBeNull();
 
-    // R5-A: target mode now offers several distinct alternatives (was 1).
+    // R5-A: target mode now offers 8–12 distinct alternatives (was 1). This
+    // roomy terrain comfortably meets the floor of 8.
     const candidates = s.smartSiteFit.result!.candidates;
-    expect(candidates.length).toBeGreaterThan(1);
-    expect(candidates.length).toBeLessThanOrEqual(8);
+    expect(candidates.length).toBeGreaterThanOrEqual(8);
+    expect(candidates.length).toBeLessThanOrEqual(12);
     // The best-scoring alternative leads and is the one pre-selected.
     expect(s.smartSiteFit.selectedAlternativeId).toBe(candidates[0].id);
     // Alternatives are genuinely distinct layout families.

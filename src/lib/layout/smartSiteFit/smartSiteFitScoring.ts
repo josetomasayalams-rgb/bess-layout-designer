@@ -518,28 +518,57 @@ function diversitySignature(candidate: SmartSiteFitCandidate): string {
 }
 
 /**
- * Pick up to `limit` genuinely distinct alternatives from a score-ranked list.
+ * A candidate is eligible to fill the requested floor only when it is a fully
+ * valid placement: every corner inside the polygon and no overlaps. Both
+ * sub-scores are graded out of 25 (see `scoreCandidate`), so a clean layout
+ * scores ~25 on each. We never pad the floor with out-of-bounds or colliding
+ * layouts — only with real, buildable variants.
+ */
+function isFullyPlaced(candidate: SmartSiteFitCandidate): boolean {
+  return candidate.score.insidePolygon >= 24.9 && candidate.score.noCollisions >= 24.9;
+}
+
+/**
+ * Finer dedupe key than `diversitySignature` (which buckets orientation to
+ * 0/90): family + block count + exact rounded rotation. Used when filling the
+ * floor so two surfaced variants always differ by a visible amount (a distinct
+ * rotation), never as pixel-identical cards.
+ */
+function finePlacementKey(candidate: SmartSiteFitCandidate): string {
+  const kind = candidate.shape?.kind ?? "custom";
+  const blocks = candidate.shape?.blocks ?? 1;
+  const rotation = Math.round(candidate.placedEquipment[0]?.rotation_deg ?? 0);
+  return `${kind}|${blocks}|${rotation}`;
+}
+
+/**
+ * Pick distinct alternatives from a score-ranked list, targeting `min`..`limit`
+ * results.
  *
  * Target sizing explores many near-identical layouts (the same shape family at
- * slightly different rotations/shifts); surfacing eight of those is useless.
- * This keeps one representative per shape family first — the highest-scoring,
- * since the input is pre-sorted — then fills the remaining slots with the
- * next-best candidates that differ by full signature (family + orientation +
- * block count).
+ * slightly different rotations/shifts). This keeps one representative per shape
+ * family first — the highest-scoring, since the input is pre-sorted — then fills
+ * with the next-best candidates that differ by full signature (family +
+ * orientation + block count), up to `limit`.
  *
- * It never pads with duplicates or invalid layouts: when the terrain only admits
- * a handful of distinct families it returns fewer than `limit`, and the caller
- * explains that honestly instead of showing redundant options. The first result
- * is always the global best, so callers can pre-select `result[0]`.
+ * If after those two passes there are still fewer than `min` results, a third
+ * pass tops up to `min` with the next best *valid* placements (fully inside,
+ * collision-free) that differ by a finer key (a distinct rotation). This honors
+ * a requested minimum (e.g. always offer 8–12 options) without ever padding with
+ * invalid or pixel-identical layouts: when the terrain genuinely admits fewer
+ * buildable layouts, it returns fewer and the caller explains that honestly. The
+ * first result is always the global best, so callers can pre-select `result[0]`.
  */
 export function selectDiverseAlternatives(
   ranked: SmartSiteFitCandidate[],
-  opts: { limit?: number } = {}
+  opts: { limit?: number; min?: number } = {}
 ): SmartSiteFitCandidate[] {
-  const limit = Math.max(1, opts.limit ?? 8);
+  const limit = Math.max(1, opts.limit ?? 12);
+  const min = Math.max(0, Math.min(opts.min ?? 0, limit));
   if (ranked.length <= limit) return ranked.slice();
 
   const result: SmartSiteFitCandidate[] = [];
+  const chosen = new Set<SmartSiteFitCandidate>();
   const seenFamilies = new Set<string>();
   const seenSignatures = new Set<string>();
 
@@ -551,6 +580,7 @@ export function selectDiverseAlternatives(
     seenFamilies.add(family);
     seenSignatures.add(diversitySignature(candidate));
     result.push(candidate);
+    chosen.add(candidate);
   }
 
   // Pass 2: fill remaining slots with distinct full signatures — a different
@@ -562,6 +592,24 @@ export function selectDiverseAlternatives(
       if (seenSignatures.has(signature)) continue;
       seenSignatures.add(signature);
       result.push(candidate);
+      chosen.add(candidate);
+    }
+  }
+
+  // Pass 3: top up to the requested floor with the next best valid placements,
+  // relaxing only the distinctness rule (still deduped by a finer rotation key)
+  // and never the validity rule.
+  if (result.length < min) {
+    const seenFine = new Set<string>(result.map(finePlacementKey));
+    for (const candidate of ranked) {
+      if (result.length >= min) break;
+      if (chosen.has(candidate)) continue;
+      if (!isFullyPlaced(candidate)) continue;
+      const fine = finePlacementKey(candidate);
+      if (seenFine.has(fine)) continue;
+      seenFine.add(fine);
+      result.push(candidate);
+      chosen.add(candidate);
     }
   }
 

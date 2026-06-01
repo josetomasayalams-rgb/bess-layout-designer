@@ -78,9 +78,10 @@ describe("SmartSiteFit Engine", () => {
     expect(result.success).toBe(true);
     expect(result.selected).not.toBeNull();
 
-    // Was always a single alternative before R5; now several are offered.
-    expect(result.candidates.length).toBeGreaterThan(1);
-    expect(result.candidates.length).toBeLessThanOrEqual(8);
+    // Was always a single alternative before R5; now 8–12 are offered. This
+    // terrain is roomy enough that the floor (8) is comfortably met.
+    expect(result.candidates.length).toBeGreaterThanOrEqual(8);
+    expect(result.candidates.length).toBeLessThanOrEqual(12);
 
     // The pre-selected alternative is the first (best-scoring) candidate.
     expect(result.candidates[0].id).toBe(result.selected!.id);
