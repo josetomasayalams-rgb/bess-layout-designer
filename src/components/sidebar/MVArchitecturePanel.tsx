@@ -5,6 +5,7 @@ import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import { useProjectStore } from "@/store/projectStore";
 import { useUiStore } from "@/store/uiStore";
 import { generateConceptualPhysicalInfrastructure } from "@/lib/layout/physicalInfrastructure";
+import { computeSummary } from "@/lib/layout/summaryCalculations";
 import { formatLength } from "@/lib/units/formatUnits";
 import { copyFor } from "@/lib/i18n";
 
@@ -37,6 +38,12 @@ export function MVArchitecturePanel() {
     0
   );
 
+  // Integrated presets (e.g. Tesla Megapack) carry the PCS/inverter inside the
+  // unit — there is no separate PCS/MV station, so the panel must not ask the
+  // user to insert one. Single source of truth: the architecture-aware summary.
+  const summary = computeSummary(placed, null);
+  const isIntegrated = summary.is_integrated_architecture ?? false;
+
   return (
     <CollapsibleSection
       icon={Network}
@@ -51,8 +58,20 @@ export function MVArchitecturePanel() {
       <div className="space-y-3">
         <div className="grid grid-cols-2 gap-2 text-[11px]">
           <Metric
-            label={isEs ? "Bloques BESS-PCS" : "BESS-PCS Blocks"}
-            value={generated.diagnostics.blockCount}
+            label={
+              isIntegrated
+                ? isEs
+                  ? "Unidades integradas"
+                  : "Integrated units"
+                : isEs
+                  ? "Bloques BESS-PCS"
+                  : "BESS-PCS Blocks"
+            }
+            value={
+              isIntegrated
+                ? (summary.integrated_unit_count ?? 0)
+                : generated.diagnostics.blockCount
+            }
           />
           <Metric
             label={isEs ? "Corredores MT" : "MV Corridors"}
@@ -86,9 +105,13 @@ export function MVArchitecturePanel() {
           </div>
         ) : (
           <p className="rounded-md border border-slate-800 bg-slate-900/70 px-2 py-1.5 text-[11px] leading-snug text-slate-500">
-            {isEs
-              ? "Inserta estaciones PCS/trafo para generar patio MT, POI y corredores conceptuales."
-              : "Insert PCS/transformer stations to generate conceptual MV yard, POI and corridors."}
+            {isIntegrated
+              ? isEs
+                ? "Unidades con PCS/inversor integrado: no requieren estación PCS/MV separada. El patio mostrado es una interfaz MT conceptual; el transformador elevador externo no se modela aquí."
+                : "Units with integrated PCS/inverter: no separate PCS/MV station required. The yard shown is a conceptual MV interface; the external step-up transformer is not modeled here."
+              : isEs
+                ? "Inserta estaciones PCS/trafo para generar patio MT, POI y corredores conceptuales."
+                : "Insert PCS/transformer stations to generate conceptual MV yard, POI and corridors."}
           </p>
         )}
 
@@ -133,7 +156,7 @@ export function MVArchitecturePanel() {
           </p>
         ) : null}
 
-        <ConceptualElectricalNotes t={t.mvArchitecture} />
+        <ConceptualElectricalNotes t={t.mvArchitecture} isIntegrated={isIntegrated} />
       </div>
     </CollapsibleSection>
   );
@@ -141,7 +164,13 @@ export function MVArchitecturePanel() {
 
 type MvArchitectureCopy = ReturnType<typeof copyFor>["mvArchitecture"];
 
-function ConceptualElectricalNotes({ t }: { t: MvArchitectureCopy }) {
+function ConceptualElectricalNotes({
+  t,
+  isIntegrated,
+}: {
+  t: MvArchitectureCopy;
+  isIntegrated: boolean;
+}) {
   return (
     <details className="group rounded-md border border-slate-700/60 bg-slate-900/60">
       <summary className="flex cursor-pointer items-center gap-1.5 px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400 hover:text-slate-200">
@@ -149,8 +178,20 @@ function ConceptualElectricalNotes({ t }: { t: MvArchitectureCopy }) {
         {t.conceptualNoteTitle}
       </summary>
       <div className="space-y-2 px-2 pb-2 pt-1">
-        <NoteRow title={t.pcsIntegratedTitle} body={t.pcsIntegratedBody} />
-        <NoteRow title={t.bessRatioTitle} body={t.bessRatioBody} />
+        {isIntegrated ? (
+          <>
+            <NoteRow title={t.integratedTitle} body={t.integratedBody} />
+            <NoteRow
+              title={t.externalTransformerTitle}
+              body={t.externalTransformerBody}
+            />
+          </>
+        ) : (
+          <>
+            <NoteRow title={t.pcsIntegratedTitle} body={t.pcsIntegratedBody} />
+            <NoteRow title={t.bessRatioTitle} body={t.bessRatioBody} />
+          </>
+        )}
         <NoteRow title={t.sectioningCenterTitle} body={t.sectioningCenterBody} />
         <NoteRow title={t.poiTitle} body={t.poiBody} />
         <NoteRow title={t.mvCorridorsTitle} body={t.mvCorridorsBody} />

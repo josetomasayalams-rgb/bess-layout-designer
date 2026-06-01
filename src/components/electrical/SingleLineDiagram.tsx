@@ -14,6 +14,7 @@ import {
 import { useProjectStore } from "@/store/projectStore";
 import { useUiStore } from "@/store/uiStore";
 import { equipmentCatalog } from "@/data/equipmentCatalog";
+import { computeSummary } from "@/lib/layout/summaryCalculations";
 import { Badge } from "@/components/ui/Badge";
 import type { EvidencedValue } from "@/types/evidence";
 
@@ -50,6 +51,15 @@ export function SingleLineDiagram() {
 
   const isPresetLoaded = blocks.length > 0;
   const hasEquipment = containerCount > 0 || stationCount > 0;
+
+  // Integrated architecture (e.g. Tesla Megapack): no separate PCS/MV station,
+  // but battery units that carry their own AC power. The preset (Sungrow) path
+  // always forces the separate-PCS topology, so this is true only for a
+  // placed-only integrated layout. Conceptual only.
+  const integratedSummary = computeSummary(placedEquipment, null);
+  const isIntegrated =
+    !isPresetLoaded && (integratedSummary.is_integrated_architecture ?? false);
+  const integratedPowerMva = integratedSummary.total_apparent_power_mva;
 
   // Find sample specifications from placed equipment or catalogs
   const placedContainers = placedEquipment.filter((e) => {
@@ -204,6 +214,44 @@ export function SingleLineDiagram() {
           ],
         };
       case "pcs":
+        if (isIntegrated) {
+          return {
+            title: isEs
+              ? "Conversión integrada (en la unidad)"
+              : "Integrated conversion (in unit)",
+            color: "border-cyan-500/30 bg-cyan-500/5",
+            items: [
+              {
+                icon: Layers,
+                label: isEs ? "Estaciones PCS separadas" : "Separate PCS stations",
+                value: isEs ? "0 · integrado" : "0 · integrated",
+                badge: (
+                  <Badge variant="preliminary">{isEs ? "CONCEPTUAL" : "CONCEPTUAL"}</Badge>
+                ),
+              },
+              {
+                icon: Zap,
+                label: isEs ? "Potencia CA conceptual" : "Conceptual AC power",
+                value: `${integratedPowerMva.toFixed(2)} MVA`,
+                badge: null,
+              },
+              {
+                icon: Cpu,
+                label: isEs ? "Conversión" : "Conversion",
+                value: isEs
+                  ? "Inversor/PCS dentro de la unidad"
+                  : "Inverter/PCS inside the unit",
+                badge: null,
+              },
+              {
+                icon: Database,
+                label: isEs ? "Unidades integradas" : "Integrated units",
+                value: `${containerCount}`,
+                badge: null,
+              },
+            ],
+          };
+        }
         return {
           title: isEs ? "Sistema de Conversión (PCS)" : "Power Conversion System",
           color: "border-cyan-500/30 bg-cyan-500/5",
@@ -235,6 +283,38 @@ export function SingleLineDiagram() {
           ],
         };
       case "transformer":
+        if (isIntegrated) {
+          return {
+            title: isEs
+              ? "Transformador elevador externo"
+              : "External step-up transformer",
+            color: "border-violet-500/30 bg-violet-500/5",
+            items: [
+              {
+                icon: Layers,
+                label: isEs ? "Estado" : "Status",
+                value: isEs ? "No modelado" : "Not modeled",
+                badge: <Badge variant="pending">{isEs ? "PENDIENTE" : "PENDING"}</Badge>,
+              },
+              {
+                icon: Settings,
+                label: isEs ? "Función" : "Function",
+                value: isEs
+                  ? "Eleva la BT de la unidad a la MT de colección"
+                  : "Steps unit LV up to the MV collection",
+                badge: null,
+              },
+              {
+                icon: Shield,
+                label: isEs ? "Confirmación" : "Confirmation",
+                value: isEs
+                  ? "Confirmar con fabricante / EPC"
+                  : "Confirm with manufacturer / EPC",
+                badge: null,
+              },
+            ],
+          };
+        }
         return {
           title: isEs ? "Transformador de Bloque" : "Block Transformer",
           color: "border-violet-500/30 bg-violet-500/5",
@@ -291,7 +371,9 @@ export function SingleLineDiagram() {
             {
               icon: Activity,
               label: isEs ? "Carga por circuito" : "Circuit loading",
-              value: `${Math.round(stationCount / feederCount)} PCS / ${isEs ? "circuito" : "circuit"}`,
+              value: isIntegrated
+                ? `${Math.round(containerCount / feederCount)} ${isEs ? "u. / circuito" : "units / circuit"}`
+                : `${Math.round(stationCount / feederCount)} PCS / ${isEs ? "circuito" : "circuit"}`,
               badge: null,
             },
           ],
@@ -374,7 +456,13 @@ export function SingleLineDiagram() {
           {isEs ? "Diagrama Unifilar Eléctrico" : "Electrical Single-Line Diagram"}
         </h3>
         <span className="text-[9px] text-slate-500 font-mono">
-          {isPresetLoaded ? "V1.2 Active" : "Conceptual"}
+          {isPresetLoaded
+            ? "V1.2 Active"
+            : isIntegrated
+              ? isEs
+                ? "Integrado · Conceptual"
+                : "Integrated · Conceptual"
+              : "Conceptual"}
         </span>
       </div>
 
@@ -490,20 +578,20 @@ export function SingleLineDiagram() {
             <text x="162" y="128" fill={hasEquipment ? "#06b6d4" : "#64748b"} fontSize="12" fontWeight="bold" fontFamily="sans-serif">~</text>
             {/* Label text */}
             <text x="182" y="120" fill={hasEquipment ? "#e2e8f0" : "#64748b"} fontSize="8.5" textAnchor="start" fontFamily="sans-serif" fontWeight="bold">
-              {stationCount} PCS
+              {isIntegrated ? (isEs ? "Integrado" : "Integrated") : `${stationCount} PCS`}
             </text>
           </g>
 
-          {/* 3. Block Transformer node */}
+          {/* 3. Block Transformer node — dashed when integrated (external, not modeled) */}
           <g className="transition-transform hover:scale-105 origin-center cursor-pointer" onClick={() => setSelectedStage("transformer")}>
             {/* Overlapping circle 1 */}
-            <circle cx="160" cy="189" r="13" fill="none" stroke={selectedStage === "transformer" ? "#8b5cf6" : hasEquipment ? "#8b5cf6" : "#475569"} strokeWidth="2" />
+            <circle cx="160" cy="189" r="13" fill="none" stroke={selectedStage === "transformer" ? "#8b5cf6" : hasEquipment ? "#8b5cf6" : "#475569"} strokeWidth="2" strokeDasharray={isIntegrated ? "3,2.5" : undefined} />
             {/* Overlapping circle 2 */}
-            <circle cx="160" cy="204" r="13" fill="none" stroke={selectedStage === "transformer" ? "#8b5cf6" : hasEquipment ? "#8b5cf6" : "#475569"} strokeWidth="2" />
-            {/* Vector group labels */}
+            <circle cx="160" cy="204" r="13" fill="none" stroke={selectedStage === "transformer" ? "#8b5cf6" : hasEquipment ? "#8b5cf6" : "#475569"} strokeWidth="2" strokeDasharray={isIntegrated ? "3,2.5" : undefined} />
+            {/* Vector group / external marker */}
             {hasEquipment && (
-              <text x="180" y="200" fill="#cbd5e1" fontSize="7.5" fontFamily="monospace">
-                {activeTransformerSpec.vectorGroup}
+              <text x="180" y="200" fill={isIntegrated ? "#a78bfa" : "#cbd5e1"} fontSize="7.5" fontFamily="monospace">
+                {isIntegrated ? (isEs ? "ext. (no mod.)" : "ext. (not mod.)") : activeTransformerSpec.vectorGroup}
               </text>
             )}
           </g>

@@ -6,14 +6,12 @@ import {
   ListPlus,
   MapPin,
   MousePointer2,
-  Plus,
   RotateCw,
   SquarePen,
-  Trash2,
   X,
 } from "lucide-react";
 import { useProjectStore } from "@/store/projectStore";
-import { parseNumberInRange } from "@/lib/units/parseNumber";
+import { parseLatLng } from "@/lib/geometry/parseCoordinate";
 import { useUiStore } from "@/store/uiStore";
 import {
   formatAreaDual,
@@ -74,15 +72,15 @@ export function ParametricTerrainPanel() {
   const updatePreviewTerrain = useProjectStore((state) => state.updatePreviewTerrain);
   const applyPreviewTerrain = useProjectStore((state) => state.applyPreviewTerrain);
   const cancelPreviewTerrain = useProjectStore((state) => state.cancelPreviewTerrain);
+  const projectName = useProjectStore((state) => state.projectName);
+  const setProjectName = useProjectStore((state) => state.setProjectName);
 
   const [mode, setMode] = useState<"draw" | "parametric" | "coordinates">(
     "draw"
   );
-  const [coordRows, setCoordRows] = useState<{ lat: string; lng: string }[]>([
-    { lat: "", lng: "" },
-    { lat: "", lng: "" },
-    { lat: "", lng: "" },
-  ]);
+  // All coordinates are typed/pasted into one textarea, one "lat, lng" per
+  // line, so a whole list can be copy-pasted in a single block (max 15 lines).
+  const [coordText, setCoordText] = useState("");
   const [coordFeedback, setCoordFeedback] = useState<{
     kind: "success" | "error";
     text: string;
@@ -175,49 +173,46 @@ export function ParametricTerrainPanel() {
     if (previewTerrain) updatePreviewTerrain({ rotationDeg: nextRotation });
   };
 
-  const MIN_COORD_ROWS = 3;
-  const MAX_COORD_ROWS = 15;
+  const MIN_COORDS = 3;
+  const MAX_COORDS = 15;
 
-  const updateCoordRow = (index: number, field: "lat" | "lng", value: string) => {
-    setCoordRows((rows) =>
-      rows.map((row, i) => (i === index ? { ...row, [field]: value } : row))
-    );
-    setCoordFeedback(null);
-  };
-
-  const addCoordRow = () => {
-    setCoordRows((rows) =>
-      rows.length >= MAX_COORD_ROWS ? rows : [...rows, { lat: "", lng: "" }]
-    );
-  };
-
-  const removeCoordRow = (index: number) => {
-    setCoordRows((rows) =>
-      rows.length <= MIN_COORD_ROWS ? rows : rows.filter((_, i) => i !== index)
-    );
-    setCoordFeedback(null);
-  };
+  // Non-empty, trimmed lines from the textarea (blank lines are ignored so a
+  // pasted block with stray newlines still works).
+  const coordLines = coordText
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line !== "");
+  const validCoordCount = coordLines.filter(
+    (line) => parseLatLng(line) !== null
+  ).length;
 
   const createPolygonFromCoordinates = () => {
+    if (coordLines.length > MAX_COORDS) {
+      setCoordFeedback({
+        kind: "error",
+        text: isEs
+          ? `Maximo ${MAX_COORDS} coordenadas (una por linea). Ingresaste ${coordLines.length}.`
+          : `Maximum ${MAX_COORDS} coordinates (one per line). You entered ${coordLines.length}.`,
+      });
+      return;
+    }
+
     const vertices: { lng: number; lat: number }[] = [];
-    for (const row of coordRows) {
-      const isEmpty = row.lat.trim() === "" && row.lng.trim() === "";
-      if (isEmpty) continue;
-      const lat = parseNumberInRange(row.lat, -90, 90);
-      const lng = parseNumberInRange(row.lng, -180, 180);
-      if (lat === null || lng === null) {
+    for (const line of coordLines) {
+      const parsed = parseLatLng(line);
+      if (parsed === null) {
         setCoordFeedback({
           kind: "error",
           text: isEs
-            ? "Coordenada invalida. Latitud entre -90 y 90, longitud entre -180 y 180."
-            : "Invalid coordinate. Latitude between -90 and 90, longitude between -180 and 180.",
+            ? `Coordenada invalida: "${line}". Usa lat, lon (latitud -90 a 90, longitud -180 a 180).`
+            : `Invalid coordinate: "${line}". Use lat, lng (latitude -90 to 90, longitude -180 to 180).`,
         });
         return;
       }
-      vertices.push({ lng, lat });
+      vertices.push({ lng: parsed.lng, lat: parsed.lat });
     }
 
-    if (vertices.length < MIN_COORD_ROWS) {
+    if (vertices.length < MIN_COORDS) {
       setCoordFeedback({
         kind: "error",
         text: isEs
@@ -248,6 +243,23 @@ export function ParametricTerrainPanel() {
             : "Generate terrain by parameters, drag it on the map and apply it as the working polygon."}
         </p>
       </div>
+
+      <label className="block text-[11px] text-slate-500">
+        {isEs ? "Nombre del proyecto" : "Project name"}
+        <input
+          type="text"
+          value={projectName}
+          maxLength={120}
+          placeholder={isEs ? "Ej. Planta BESS Atacama" : "e.g. Atacama BESS Plant"}
+          onChange={(event) => setProjectName(event.target.value)}
+          className={inputClass}
+        />
+        <span className="mt-1 block text-[10px] leading-snug text-slate-600">
+          {isEs
+            ? "Se usa en el encabezado del reporte tecnico."
+            : "Used in the technical report header."}
+        </span>
+      </label>
 
       <div className="grid grid-cols-3 gap-2">
         <button
@@ -306,68 +318,30 @@ export function ParametricTerrainPanel() {
         <div className="space-y-3">
           <p className="text-[10px] leading-snug text-slate-500">
             {isEs
-              ? "Ingresa entre 3 y 15 coordenadas (latitud, longitud). El poligono se crea en el orden ingresado."
-              : "Enter between 3 and 15 coordinates (latitude, longitude). The polygon is built in the entered order."}
+              ? "Pega o escribe una coordenada por linea (lat, lon), hasta 15. Puedes copiarlas desde otra fuente y pegarlas todas de una vez. El poligono se crea en el orden ingresado."
+              : "Paste or type one coordinate per line (lat, lng), up to 15. You can copy them from another source and paste them all at once. The polygon is built in the entered order."}
           </p>
 
-          <div className="space-y-1.5">
-            <div className="grid grid-cols-[1.5rem_1fr_1fr_1.75rem] items-center gap-1.5 text-[10px] uppercase tracking-wide text-slate-600">
-              <span>#</span>
-              <span>{isEs ? "Latitud" : "Latitude"}</span>
-              <span>{isEs ? "Longitud" : "Longitude"}</span>
-              <span className="sr-only">{isEs ? "Quitar" : "Remove"}</span>
-            </div>
-            {coordRows.map((row, index) => (
-              <div
-                key={index}
-                className="grid grid-cols-[1.5rem_1fr_1fr_1.75rem] items-center gap-1.5"
-              >
-                <span className="text-[11px] text-slate-500">{index + 1}</span>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  step="any"
-                  value={row.lat}
-                  placeholder="-33.45"
-                  aria-label={`${isEs ? "Latitud" : "Latitude"} ${index + 1}`}
-                  onChange={(event) => updateCoordRow(index, "lat", event.target.value)}
-                  className={inputClass}
-                />
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  step="any"
-                  value={row.lng}
-                  placeholder="-70.66"
-                  aria-label={`${isEs ? "Longitud" : "Longitude"} ${index + 1}`}
-                  onChange={(event) => updateCoordRow(index, "lng", event.target.value)}
-                  className={inputClass}
-                />
-                <button
-                  type="button"
-                  onClick={() => removeCoordRow(index)}
-                  disabled={coordRows.length <= MIN_COORD_ROWS}
-                  title={isEs ? "Quitar fila" : "Remove row"}
-                  aria-label={isEs ? "Quitar fila" : "Remove row"}
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-slate-700 bg-slate-900 text-slate-400 transition hover:border-rose-500/60 hover:text-rose-300 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-                </button>
-              </div>
-            ))}
-          </div>
+          <label className="block text-[11px] text-slate-500">
+            {isEs ? "Coordenadas (una por linea)" : "Coordinates (one per line)"}
+            <textarea
+              value={coordText}
+              onChange={(event) => {
+                setCoordText(event.target.value);
+                setCoordFeedback(null);
+              }}
+              rows={6}
+              spellCheck={false}
+              placeholder={"-33.45, -70.66\n-33.46, -70.66\n-33.46, -70.65"}
+              className={`${inputClass} min-h-[7rem] resize-y font-mono leading-relaxed`}
+            />
+          </label>
 
-          <button
-            type="button"
-            onClick={addCoordRow}
-            disabled={coordRows.length >= MAX_COORD_ROWS}
-            className={`${buttonClass} w-full border-slate-700 bg-slate-900 text-slate-300 hover:border-cyan-500/60`}
-          >
-            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+          <div className="text-[10px] text-slate-600">
             {isEs
-              ? `Agregar coordenada (${coordRows.length}/${MAX_COORD_ROWS})`
-              : `Add coordinate (${coordRows.length}/${MAX_COORD_ROWS})`}
-          </button>
+              ? `${validCoordCount}/${MAX_COORDS} coordenadas validas detectadas`
+              : `${validCoordCount}/${MAX_COORDS} valid coordinates detected`}
+          </div>
 
           <button
             type="button"

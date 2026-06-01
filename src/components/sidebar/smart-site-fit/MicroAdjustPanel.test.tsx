@@ -215,5 +215,56 @@ describe("MicroAdjustPanel", () => {
     fireEvent.click(discardBtn);
     expect(onDiscard).toHaveBeenCalled();
   });
+
+  it("renders manual parameters section when layoutMode is manual", () => {
+    render(
+      <MicroAdjustPanel
+        {...defaultProps}
+        overrides={{
+          layoutMode: "manual",
+          containersWide: 4,
+          groupCount: 1,
+        }}
+      />
+    );
+
+    // Header for manual layout parameters
+    expect(screen.getByText("Manual Layout Parameters")).toBeDefined();
+
+    // Inputs for columns/blocks are rendered
+    expect(screen.getByLabelText("BESS Columns")).toBeDefined();
+    expect(screen.getByLabelText("Block Columns")).toBeDefined();
+    expect(screen.getByLabelText("Layout Orientation (°)")).toBeDefined();
+
+    // Strategy combobox and standard separation sliders are not rendered
+    expect(screen.queryByText("Layout shape")).toBeNull();
+    expect(screen.queryByText("BESS - BESS Separation")).toBeNull();
+  });
+
+  it("triggers onUpdateOverrides when manual parameters input change", () => {
+    const onUpdateOverrides = vi.fn();
+    render(
+      <MicroAdjustPanel
+        {...defaultProps}
+        onUpdateOverrides={onUpdateOverrides}
+        overrides={{
+          layoutMode: "manual",
+          containersWide: 4,
+          groupCount: 1,
+        }}
+      />
+    );
+
+    // Edit BESS Columns (containersWide)
+    const wideInput = screen.getByLabelText("BESS Columns") as HTMLInputElement;
+    fireEvent.change(wideInput, { target: { value: "6" } });
+    expect(onUpdateOverrides).toHaveBeenCalledWith({ containersWide: 6 });
+
+    // Edit Layout Orientation
+    const orientInput = screen.getByLabelText("Layout Orientation (°)") as HTMLInputElement;
+    fireEvent.change(orientInput, { target: { value: "45" } });
+    expect(onUpdateOverrides).toHaveBeenCalledWith({ orientationDeg: 45 });
+  });
 });
+
 

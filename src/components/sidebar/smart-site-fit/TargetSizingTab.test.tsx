@@ -234,4 +234,51 @@ describe("TargetSizingTab", () => {
     fireEvent.click(button8);
     expect(screen.getByText(/The 8h and 16h configurations are calculated/i)).toBeDefined();
   });
+
+  it("renders layout configuration dropdown and supports choosing manual", () => {
+    render(<TargetSizingTab {...defaultProps} />);
+
+    const modeSelect = screen.getByLabelText(/Layout Configuration/i) as HTMLSelectElement;
+    expect(modeSelect).toBeDefined();
+    expect(modeSelect.value).toBe("auto");
+
+    // Switching to manual hides Design Strategy and shows BESS Columns, Block Cols, Orientation
+    fireEvent.change(modeSelect, { target: { value: "manual" } });
+    expect(modeSelect.value).toBe("manual");
+    expect(screen.queryByLabelText(/Design Strategy/i)).toBeNull();
+    expect(screen.getByLabelText(/BESS Columns/i)).toBeDefined();
+    expect(screen.getByLabelText(/Block Cols/i)).toBeDefined();
+    expect(screen.getByLabelText(/Orientation/i)).toBeDefined();
+  });
+
+  it("runs manual analysis with columns, blocks and orientation overrides", async () => {
+    const onRunAnalysis = vi.fn();
+    render(<TargetSizingTab {...defaultProps} onRunAnalysis={onRunAnalysis} />);
+
+    const modeSelect = screen.getByLabelText(/Layout Configuration/i) as HTMLSelectElement;
+    fireEvent.change(modeSelect, { target: { value: "manual" } });
+
+    // Set columns to 5 and orientation to 30
+    const colsInput = screen.getByLabelText(/BESS Columns/i) as HTMLInputElement;
+    fireEvent.change(colsInput, { target: { value: "5" } });
+
+    const angleInput = screen.getByLabelText(/Orientation/i) as HTMLInputElement;
+    fireEvent.change(angleInput, { target: { value: "30" } });
+
+    const button = screen.getByRole("button", { name: /Calculate alternative/i });
+    fireEvent.click(button);
+
+    await waitFor(() =>
+      expect(onRunAnalysis).toHaveBeenCalledWith(
+        expect.objectContaining({
+          overrides: expect.objectContaining({
+            layoutMode: "manual",
+            containersWide: 5,
+            orientationDeg: 30,
+          }),
+        })
+      )
+    );
+  });
 });
+

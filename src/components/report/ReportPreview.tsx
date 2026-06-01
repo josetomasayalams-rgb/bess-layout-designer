@@ -153,7 +153,7 @@ export function ReportPreview({ isOpen, onClose, includeGeocoding }: ReportPrevi
             : caseStudy?.pendingData ?? [];
 
         const assembled = buildReportData({
-          projectName: caseStudy?.projectName,
+          projectName: project.projectName?.trim() || caseStudy?.projectName,
           appVersion: "1.0.0-rc.1",
           locale: currentLocale,
           polygon: project.polygon,

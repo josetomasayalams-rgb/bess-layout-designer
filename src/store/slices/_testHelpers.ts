@@ -51,5 +51,6 @@ export function resetProjectStore(): void {
     fireSafetyZones: [],
     past: [],
     future: [],
+    projectName: "",
   });
 }

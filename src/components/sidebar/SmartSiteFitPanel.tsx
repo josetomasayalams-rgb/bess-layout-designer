@@ -1,18 +1,15 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { Compass, Info, AlertCircle } from "lucide-react";
 import { CollapsibleSection } from "@/components/ui/CollapsibleSection";
 import { useProjectStore } from "@/store/projectStore";
 import { useUiStore } from "@/store/uiStore";
 import { TargetSizingTab } from "./smart-site-fit/TargetSizingTab";
-import { TerrainSizingTab } from "./smart-site-fit/TerrainSizingTab";
 
 export function SmartSiteFitPanel() {
   const locale = useUiStore((s) => s.locale);
   const isEs = locale === "es";
-
-  const [activeTab, setActiveTab] = useState<"target" | "terrain">("target");
 
   const polygon = useProjectStore((s) => s.polygon);
   const anchor = useProjectStore((s) => s.anchor);
@@ -26,7 +23,6 @@ export function SmartSiteFitPanel() {
   const applySmartSiteFitAlternative = useProjectStore((s) => s.applySmartSiteFitAlternative);
   const discardSmartSiteFit = useProjectStore((s) => s.discardSmartSiteFit);
 
-  const hasPolygon = polygon.length >= 3;
 
   // Architecture-aware applied-layout banner. Integrated presets (e.g. Tesla
   // Megapack) carry their own power conversion, so pcsCount === 0 — the banner
@@ -51,7 +47,7 @@ export function SmartSiteFitPanel() {
       icon={Compass}
       iconColor="text-cyan-400"
       title={isEs ? "Dimensionamiento inteligente" : "Smart sizing"}
-      description={isEs ? "Por objetivo o por terreno" : "By target or by terrain"}
+      description={isEs ? "Por capacidad objetivo" : "By target capacity"}
     >
       <div className="space-y-4 pt-1">
         {/* Disclaimer / Warning Box */}
@@ -77,71 +73,22 @@ export function SmartSiteFitPanel() {
           </div>
         )}
 
-        {/* Tab Headers */}
-        <div className="flex border-b border-slate-800">
-          <button
-            onClick={() => {
-              setActiveTab("target");
-              discardSmartSiteFit();
-            }}
-            className={`flex-1 pb-2 text-center text-xs font-semibold border-b-2 transition-all ${
-              activeTab === "target"
-                ? "border-cyan-500 text-cyan-400"
-                : "border-transparent text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            {isEs ? "Por objetivo" : "By target"}
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab("terrain");
-              discardSmartSiteFit();
-            }}
-            className={`flex-1 pb-2 text-center text-xs font-semibold border-b-2 transition-all ${
-              activeTab === "terrain"
-                ? "border-cyan-500 text-cyan-400"
-                : "border-transparent text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            {isEs ? "Por terreno" : "By terrain"}
-          </button>
-        </div>
-
         {/* Tab Contents */}
-        {activeTab === "target" ? (
-          <TargetSizingTab
-            result={smartSiteFit.result}
-            selectedAlternativeId={smartSiteFit.selectedAlternativeId}
-            overrides={smartSiteFit.overrides}
-            isDirty={smartSiteFit.dirty}
-            onRunAnalysis={runSmartSiteFitAnalysis}
-            onSelectAlternative={selectSmartSiteFitAlternative}
-            onUpdateOverrides={updateSmartSiteFitOverrides}
-            onRecalculate={recalculateSmartSiteFitPreview}
-            onApply={applySmartSiteFitAlternative}
-            onDiscard={discardSmartSiteFit}
-            locale={locale}
-            polygon={polygon}
-            anchor={anchor ?? undefined}
-          />
-        ) : (
-          <TerrainSizingTab
-            hasPolygon={hasPolygon}
-            result={smartSiteFit.result}
-            selectedAlternativeId={smartSiteFit.selectedAlternativeId}
-            overrides={smartSiteFit.overrides}
-            isDirty={smartSiteFit.dirty}
-            onRunAnalysis={runSmartSiteFitAnalysis}
-            onSelectAlternative={selectSmartSiteFitAlternative}
-            onUpdateOverrides={updateSmartSiteFitOverrides}
-            onRecalculate={recalculateSmartSiteFitPreview}
-            onApply={applySmartSiteFitAlternative}
-            onDiscard={discardSmartSiteFit}
-            locale={locale}
-            polygon={polygon}
-            anchor={anchor ?? undefined}
-          />
-        )}
+        <TargetSizingTab
+          result={smartSiteFit.result}
+          selectedAlternativeId={smartSiteFit.selectedAlternativeId}
+          overrides={smartSiteFit.overrides}
+          isDirty={smartSiteFit.dirty}
+          onRunAnalysis={runSmartSiteFitAnalysis}
+          onSelectAlternative={selectSmartSiteFitAlternative}
+          onUpdateOverrides={updateSmartSiteFitOverrides}
+          onRecalculate={recalculateSmartSiteFitPreview}
+          onApply={applySmartSiteFitAlternative}
+          onDiscard={discardSmartSiteFit}
+          locale={locale}
+          polygon={polygon}
+          anchor={anchor ?? undefined}
+        />
       </div>
     </CollapsibleSection>
   );

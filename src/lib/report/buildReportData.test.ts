@@ -45,6 +45,18 @@ function makePlacedEquipment(): PlacedEquipment[] {
   return [...containers, ...stations];
 }
 
+// Integrated AC units (no separate PCS/MV station). Tesla Megapack 2 XL 4h =
+// 3.916 MWh / 0.979 MVA per unit; the PCS/inverter lives inside the unit.
+function makeTeslaLayout(count: number): PlacedEquipment[] {
+  return Array.from({ length: count }, (_, index) => ({
+    id: `mp-${index + 1}`,
+    equipmentSpecId: "bess-tesla-megapack-2xl-4h",
+    anchor: point((index % 10) * 12, Math.floor(index / 10) * 5),
+    rotation_deg: 0,
+    sourceReliability: "preliminary_assumption" as const,
+  }));
+}
+
 function baseReportArgs() {
   return {
     projectName: "BESS del Desierto",
@@ -95,6 +107,9 @@ describe("buildReportData — report KPI synchronization", () => {
     expect(data.sizingFromTargets.containers).toBe(320);
     expect(data.sizingFromTargets.stations).toBe(40);
     expect(data.sizingFromTargets.feeders).toBe(10);
+    // Separate-PCS Sungrow layout must never be flagged as integrated.
+    expect(data.reportKpis.isIntegrated).toBe(false);
+    expect(data.reportKpis.integratedUnitCount).toBe(0);
   });
 
   it("adds explicit alerts when layout exists but electrical architecture is not persisted", () => {
@@ -232,5 +247,44 @@ describe("buildReportData — Fase 9 preliminary electrical block", () => {
     );
     expect(block.hasSeverityCaps).toBe(cappedInBlock.length > 0);
     expect(cappedInBlock.length).toBe(cappedInEvaluation.length);
+  });
+});
+
+describe("buildReportData — integrated (Tesla) architecture KPIs", () => {
+  function teslaArgs(count: number) {
+    return { ...baseReportArgs(), placed: makeTeslaLayout(count) };
+  }
+
+  it("derives non-zero power and duration from integrated units without a separate PCS", () => {
+    const data = buildReportData(teslaArgs(10));
+
+    expect(data.reportKpis.stations).toBe(0);
+    expect(data.reportKpis.containers).toBe(10);
+    expect(data.reportKpis.isIntegrated).toBe(true);
+    expect(data.reportKpis.integratedUnitCount).toBe(10);
+    // Installed power from integrated unit AC rating (0.979 MVA each), not a PCS.
+    expect(data.reportKpis.installedPowerMVA).toBeCloseTo(10 * 0.979, 3);
+    expect(data.reportKpis.poiPowerMW).not.toBeNull();
+    expect(data.reportKpis.poiPowerMW!).toBeCloseTo(10 * 0.979, 3);
+    expect(data.reportKpis.grossEnergyMWh).toBeCloseTo(10 * 3.916, 2);
+    // Duration is no longer null (was null pre-fix because installed power was 0).
+    expect(data.reportKpis.durationHours).not.toBeNull();
+    expect(data.reportKpis.durationHours!).toBeGreaterThan(0);
+    // Gross energy / installed power ≈ the 4h unit rating, factor-independent.
+    expect(
+      data.reportKpis.grossEnergyMWh / data.reportKpis.installedPowerMVA
+    ).toBeCloseTo(4, 1);
+  });
+
+  it("uses integrated-specific wording for the derived-power alert and skips PCS-only alerts", () => {
+    const data = buildReportData(teslaArgs(4));
+    const ids = data.consistencyAlerts.map((a) => a.id);
+    const sync1 = data.consistencyAlerts.find((a) => a.id === "RPT-SYNC-001");
+
+    expect(sync1).toBeDefined();
+    expect(sync1!.message).toContain("unidades integradas");
+    // No PCS/MV stations were placed → the PCS-without-architecture alert
+    // (RPT-SYNC-004) must not fire for an integrated layout.
+    expect(ids).not.toContain("RPT-SYNC-004");
   });
 });

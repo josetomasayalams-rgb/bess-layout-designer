@@ -27,8 +27,10 @@ export type LifecycleSlice = {
   interactionMode: ProjectState["interactionMode"];
   past: ProjectState["past"];
   future: ProjectState["future"];
+  projectName: ProjectState["projectName"];
 
   setMode: ProjectState["setMode"];
+  setProjectName: ProjectState["setProjectName"];
   loadDemoProject: ProjectState["loadDemoProject"];
   resetProject: ProjectState["resetProject"];
   undo: ProjectState["undo"];
@@ -43,6 +45,7 @@ export function createLifecycleSlice(
     interactionMode: "select",
     past: [],
     future: [],
+    projectName: "",
 
     setMode: (mode) =>
       set({
@@ -52,6 +55,8 @@ export function createLifecycleSlice(
         terrainFitPreview:
           mode === "edit-layout" ? emptyTerrainFitPreviewState : get().terrainFitPreview,
       }),
+
+    setProjectName: (name) => set({ projectName: name }),
 
     loadDemoProject: () => {
       const demo = createDemoProject();
@@ -95,6 +100,7 @@ export function createLifecycleSlice(
         layoutEdit: emptyLayoutEditState,
         terrainFitPreview: emptyTerrainFitPreviewState,
         comparison: emptyComparison,
+        projectName: "",
       })),
 
     undo: () =>

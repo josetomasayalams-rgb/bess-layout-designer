@@ -281,4 +281,76 @@ describe("SmartSiteFit Engine", () => {
     expect(pcs).toBe(5);
     expect(bess).toBe(40);
   }, 20000);
+
+  it("should successfully build a manual layout for Sungrow", () => {
+    const result = runSmartSiteFit({
+      mode: "target",
+      polygon,
+      targetMW: 5,
+      targetMWh: 40,
+      durationHours: 8,
+      overrides: {
+        layoutMode: "manual",
+        containersWide: 4,
+        groupCount: 1,
+        orientationDeg: 45,
+      },
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.selected).not.toBeNull();
+    const candidate = result.selected!;
+    expect(candidate.shape?.id).toBe("manual-layout");
+    expect(candidate.placedEquipment.length).toBeGreaterThan(0);
+
+    // Verify all items have rotation 45
+    for (const item of candidate.placedEquipment) {
+      expect(item.rotation_deg).toBe(45);
+      expect(item.blockId).toContain("block-");
+    }
+
+    // Verify PCS is present
+    const pcs = candidate.placedEquipment.filter((e) => e.equipmentSpecId === "sungrow-sc5000ud-mv-us-p3");
+    expect(pcs.length).toBeGreaterThan(0);
+  });
+
+  it("should successfully build a manual layout for Tesla Megapack", () => {
+    const result = runSmartSiteFit({
+      mode: "target",
+      polygon,
+      targetMW: 10,
+      targetMWh: 40,
+      durationHours: 4,
+      presetId: "tesla-megapack-2xl",
+      overrides: {
+        layoutMode: "manual",
+        containersWide: 2,
+        groupCount: 2,
+        orientationDeg: 90,
+      },
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.selected).not.toBeNull();
+    const candidate = result.selected!;
+    expect(candidate.shape?.id).toBe("manual-layout");
+    expect(candidate.placedEquipment.length).toBeGreaterThan(0);
+
+    // Verify all items have rotation 90
+    for (const item of candidate.placedEquipment) {
+      expect(item.rotation_deg).toBe(90);
+      expect(item.blockId).toContain("integrated-row-");
+      expect(item.equipmentSpecId).toContain("tesla-megapack-2xl-4h");
+    }
+
+    // Verify pcsCount is 0 in meta and no separate PCS stations exist
+    const pcs = candidate.placedEquipment.filter((e) => e.equipmentSpecId.includes("pcs"));
+    expect(pcs).toHaveLength(0);
+
+    // Warnings should contain integrated warnings
+    const warnIds = result.warnings.map((w) => w.id);
+    expect(warnIds).toContain("integrated-external-transformer");
+    expect(warnIds).toContain("integrated-no-separate-pcs");
+  });
 });
+

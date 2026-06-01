@@ -43,6 +43,15 @@ export type ProjectSummary = {
   site_area: SiteArea | null;
   occupied_area_m2: number;
   occupation_ratio: number | null;
+  /**
+   * True when the layout has no separate PCS/MV station but battery units that
+   * carry their own AC power (integrated architecture, e.g. Tesla Megapack).
+   * Lets the UI/report present an "integrated" architecture instead of a
+   * misleading "0 PCS". Populated by computeSummary; conceptual only.
+   */
+  is_integrated_architecture?: boolean;
+  /** Count of integrated AC units when is_integrated_architecture is true. */
+  integrated_unit_count?: number;
 };
 
 export type ExportedQuantity = {

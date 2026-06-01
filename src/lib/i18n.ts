@@ -150,6 +150,10 @@ export const COPY = {
       poiBody: "Conceptual connection point. Does not represent a complete HV/AT substation. HV interconnection infrastructure is outside this tool's scope.",
       mvCorridorsTitle: "MV corridors (orange lines)",
       mvCorridorsBody: "Conceptual MV collection corridors. Not calculated cabling or definitive conduit routing. Preliminary sizing only.",
+      integratedTitle: "Integrated unit (PCS/inverter inside)",
+      integratedBody: "Tesla Megapack integrates the inverter/PCS inside the unit. There is no separate PCS/MV station to place; the unit delivers AC directly. Conceptual only.",
+      externalTransformerTitle: "External step-up transformer (not modeled)",
+      externalTransformerBody: "An external LV/MV step-up transformer is required between the integrated units and the MV collection. It is conceptual and not modeled here; confirm with the manufacturer / EPC.",
     },
     spacing: {
       title: "Spacing assumptions",
@@ -366,6 +370,10 @@ export const COPY = {
       poiBody: "Punto conceptual de conexión. No representa una subestación AT completa. La infraestructura de interconexión AT queda fuera del alcance de esta herramienta.",
       mvCorridorsTitle: "Corredores MT (líneas naranjas)",
       mvCorridorsBody: "Corredores conceptuales de colección MT. No son cableado calculado ni canalización definitiva. Solo predimensionamiento conceptual.",
+      integratedTitle: "Unidad integrada (PCS/inversor adentro)",
+      integratedBody: "El Tesla Megapack integra el inversor/PCS dentro de la unidad. No hay estación PCS/MV separada que colocar; la unidad entrega CA directamente. Solo conceptual.",
+      externalTransformerTitle: "Transformador elevador externo (no modelado)",
+      externalTransformerBody: "Se requiere un transformador elevador BT/MT externo entre las unidades integradas y la colección MT. Es conceptual y no se modela aquí; confirmar con fabricante / EPC.",
     },
     spacing: {
       title: "Supuestos de separación",

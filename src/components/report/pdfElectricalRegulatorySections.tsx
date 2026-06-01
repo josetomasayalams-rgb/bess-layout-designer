@@ -1,6 +1,7 @@
 import { Line, Rect, Svg, Text, View } from "@react-pdf/renderer";
 import { REPORT_COLORS, REPORT_FONTS, reportStyles as s } from "./reportStyles";
 import { documentTitle, type TechnicalReportData } from "@/lib/report/buildReportData";
+import { selectSldStages } from "@/lib/report/sldStages";
 import { fmtInt, fmtNum, formatIsoDate } from "./pdfFormatters";
 import { AlertCard, DefGrid, SectionPage, Table } from "./pdfPrimitives";
 import {
@@ -20,14 +21,8 @@ type ReportSectionProps = { data: TechnicalReportData };
  * @react-pdf/renderer (WinAnsi) no puede codificar y renderiza como cajas
  * `notdef`. Las puntas de flecha son triángulos vectoriales.
  */
-function SingleLineDiagram() {
-  const stages = [
-    { title: "Contenedor BESS", sub: "DC" },
-    { title: "PCS + trafo", sub: "BT/MT integrado" },
-    { title: "Feeder MT", sub: "media tensión" },
-    { title: "Barra / secc.", sub: "MT" },
-    { title: "POI", sub: "conexión red" },
-  ];
+function SingleLineDiagram({ isIntegrated }: { isIntegrated: boolean }) {
+  const { stages, caption } = selectSldStages(isIntegrated);
   const BOX_W = 88;
   const BOX_H = 44;
   const STEP = 106; // BOX_W + gap
@@ -104,10 +99,7 @@ function SingleLineDiagram() {
           );
         })}
       </Svg>
-      <Text style={s.imageCaption}>
-        Diagrama unilineal conceptual. El PCS integra el transformador BT/MT en
-        una misma estación; no se modelan transformadores separados por bloque.
-      </Text>
+      <Text style={s.imageCaption}>{caption}</Text>
     </View>
   );
 }
@@ -118,19 +110,29 @@ export function ElectricalSection({ data }: ReportSectionProps) {
   return (
     <SectionPage data={data} number="5" title="Arquitectura eléctrica conceptual">
       <Text style={s.paragraph}>
-        La arquitectura conceptual encadena el contenedor BESS (lado DC), el PCS
-        con transformador BT/MT integrado, el feeder de media tensión, la barra
-        y seccionamiento MT, y el punto de conexión (POI). La fuente de los datos
-        eléctricos se cita cuando está disponible; los campos vacíos representan
-        información pendiente de validación de fabricante o EPC.
+        {k.isIntegrated
+          ? "En esta configuración los equipos integran el inversor/PCS dentro de la unidad y entregan corriente alterna directamente; no existe una estación PCS/MV separada que colocar. La arquitectura conceptual encadena la unidad integrada, el colector MT conceptual, el transformador elevador externo (no modelado en esta herramienta), la barra y seccionamiento MT, y el punto de conexión (POI). La fuente de los datos eléctricos se cita cuando está disponible; los campos vacíos representan información pendiente de validación de fabricante o EPC."
+          : "La arquitectura conceptual encadena el contenedor BESS (lado DC), el PCS con transformador BT/MT integrado, el feeder de media tensión, la barra y seccionamiento MT, y el punto de conexión (POI). La fuente de los datos eléctricos se cita cuando está disponible; los campos vacíos representan información pendiente de validación de fabricante o EPC."}
       </Text>
 
-      <SingleLineDiagram />
+      <SingleLineDiagram isIntegrated={k.isIntegrated} />
+
+      {k.isIntegrated ? (
+        <AlertCard
+          severity="warning"
+          title="Arquitectura integrada: transformador elevador externo no modelado"
+          message={`Layout integrado con ${fmtInt(k.integratedUnitCount)} unidad(es): el inversor/PCS está integrado en la unidad y entrega corriente alterna directamente, por lo que no existe una estación PCS/MV separada que modelar. La elevación de baja a media tensión requiere un transformador elevador BT/MT externo que esta herramienta no modela.`}
+          recommendation="Confirmar el esquema de elevación BT/MT y el punto de conexión con el fabricante y el EPC antes de usar este reporte como base técnica formal."
+        />
+      ) : null}
 
       <DefGrid
         items={[
           { label: "Bloques BESS", value: fmtInt(e.blocks) },
-          { label: "Estaciones de conversión", value: fmtInt(k.stations) },
+          {
+            label: "Estaciones de conversión",
+            value: k.isIntegrated ? "Integrado (en unidad)" : fmtInt(k.stations),
+          },
           { label: "Feeders MT", value: fmtInt(k.feeders) },
           { label: "Barras MT", value: fmtInt(Math.max(k.buses, e.buses.length)) },
           {

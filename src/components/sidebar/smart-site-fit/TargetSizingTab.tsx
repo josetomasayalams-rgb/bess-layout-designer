@@ -60,6 +60,11 @@ export function TargetSizingTab({
   const [strategy, setStrategy] = useState<SmartSiteFitStrategy>("balanced");
   const [presetId, setPresetId] = useState<string>(getDefaultSmartSiteFitPreset().id);
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
+  const [layoutMode, setLayoutMode] = useState<"auto" | "manual">("auto");
+  const [containersWide, setContainersWide] = useState<number>(4);
+  const [groupCount, setGroupCount] = useState<number>(1);
+  const [orientationDeg, setOrientationDeg] = useState<number>(0);
+
 
   const preset = getSmartSiteFitPresetById(presetId);
   const integrated = isIntegratedPreset(preset);
@@ -83,10 +88,6 @@ export function TargetSizingTab({
   const handleCalculate = (e: React.FormEvent) => {
     e.preventDefault();
     if (isAnalyzing) return;
-    // Surface a loading state, then defer the synchronous engine by one
-    // macrotask so the spinner paints before a large layout computes (keeps the
-    // UI responsive at utility scale). A Web Worker can replace this deferral
-    // later without changing the call site.
     setIsAnalyzing(true);
     window.setTimeout(() => {
       onRunAnalysis({
@@ -96,6 +97,12 @@ export function TargetSizingTab({
         durationHours: duration,
         strategy,
         presetId,
+        overrides: {
+          layoutMode,
+          containersWide: layoutMode === "manual" ? containersWide : undefined,
+          groupCount: layoutMode === "manual" ? groupCount : undefined,
+          orientationDeg: layoutMode === "manual" ? orientationDeg : undefined,
+        },
       });
       setIsAnalyzing(false);
     }, 0);
@@ -209,7 +216,28 @@ export function TargetSizingTab({
               />
             </div>
 
-            {/* Strategy Select */}
+            {/* Layout Mode Select */}
+            <div className="space-y-1">
+              <label htmlFor="layout-mode" className="block text-[11px] text-slate-400">
+                {isEs ? "Configuración de layout" : "Layout Configuration"}
+              </label>
+              <select
+                id="layout-mode"
+                value={layoutMode}
+                onChange={(e) => setLayoutMode(e.target.value as "auto" | "manual")}
+                className="w-full rounded-md border border-slate-800 bg-slate-900 px-3 py-1.5 text-xs text-slate-100 focus:border-cyan-500 focus:outline-none"
+              >
+                <option value="auto">
+                  {isEs ? "Automática (Calculador)" : "Automatic (Calculator)"}
+                </option>
+                <option value="manual">
+                  {isEs ? "Manual (Personalizada)" : "Manual (Custom)"}
+                </option>
+              </select>
+            </div>
+          </div>
+
+          {layoutMode === "auto" ? (
             <div className="space-y-1">
               <label htmlFor="target-strategy" className="block text-[11px] text-slate-400">
                 {isEs ? "Estrategia de diseño" : "Design Strategy"}
@@ -229,7 +257,52 @@ export function TargetSizingTab({
                 </option>
               </select>
             </div>
-          </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-2 rounded-md border border-slate-850 bg-slate-950/40 p-2.5">
+              {/* Containers Wide */}
+              <div className="space-y-1">
+                <label htmlFor="manual-wide" className="block text-[10px] text-slate-400">
+                  {isEs ? "Ancho BESS" : "BESS Columns"}
+                </label>
+                <NumberField
+                  id="manual-wide"
+                  value={containersWide}
+                  min={1}
+                  integer
+                  onChange={(val) => setContainersWide(val)}
+                  className="w-full rounded border border-slate-800 bg-slate-900 p-1 font-mono text-[11px] text-slate-100 focus:border-cyan-500 focus:outline-none"
+                />
+              </div>
+
+              {/* Group Count */}
+              <div className="space-y-1">
+                <label htmlFor="manual-groups" className="block text-[10px] text-slate-400">
+                  {isEs ? "Bloques Horiz." : "Block Cols"}
+                </label>
+                <NumberField
+                  id="manual-groups"
+                  value={groupCount}
+                  min={1}
+                  integer
+                  onChange={(val) => setGroupCount(val)}
+                  className="w-full rounded border border-slate-800 bg-slate-900 p-1 font-mono text-[11px] text-slate-100 focus:border-cyan-500 focus:outline-none"
+                />
+              </div>
+
+              {/* Orientation Deg */}
+              <div className="space-y-1">
+                <label htmlFor="manual-angle" className="block text-[10px] text-slate-400">
+                  {isEs ? "Orientación (°)" : "Orientation (°)"}
+                </label>
+                <NumberField
+                  id="manual-angle"
+                  value={orientationDeg}
+                  onChange={(val) => setOrientationDeg(val)}
+                  className="w-full rounded border border-slate-800 bg-slate-900 p-1 font-mono text-[11px] text-slate-100 focus:border-cyan-500 focus:outline-none"
+                />
+              </div>
+            </div>
+          )}
 
           {!integrated && (duration === 8 || duration === 16) && (
             <div className="rounded-md border border-slate-800 bg-slate-950 p-2 text-[10px] text-slate-400 leading-tight space-y-1">

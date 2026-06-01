@@ -1,16 +1,21 @@
 import type { LocalPoint, ProjectAnchor } from "@/types/geometry";
+import type { PlacedEquipment } from "@/types/equipment";
 import type {
   SmartSiteFitInput,
   SmartSiteFitResult,
   SmartSiteFitCandidate,
+  SmartSiteFitWarning,
+  SmartSiteFitAssumption,
 } from "./smartSiteFitTypes";
 import { generateCandidates } from "./smartSiteFitCandidates";
 import { rankSmartSiteFitCandidates, selectDiverseAlternatives } from "./smartSiteFitScoring";
-import { toLocal } from "@/lib/geometry/projection";
-import { validatePolygonForSmartSiteFit } from "./smartSiteFitGeometry";
+import { toLocal, toLngLat } from "@/lib/geometry/projection";
+import { validatePolygonForSmartSiteFit, analyzePolygon } from "./smartSiteFitGeometry";
 import { DEFAULT_PERFORMANCE_BUDGET } from "./smartSiteFitPerformance";
-import { getSmartSiteFitPresetById, getDefaultSmartSiteFitPreset } from "./smartSiteFitPresets";
-import { resolveContainersPerPcs } from "./smartSiteFitEquipmentResolution";
+import { getSmartSiteFitPresetById, getDefaultSmartSiteFitPreset, isIntegratedPreset } from "./smartSiteFitPresets";
+import { resolveContainersPerPcs, resolveSeparatePcsEquipment } from "./smartSiteFitEquipmentResolution";
+import { buildManualSungrowLayout, buildManualTeslaLayout } from "./smartSiteFitManual";
+import { nanoid } from "nanoid";
 import type { SmartSiteFitPreset } from "./smartSiteFitTypes";
 
 export function runSmartSiteFit(input: SmartSiteFitInput): SmartSiteFitResult {
@@ -72,12 +77,17 @@ export function runSmartSiteFit(input: SmartSiteFitInput): SmartSiteFitResult {
   // can branch between separate-PCS and integrated architectures.
   const preset = getSmartSiteFitPresetById(input.presetId);
 
+  if (input.overrides?.layoutMode === "manual") {
+    return runManualSizing(input, localPolygon, anchor, durationHours, preset);
+  }
+
   if (input.mode === "target") {
     return runTargetSizing(input, localPolygon, anchor, durationHours, strategy, preset);
   } else {
     return runTerrainSizing(input, localPolygon, anchor, durationHours, strategy, preset);
   }
 }
+
 
 export function runTargetSizing(
   input: SmartSiteFitInput,
@@ -297,5 +307,155 @@ export function runTerrainSizing(
     assumptions: selected?.assumptions ?? [],
     fallbackUsed: false,
     message: "Dimensionamiento por terreno completado exitosamente.",
+  };
+}
+
+export function runManualSizing(
+  input: SmartSiteFitInput,
+  localPolygon: LocalPoint[],
+  anchor: ProjectAnchor,
+  durationHours: number,
+  preset: SmartSiteFitPreset
+): SmartSiteFitResult {
+  const overrides = input.overrides ?? {};
+  const centroid = analyzePolygon(localPolygon).centroid;
+
+  // Resolve target MW/MWh to seed counts if not overridden
+  const targetMW = input.targetMW ?? 10;
+  const targetMWh = input.targetMWh ?? (targetMW * durationHours);
+
+  const isTesla = isIntegratedPreset(preset);
+
+  let resultItems: Array<{ equipmentSpecId: string; x_m: number; y_m: number; blockIndex: number }> = [];
+  let builderWarnings: SmartSiteFitWarning[] = [];
+  let builderAssumptions: SmartSiteFitAssumption[] = [];
+  let meta: { rowsPerGroup: number; groupCount: number; pcsCount: number } = { rowsPerGroup: 0, groupCount: 0, pcsCount: 0 };
+
+  if (!isTesla) {
+    // Sungrow / separate PCS
+    const eq = resolveSeparatePcsEquipment(preset, durationHours);
+    const bessPerPcs = resolveContainersPerPcs(preset, durationHours);
+
+    let pcsCount = overrides.pcsCount !== undefined ? overrides.pcsCount : Math.ceil(targetMW / eq.powerPerPcsMW);
+    if (pcsCount <= 0) pcsCount = 1;
+    const bessCount = overrides.bessCount !== undefined ? overrides.bessCount : pcsCount * bessPerPcs;
+
+    const containersPerPcs = Math.ceil(bessCount / pcsCount);
+
+    const manualResult = buildManualSungrowLayout({
+      containersPerPcs,
+      pcsCount,
+      containersWide: overrides.containersWide,
+      containersLong: overrides.containersLong,
+      rowsPerGroup: overrides.rowsPerGroup,
+      groupCount: overrides.groupCount,
+      groupSeparation_m: overrides.groupSeparation_m,
+      rowSeparation_m: overrides.rowSeparation_m,
+      bessToBess_m: overrides.bessToBess_m,
+      bessToPcs_m: overrides.bessToPcs_m,
+      pcsToPcs_m: overrides.pcsToPcs_m,
+      orientationDeg: overrides.orientationDeg,
+    });
+
+    resultItems = manualResult.items;
+    builderWarnings = manualResult.warnings;
+    builderAssumptions = manualResult.assumptions;
+    meta = manualResult.meta;
+  } else {
+    // Tesla / Integrated
+    const unitMWh = durationHours === 2 ? 3.854 : 3.916;
+    const bessCount = overrides.bessCount !== undefined ? overrides.bessCount : Math.ceil(targetMWh / unitMWh);
+
+    const manualResult = buildManualTeslaLayout({
+      bessCount,
+      durationHours,
+      containersWide: overrides.containersWide,
+      containersLong: overrides.containersLong,
+      rowsPerGroup: overrides.rowsPerGroup,
+      groupCount: overrides.groupCount,
+      groupSeparation_m: overrides.groupSeparation_m,
+      rowSeparation_m: overrides.rowSeparation_m,
+      bessToBess_m: overrides.bessToBess_m,
+      orientationDeg: overrides.orientationDeg,
+    });
+
+    resultItems = manualResult.items;
+    builderWarnings = manualResult.warnings;
+    builderAssumptions = manualResult.assumptions;
+    meta = manualResult.meta;
+  }
+
+  // Map to PlacedEquipment
+  const placedEquipment: PlacedEquipment[] = [];
+  for (const item of resultItems) {
+    const rx = centroid.x_m + item.x_m;
+    const ry = centroid.y_m + item.y_m;
+    const lngLat = toLngLat({ x_m: rx, y_m: ry }, anchor);
+
+    const blockId = isTesla
+      ? `integrated-row-${item.blockIndex}`
+      : `block-${item.blockIndex}`;
+
+    placedEquipment.push({
+      id: nanoid(8),
+      equipmentSpecId: item.equipmentSpecId,
+      anchor: lngLat,
+      rotation_deg: overrides.orientationDeg ?? 0,
+      groupId: blockId,
+      blockId: blockId,
+      classification: "preliminary_assumption",
+      sourceReliability: "preliminary_assumption",
+    });
+  }
+
+  // Create Candidate
+  const candidate: SmartSiteFitCandidate = {
+    id: "manual-alternative",
+    strategy: input.strategy ?? "balanced",
+    placedEquipment,
+    score: {
+      total: 100,
+      insidePolygon: 100,
+      noCollisions: 100,
+      boundaryMargin: 100,
+      siteUtilization: 100,
+      rowRegularity: 100,
+      corridorEfficiency: 100,
+      ratioCompliance: 100,
+    },
+    warnings: builderWarnings,
+    assumptions: builderAssumptions,
+    shape: {
+      id: "manual-layout",
+      kind: overrides.manualShapeKind ?? "compact_grid",
+      label: "Manual",
+      description: "Layout manual personalizado",
+      rows: meta.rowsPerGroup,
+      columns: meta.groupCount,
+      blocks: isTesla ? 0 : meta.pcsCount,
+      pcsPlacement: isTesla ? "distributed" : "end",
+    },
+  };
+
+  // Score candidate
+  const targetRatio = isTesla ? 1 : resolveContainersPerPcs(preset, durationHours);
+  const ranked = rankSmartSiteFitCandidates(
+    [candidate],
+    localPolygon,
+    anchor,
+    durationHours,
+    targetRatio
+  );
+
+  const selected = ranked[0] ?? null;
+
+  return {
+    success: true,
+    candidates: ranked,
+    selected,
+    warnings: selected?.warnings ?? [],
+    assumptions: selected?.assumptions ?? [],
+    fallbackUsed: false,
+    message: "Dimensionamiento manual completado exitosamente.",
   };
 }

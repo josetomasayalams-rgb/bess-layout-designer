@@ -16,36 +16,21 @@ function enterCoordinateMode() {
   fireEvent.click(screen.getByRole("button", { name: /Coordinate polygon/i }));
 }
 
+function coordTextarea() {
+  return screen.getByLabelText(/Coordinates \(one per line\)/i);
+}
+
 describe("ParametricTerrainPanel — coordinate polygon", () => {
-  it("renders three initial coordinate rows", () => {
+  it("renders a single multi-line coordinate textarea", () => {
     enterCoordinateMode();
-    expect(screen.getByLabelText("Latitude 1")).toBeDefined();
-    expect(screen.getByLabelText("Latitude 2")).toBeDefined();
-    expect(screen.getByLabelText("Latitude 3")).toBeDefined();
-    expect(screen.queryByLabelText("Latitude 4")).toBeNull();
+    expect(coordTextarea()).toBeDefined();
   });
 
-  it("adds rows up to a maximum of 15", () => {
+  it("creates a polygon from multiple pasted lines and reports success", () => {
     enterCoordinateMode();
-    const addBtn = () => screen.getByRole("button", { name: /Add coordinate/i });
-    for (let i = 0; i < 20; i += 1) {
-      const btn = addBtn();
-      if ((btn as HTMLButtonElement).disabled) break;
-      fireEvent.click(btn);
-    }
-    expect(screen.getByLabelText("Latitude 15")).toBeDefined();
-    expect(screen.queryByLabelText("Latitude 16")).toBeNull();
-    expect((addBtn() as HTMLButtonElement).disabled).toBe(true);
-  });
-
-  it("creates a polygon from three valid coordinates and reports success", () => {
-    enterCoordinateMode();
-    fireEvent.change(screen.getByLabelText("Latitude 1"), { target: { value: "-33.0" } });
-    fireEvent.change(screen.getByLabelText("Longitude 1"), { target: { value: "-70.0" } });
-    fireEvent.change(screen.getByLabelText("Latitude 2"), { target: { value: "-33.1" } });
-    fireEvent.change(screen.getByLabelText("Longitude 2"), { target: { value: "-70.0" } });
-    fireEvent.change(screen.getByLabelText("Latitude 3"), { target: { value: "-33.1" } });
-    fireEvent.change(screen.getByLabelText("Longitude 3"), { target: { value: "-70.1" } });
+    fireEvent.change(coordTextarea(), {
+      target: { value: "-33.0, -70.0\n-33.1, -70.0\n-33.1, -70.1" },
+    });
 
     fireEvent.click(screen.getByRole("button", { name: /Create polygon/i }));
 
@@ -53,14 +38,22 @@ describe("ParametricTerrainPanel — coordinate polygon", () => {
     expect(screen.getByText(/Polygon created from 3 coordinates/i)).toBeDefined();
   });
 
+  it("ignores blank lines between coordinates", () => {
+    enterCoordinateMode();
+    fireEvent.change(coordTextarea(), {
+      target: { value: "-33.0, -70.0\n\n-33.1, -70.0\n   \n-33.1, -70.1\n" },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Create polygon/i }));
+
+    expect(useProjectStore.getState().polygon).toHaveLength(3);
+  });
+
   it("rejects an out-of-range coordinate with a specific error", () => {
     enterCoordinateMode();
-    fireEvent.change(screen.getByLabelText("Latitude 1"), { target: { value: "999" } });
-    fireEvent.change(screen.getByLabelText("Longitude 1"), { target: { value: "-70.0" } });
-    fireEvent.change(screen.getByLabelText("Latitude 2"), { target: { value: "-33.1" } });
-    fireEvent.change(screen.getByLabelText("Longitude 2"), { target: { value: "-70.0" } });
-    fireEvent.change(screen.getByLabelText("Latitude 3"), { target: { value: "-33.1" } });
-    fireEvent.change(screen.getByLabelText("Longitude 3"), { target: { value: "-70.1" } });
+    fireEvent.change(coordTextarea(), {
+      target: { value: "999, -70.0\n-33.1, -70.0\n-33.1, -70.1" },
+    });
 
     fireEvent.click(screen.getByRole("button", { name: /Create polygon/i }));
 
@@ -68,10 +61,22 @@ describe("ParametricTerrainPanel — coordinate polygon", () => {
     expect(screen.getByText(/Invalid coordinate/i)).toBeDefined();
   });
 
+  it("rejects more than 15 coordinates", () => {
+    enterCoordinateMode();
+    const lines = Array.from({ length: 16 }, (_, i) => `-33.${i}, -70.0`).join(
+      "\n"
+    );
+    fireEvent.change(coordTextarea(), { target: { value: lines } });
+
+    fireEvent.click(screen.getByRole("button", { name: /Create polygon/i }));
+
+    expect(useProjectStore.getState().polygon).toHaveLength(0);
+    expect(screen.getByText(/Maximum 15 coordinates/i)).toBeDefined();
+  });
+
   it("errors when fewer than three valid coordinates are provided", () => {
     enterCoordinateMode();
-    fireEvent.change(screen.getByLabelText("Latitude 1"), { target: { value: "-33.0" } });
-    fireEvent.change(screen.getByLabelText("Longitude 1"), { target: { value: "-70.0" } });
+    fireEvent.change(coordTextarea(), { target: { value: "-33.0, -70.0" } });
 
     fireEvent.click(screen.getByRole("button", { name: /Create polygon/i }));
 

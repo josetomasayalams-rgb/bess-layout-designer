@@ -221,142 +221,307 @@ export function MicroAdjustPanel({
         ))}
       </div>
 
-      <div className="space-y-3">
-        {/* Layout Shape Selector */}
-        <div className="space-y-1">
-          <label className="block text-[11px] text-slate-400">
-            {isEs ? "Forma del layout" : "Layout shape"}
-          </label>
-          <select
-            value={overrides.preferredShapeKind ?? "auto"}
-            onChange={(e) =>
-              onUpdateOverrides({
-                preferredShapeKind: e.target.value as SmartSiteFitOverrides["preferredShapeKind"],
-              })
-            }
-            className="w-full rounded border border-slate-800 bg-slate-950 p-1 text-[11px] text-slate-350 focus:border-cyan-500 focus:outline-none"
-          >
-            <option value="auto">
-              {isEs ? "Automática recomendada" : "Automatic (recommended)"}
-            </option>
-            <option value="single_row">{isEs ? "Fila Única" : "Single Row"}</option>
-            {!integrated && (
-              <option value="two_row_block">{isEs ? "Dos Hileras" : "Two Rows"}</option>
-            )}
-            <option value="compact_grid">{isEs ? "Compacta" : "Compact Grid"}</option>
-            <option value="wide_grid">{isEs ? "Ancha" : "Wide Grid"}</option>
-            <option value="deep_grid">{isEs ? "Profunda" : "Deep Grid"}</option>
-            {!integrated && (
-              <option value="multi_block">{isEs ? "Multibloque" : "Multi-block"}</option>
-            )}
-            {!integrated && (
-              <option value="split_blocks">{isEs ? "Bloques Separados" : "Split Blocks"}</option>
-            )}
-            {!integrated && (
-              <option value="spine_ribs">{isEs ? "Espina de Pez" : "Fishbone"}</option>
-            )}
-            {!integrated && (
-              <option value="perimeter_ring">
-                {isEs ? "Anillo Perimetral" : "Perimeter Ring"}
-              </option>
-            )}
-          </select>
-        </div>
+      {overrides.layoutMode === "manual" ? (
+        <div className="space-y-3">
+          <div className="border-t border-slate-800 pt-3 space-y-3">
+            <h5 className="text-[11px] font-bold text-cyan-400 uppercase tracking-wider">
+              {isEs ? "Parámetros del Layout Manual" : "Manual Layout Parameters"}
+            </h5>
+            
+            <div className="grid grid-cols-2 gap-3">
+              {/* BESS Columns (containersWide) */}
+              <div className="space-y-1">
+                <label className="block text-[11px] text-slate-400" htmlFor="manual-wide-adj">
+                  {isEs ? "Ancho BESS (columnas)" : "BESS Columns"}
+                </label>
+                <NumberField
+                  id="manual-wide-adj"
+                  value={overrides.containersWide ?? 4}
+                  min={1}
+                  integer
+                  onChange={(val) => onUpdateOverrides({ containersWide: val })}
+                  className="w-full rounded border border-slate-800 bg-slate-950 p-1 text-[11px] font-mono text-slate-100 focus:border-cyan-500 focus:outline-none"
+                />
+              </div>
 
-        {/* BESS to BESS (unit-to-unit for integrated systems) */}
-        <div className="space-y-1">
-          <div className="flex justify-between text-[11px]">
-            <span className="text-slate-400">
-              {integrated
-                ? isEs
-                  ? "Separación entre unidades"
-                  : "Unit - Unit Separation"
-                : isEs
-                ? "Separación BESS - BESS"
-                : "BESS - BESS Separation"}
-            </span>
-            <span className="font-mono font-bold text-cyan-300">{bessToBess}m</span>
+              {/* BESS Rows (containersLong) */}
+              <div className="space-y-1">
+                <label className="block text-[11px] text-slate-400" htmlFor="manual-long-adj">
+                  {isEs ? "Alto BESS (filas, 0 = auto)" : "BESS Rows (0 = auto)"}
+                </label>
+                <NumberField
+                  id="manual-long-adj"
+                  value={overrides.containersLong ?? 0}
+                  min={0}
+                  integer
+                  onChange={(val) => onUpdateOverrides({ containersLong: val })}
+                  className="w-full rounded border border-slate-800 bg-slate-950 p-1 text-[11px] font-mono text-slate-100 focus:border-cyan-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              {/* Group Columns (groupCount) */}
+              <div className="space-y-1">
+                <label className="block text-[11px] text-slate-400" htmlFor="manual-group-count-adj">
+                  {isEs ? "Columnas de bloques" : "Block Columns"}
+                </label>
+                <NumberField
+                  id="manual-group-count-adj"
+                  value={overrides.groupCount ?? 1}
+                  min={1}
+                  integer
+                  onChange={(val) => onUpdateOverrides({ groupCount: val })}
+                  className="w-full rounded border border-slate-800 bg-slate-950 p-1 text-[11px] font-mono text-slate-100 focus:border-cyan-500 focus:outline-none"
+                />
+              </div>
+
+              {/* Group Rows (rowsPerGroup) */}
+              <div className="space-y-1">
+                <label className="block text-[11px] text-slate-400" htmlFor="manual-rows-per-group-adj">
+                  {isEs ? "Filas de bloques (0 = auto)" : "Block Rows (0 = auto)"}
+                </label>
+                <NumberField
+                  id="manual-rows-per-group-adj"
+                  value={overrides.rowsPerGroup ?? 0}
+                  min={0}
+                  integer
+                  onChange={(val) => onUpdateOverrides({ rowsPerGroup: val })}
+                  className="w-full rounded border border-slate-800 bg-slate-950 p-1 text-[11px] font-mono text-slate-100 focus:border-cyan-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            {/* Spacings Group */}
+            <div className="grid grid-cols-2 gap-3">
+              {/* Group Separation */}
+              <div className="space-y-1">
+                <label className="block text-[11px] text-slate-400" htmlFor="manual-group-sep-adj">
+                  {isEs ? "Sep. Horiz. Bloques (m)" : "Block Horiz. Sep (m)"}
+                </label>
+                <NumberField
+                  id="manual-group-sep-adj"
+                  value={overrides.groupSeparation_m ?? 6.0}
+                  min={1}
+                  onChange={(val) => onUpdateOverrides({ groupSeparation_m: val })}
+                  className="w-full rounded border border-slate-800 bg-slate-950 p-1 text-[11px] font-mono text-slate-100 focus:border-cyan-500 focus:outline-none"
+                />
+              </div>
+
+              {/* Row Separation */}
+              <div className="space-y-1">
+                <label className="block text-[11px] text-slate-400" htmlFor="manual-row-sep-adj">
+                  {isEs ? "Sep. Vert. Bloques (m)" : "Block Vert. Sep (m)"}
+                </label>
+                <NumberField
+                  id="manual-row-sep-adj"
+                  value={overrides.rowSeparation_m ?? 6.0}
+                  min={1}
+                  onChange={(val) => onUpdateOverrides({ rowSeparation_m: val })}
+                  className="w-full rounded border border-slate-800 bg-slate-950 p-1 text-[11px] font-mono text-slate-100 focus:border-cyan-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            {/* Spacings inside blocks */}
+            <div className="grid grid-cols-2 gap-3">
+              {/* BESS to BESS separation */}
+              <div className="space-y-1">
+                <label className="block text-[11px] text-slate-400" htmlFor="manual-bess-bess-adj">
+                  {isEs ? "Sep. BESS - BESS (m)" : "BESS - BESS Sep (m)"}
+                </label>
+                <NumberField
+                  id="manual-bess-bess-adj"
+                  value={overrides.bessToBess_m ?? 3.0}
+                  min={0.5}
+                  onChange={(val) => onUpdateOverrides({ bessToBess_m: val })}
+                  className="w-full rounded border border-slate-800 bg-slate-950 p-1 text-[11px] font-mono text-slate-100 focus:border-cyan-500 focus:outline-none"
+                />
+              </div>
+
+              {/* BESS to PCS separation (if not Tesla) */}
+              {!integrated && (
+                <div className="space-y-1">
+                  <label className="block text-[11px] text-slate-400" htmlFor="manual-bess-pcs-adj">
+                    {isEs ? "Sep. BESS - PCS (m)" : "BESS - PCS Sep (m)"}
+                  </label>
+                  <NumberField
+                    id="manual-bess-pcs-adj"
+                    value={overrides.bessToPcs_m ?? 3.0}
+                    min={0.5}
+                    onChange={(val) => onUpdateOverrides({ bessToPcs_m: val })}
+                    className="w-full rounded border border-slate-800 bg-slate-950 p-1 text-[11px] font-mono text-slate-100 focus:border-cyan-500 focus:outline-none"
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Orientation */}
+            <div className="space-y-1">
+              <label className="block text-[11px] text-slate-400" htmlFor="manual-orient-adj">
+                {isEs ? "Orientación del Layout (°)" : "Layout Orientation (°)"}
+              </label>
+              <NumberField
+                id="manual-orient-adj"
+                value={overrides.orientationDeg ?? 0}
+                onChange={(val) => onUpdateOverrides({ orientationDeg: val })}
+                className="w-full rounded border border-slate-800 bg-slate-950 p-1 text-[11px] font-mono text-slate-100 focus:border-cyan-500 focus:outline-none"
+              />
+            </div>
+
+            {/* Boundary Margin */}
+            <div className="space-y-1">
+              <label className="block text-[11px] text-slate-400" htmlFor="manual-boundary-adj">
+                {isEs ? "Margen al deslinde (setback, m)" : "Boundary Setback (m)"}
+              </label>
+              <NumberField
+                id="manual-boundary-adj"
+                value={overrides.boundaryMargin_m ?? 4.0}
+                min={0}
+                onChange={(val) => onUpdateOverrides({ boundaryMargin_m: val })}
+                className="w-full rounded border border-slate-800 bg-slate-950 p-1 text-[11px] font-mono text-slate-100 focus:border-cyan-500 focus:outline-none"
+              />
+            </div>
           </div>
-          <input
-            type="range"
-            min="2.5"
-            max="10.0"
-            step="0.5"
-            value={bessToBess}
-            onChange={(e) =>
-              onUpdateOverrides({ bessToBess_m: parseFloat(e.target.value) })
-            }
-            className="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-500"
-          />
         </div>
+      ) : (
+        <div className="space-y-3">
+          {/* Layout Shape Selector */}
+          <div className="space-y-1">
+            <label className="block text-[11px] text-slate-400">
+              {isEs ? "Forma del layout" : "Layout shape"}
+            </label>
+            <select
+              value={overrides.preferredShapeKind ?? "auto"}
+              onChange={(e) =>
+                onUpdateOverrides({
+                  preferredShapeKind: e.target.value as SmartSiteFitOverrides["preferredShapeKind"],
+                })
+              }
+              className="w-full rounded border border-slate-800 bg-slate-950 p-1 text-[11px] text-slate-350 focus:border-cyan-500 focus:outline-none"
+            >
+              <option value="auto">
+                {isEs ? "Automática recomendada" : "Automatic (recommended)"}
+              </option>
+              <option value="single_row">{isEs ? "Fila Única" : "Single Row"}</option>
+              {!integrated && (
+                <option value="two_row_block">{isEs ? "Dos Hileras" : "Two Rows"}</option>
+              )}
+              <option value="compact_grid">{isEs ? "Compacta" : "Compact Grid"}</option>
+              <option value="wide_grid">{isEs ? "Ancha" : "Wide Grid"}</option>
+              <option value="deep_grid">{isEs ? "Profunda" : "Deep Grid"}</option>
+              {!integrated && (
+                <option value="multi_block">{isEs ? "Multibloque" : "Multi-block"}</option>
+              )}
+              {!integrated && (
+                <option value="split_blocks">{isEs ? "Bloques Separados" : "Split Blocks"}</option>
+              )}
+              {!integrated && (
+                <option value="spine_ribs">{isEs ? "Espina de Pez" : "Fishbone"}</option>
+              )}
+              {!integrated && (
+                <option value="perimeter_ring">
+                  {isEs ? "Anillo Perimetral" : "Perimeter Ring"}
+                </option>
+              )}
+            </select>
+          </div>
 
-        {/* BESS to PCS — only meaningful for separate-PCS architectures. */}
-        {!integrated && (
+          {/* BESS to BESS (unit-to-unit for integrated systems) */}
           <div className="space-y-1">
             <div className="flex justify-between text-[11px]">
               <span className="text-slate-400">
-                {isEs ? "Separación BESS - PCS" : "BESS - PCS Separation"}
+                {integrated
+                  ? isEs
+                    ? "Separación entre unidades"
+                    : "Unit - Unit Separation"
+                  : isEs
+                  ? "Separación BESS - BESS"
+                  : "BESS - BESS Separation"}
               </span>
-              <span className="font-mono font-bold text-cyan-300">{bessToPcs}m</span>
+              <span className="font-mono font-bold text-cyan-300">{bessToBess}m</span>
             </div>
             <input
               type="range"
               min="2.5"
               max="10.0"
               step="0.5"
-              value={bessToPcs}
+              value={bessToBess}
               onChange={(e) =>
-                onUpdateOverrides({ bessToPcs_m: parseFloat(e.target.value) })
+                onUpdateOverrides({ bessToBess_m: parseFloat(e.target.value) })
               }
               className="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-500"
             />
           </div>
-        )}
 
-        {/* Boundary Margin */}
-        <div className="space-y-1">
-          <div className="flex justify-between text-[11px]">
-            <span className="text-slate-400">
-              {isEs ? "Margen al deslinde (setback)" : "Boundary Margin (Setback)"}
-            </span>
-            <span className="font-mono font-bold text-cyan-300">{boundaryMargin}m</span>
-          </div>
-          <input
-            type="range"
-            min="3.0"
-            max="20.0"
-            step="0.5"
-            value={boundaryMargin}
-            onChange={(e) =>
-              onUpdateOverrides({ boundaryMargin_m: parseFloat(e.target.value) })
-            }
-            className="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-500"
-          />
-        </div>
+          {/* BESS to PCS — only meaningful for separate-PCS architectures. */}
+          {!integrated && (
+            <div className="space-y-1">
+              <div className="flex justify-between text-[11px]">
+                <span className="text-slate-400">
+                  {isEs ? "Separación BESS - PCS" : "BESS - PCS Separation"}
+                </span>
+                <span className="font-mono font-bold text-cyan-300">{bessToPcs}m</span>
+              </div>
+              <input
+                type="range"
+                min="2.5"
+                max="10.0"
+                step="0.5"
+                value={bessToPcs}
+                onChange={(e) =>
+                  onUpdateOverrides({ bessToPcs_m: parseFloat(e.target.value) })
+                }
+                className="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+              />
+            </div>
+          )}
 
-        {/* PCS to PCS — only meaningful for separate-PCS architectures. */}
-        {!integrated && (
+          {/* Boundary Margin */}
           <div className="space-y-1">
             <div className="flex justify-between text-[11px]">
               <span className="text-slate-400">
-                {isEs ? "Ancho del corredor MT (PCS - PCS)" : "MV Corridor Width (PCS - PCS)"}
+                {isEs ? "Margen al deslinde (setback)" : "Boundary Margin (Setback)"}
               </span>
-              <span className="font-mono font-bold text-cyan-300">{pcsToPcs}m</span>
+              <span className="font-mono font-bold text-cyan-300">{boundaryMargin}m</span>
             </div>
             <input
               type="range"
-              min="2.5"
-              max="15.0"
+              min="3.0"
+              max="20.0"
               step="0.5"
-              value={pcsToPcs}
+              value={boundaryMargin}
               onChange={(e) =>
-                onUpdateOverrides({ pcsToPcs_m: parseFloat(e.target.value) })
+                onUpdateOverrides({ boundaryMargin_m: parseFloat(e.target.value) })
               }
               className="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-500"
             />
           </div>
-        )}
-      </div>
+
+          {/* PCS to PCS — only meaningful for separate-PCS architectures. */}
+          {!integrated && (
+            <div className="space-y-1">
+              <div className="flex justify-between text-[11px]">
+                <span className="text-slate-400">
+                  {isEs ? "Ancho del corredor MT (PCS - PCS)" : "MV Corridor Width (PCS - PCS)"}
+                </span>
+                <span className="font-mono font-bold text-cyan-300">{pcsToPcs}m</span>
+              </div>
+              <input
+                type="range"
+                min="2.5"
+                max="15.0"
+                step="0.5"
+                value={pcsToPcs}
+                onChange={(e) =>
+                  onUpdateOverrides({ pcsToPcs_m: parseFloat(e.target.value) })
+                }
+                className="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+              />
+            </div>
+          )}
+        </div>
+      )}
 
       {isDirty && (
         <div className="rounded-md border border-amber-500/20 bg-amber-500/10 p-2 text-[10px] text-amber-300/90 leading-tight">
