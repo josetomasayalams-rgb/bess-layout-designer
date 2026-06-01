@@ -13,6 +13,7 @@ import {
   isIntegratedPreset,
 } from "@/lib/layout/smartSiteFit/smartSiteFitPresets";
 import { summarizePlacedEquipment } from "@/lib/layout/smartSiteFit/smartSiteFitSizing";
+import { buildSmartSiteFitPreview } from "@/lib/layout/smartSiteFit/smartSiteFitPreview";
 import { AlternativeCard } from "./AlternativeCard";
 import { MicroAdjustPanel } from "./MicroAdjustPanel";
 import { BessSystemSelector } from "./BessSystemSelector";
@@ -125,11 +126,16 @@ export function TargetSizingTab({
     (c) => c.id === selectedAlternativeId
   );
 
+  const preview = React.useMemo(() => {
+    if (!selectedAlternative) return null;
+    return buildSmartSiteFitPreview(selectedAlternative, { polygon, anchor });
+  }, [selectedAlternative, polygon, anchor]);
+
   const selectedSummary = selectedAlternative
     ? summarizePlacedEquipment(selectedAlternative.placedEquipment)
     : undefined;
-  const selectedBessCount = selectedSummary?.bessCount;
-  const selectedPcsCount = selectedSummary?.pcsCount;
+  const selectedBessCount = selectedSummary?.bessCount ?? 0;
+  const selectedPcsCount = selectedSummary?.pcsCount ?? 0;
 
   return (
     <div className="space-y-4">
@@ -423,6 +429,64 @@ export function TargetSizingTab({
                     : "The manual design is projected on the map with dashed light blue outlines. Adjust distances using the controls below. Click 'Recalculate' to refresh the map, or 'Apply' to commit."}
                 </p>
               </div>
+
+              {/* Schematic SVG Visor (Preview block diagram) */}
+              {preview && preview.blocks.length > 0 && (
+                <div className="rounded-lg border border-slate-800 bg-slate-950 p-2.5 space-y-2">
+                  <div className="flex items-center justify-between text-[10px] text-slate-400">
+                    <span className="font-semibold uppercase tracking-wider text-slate-500">
+                      {isEs ? "Esquema del bloque" : "Block Diagram"}
+                    </span>
+                    <span className="font-mono text-cyan-400">
+                      {selectedBessCount} BESS {selectedPcsCount > 0 ? `· ${selectedPcsCount} PCS` : ""}
+                    </span>
+                  </div>
+                  <div className="rounded border border-slate-900 bg-slate-950/80 p-2 flex flex-col items-center justify-center gap-2">
+                    <svg
+                      viewBox={`0 0 ${preview.width} ${preview.height}`}
+                      preserveAspectRatio="xMidYMid meet"
+                      className="h-24 w-full transition-all duration-300"
+                      role="img"
+                      aria-label={isEs ? "Visor de layout manual" : "Manual layout schematic"}
+                    >
+                      {preview.site && (
+                        <polygon
+                          points={preview.site.points.map((p) => `${p.x},${p.y}`).join(" ")}
+                          fill="none"
+                          stroke="rgb(71 85 105 / 0.7)"
+                          strokeWidth={0.6}
+                          strokeDasharray="2 1.5"
+                        />
+                      )}
+                      {preview.blocks.map((b, i) => (
+                        <rect
+                          key={i}
+                          x={b.x}
+                          y={b.y}
+                          width={Math.max(b.w, 0.4)}
+                          height={Math.max(b.h, 0.4)}
+                          fill={b.kind === "pcs" ? "rgb(251 191 36 / 0.9)" : "rgb(34 211 238 / 0.75)"}
+                          rx={0.2}
+                          ry={0.2}
+                        />
+                      ))}
+                    </svg>
+
+                    <div className="flex justify-center gap-4 text-[9px] text-slate-500 font-medium">
+                      <span className="flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full bg-cyan-400/80"></span>
+                        {isEs ? "Contenedores BESS" : "BESS Enclosures"}
+                      </span>
+                      {selectedPcsCount > 0 && (
+                        <span className="flex items-center gap-1.5">
+                          <span className="h-2 w-2 rounded-full bg-amber-400/90"></span>
+                          {isEs ? "Estación PCS/MV" : "PCS/MV Station"}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </>
           ) : (
             <>
