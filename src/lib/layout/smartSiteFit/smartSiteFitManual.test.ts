@@ -142,6 +142,33 @@ describe("buildManualSungrowLayout", () => {
     const pcsItems = result.items.filter((item) => item.equipmentSpecId === "sungrow-sc5000ud-mv-us-p3");
     expect(pcsItems).toHaveLength(2);
   });
+
+  it("should support custom column/row sub-group separations for rectangular spacing", () => {
+    const result = buildManualSungrowLayout({
+      containersPerPcs: 4,
+      pcsCount: 1,
+      containersWide: 4,
+      containersLong: 1,
+      colGroupSize: 2,
+      colGroupSeparation_m: 10.0,
+      bessToBess_m: 3.0,
+      orientationDeg: 0, // avoid rotation for exact coordinate check
+    });
+
+    const bessItems = result.items.filter((item) => item.equipmentSpecId === "sungrow-st2752ux-us");
+    expect(bessItems).toHaveLength(4);
+
+    // Because of centering around (0,0), we check the differences between consecutive X coords.
+    // Let's sort them by x_m
+    bessItems.sort((a, b) => a.x_m - b.x_m);
+
+    // Diff between index 0 and 1 should be bessLength (9.34) + bessToBess (3.0) = 12.34
+    expect(bessItems[1].x_m - bessItems[0].x_m).toBeCloseTo(12.34, 2);
+    // Diff between index 1 and 2 should be bessLength (9.34) + colGroupSeparation (10.0) = 19.34
+    expect(bessItems[2].x_m - bessItems[1].x_m).toBeCloseTo(19.34, 2);
+    // Diff between index 2 and 3 should be bessLength (9.34) + bessToBess (3.0) = 12.34
+    expect(bessItems[3].x_m - bessItems[2].x_m).toBeCloseTo(12.34, 2);
+  });
 });
 
 describe("buildManualTeslaLayout", () => {

@@ -87,6 +87,10 @@ export interface SmartSiteFitManualLayoutSpec {
   groupSeparation_m?: number;
   rowSeparation_m?: number;
   orientationDeg?: number;
+  colGroupSize?: number;
+  rowGroupSize?: number;
+  colGroupSeparation_m?: number;
+  rowGroupSeparation_m?: number;
 }
 
 export interface SmartSiteFitOverrides {
@@ -116,6 +120,10 @@ export interface SmartSiteFitOverrides {
   groupCount?: number;
   groupSeparation_m?: number;
   rowSeparation_m?: number;
+  colGroupSize?: number;
+  rowGroupSize?: number;
+  colGroupSeparation_m?: number;
+  rowGroupSeparation_m?: number;
 }
 
 export interface SmartSiteFitInput {

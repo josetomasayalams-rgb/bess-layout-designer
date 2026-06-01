@@ -355,6 +355,10 @@ export function runManualSizing(
       bessToPcs_m: overrides.bessToPcs_m,
       pcsToPcs_m: overrides.pcsToPcs_m,
       orientationDeg: overrides.orientationDeg,
+      colGroupSize: overrides.colGroupSize,
+      rowGroupSize: overrides.rowGroupSize,
+      colGroupSeparation_m: overrides.colGroupSeparation_m,
+      rowGroupSeparation_m: overrides.rowGroupSeparation_m,
     });
 
     resultItems = manualResult.items;
@@ -377,6 +381,10 @@ export function runManualSizing(
       rowSeparation_m: overrides.rowSeparation_m,
       bessToBess_m: overrides.bessToBess_m,
       orientationDeg: overrides.orientationDeg,
+      colGroupSize: overrides.colGroupSize,
+      rowGroupSize: overrides.rowGroupSize,
+      colGroupSeparation_m: overrides.colGroupSeparation_m,
+      rowGroupSeparation_m: overrides.rowGroupSeparation_m,
     });
 
     resultItems = manualResult.items;

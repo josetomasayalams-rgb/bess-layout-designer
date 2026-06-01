@@ -15,6 +15,10 @@ export type BuildManualSungrowLayoutParams = {
   pcsToPcs_m?: number;
   orientationDeg?: number;
   manualShapeKind?: SmartSiteFitShapeKind;
+  colGroupSize?: number;
+  rowGroupSize?: number;
+  colGroupSeparation_m?: number;
+  rowGroupSeparation_m?: number;
 };
 
 export type BuildManualSungrowLayoutResult = {
@@ -31,6 +35,10 @@ export type BuildManualSungrowLayoutResult = {
     rowsPerGroup: number;
     containersWide: number;
     containersLong: number;
+    colGroupSize?: number;
+    rowGroupSize?: number;
+    colGroupSeparation_m?: number;
+    rowGroupSeparation_m?: number;
   };
 };
 
@@ -107,6 +115,10 @@ export function buildManualSungrowLayout(
   const groupSeparation = params.groupSeparation_m !== undefined ? params.groupSeparation_m : 6.0;
   const rowSeparation = params.rowSeparation_m !== undefined ? params.rowSeparation_m : 6.0;
   const orientationDeg = params.orientationDeg !== undefined ? params.orientationDeg : 0;
+  const colGroupSize = params.colGroupSize !== undefined ? params.colGroupSize : 0;
+  const rowGroupSize = params.rowGroupSize !== undefined ? params.rowGroupSize : 0;
+  const colGroupSeparation = params.colGroupSeparation_m !== undefined ? params.colGroupSeparation_m : 6.0;
+  const rowGroupSeparation = params.rowGroupSeparation_m !== undefined ? params.rowGroupSeparation_m : 6.0;
 
   // Sungrow ST2752UX + SC5000UD specs & physical dims
   const bessSpecId = "sungrow-st2752ux-us";
@@ -133,13 +145,33 @@ export function buildManualSungrowLayout(
         rowsPerGroup,
         containersWide,
         containersLong,
+        colGroupSize,
+        rowGroupSize,
+        colGroupSeparation_m: colGroupSeparation,
+        rowGroupSeparation_m: rowGroupSeparation,
       },
     };
   }
 
-  // Single block dimensions
-  const bessGridW = containersWide * (bessLength + bessToBess) - bessToBess;
-  const bessGridH = containersLong * (bessWidth + bessToBess) - bessToBess;
+  // Single block dimensions taking sub-group separations into account
+  const getColX = (c: number) => {
+    if (colGroupSize <= 0 || c < colGroupSize) {
+      return c * (bessLength + bessToBess);
+    }
+    const numG = Math.floor(c / colGroupSize);
+    return c * bessLength + (c - numG) * bessToBess + numG * colGroupSeparation;
+  };
+
+  const getRowY = (r: number) => {
+    if (rowGroupSize <= 0 || r < rowGroupSize) {
+      return r * (bessWidth + bessToBess);
+    }
+    const numG = Math.floor(r / rowGroupSize);
+    return r * bessWidth + (r - numG) * bessToBess + numG * rowGroupSeparation;
+  };
+
+  const bessGridW = getColX(containersWide - 1) + bessLength;
+  const bessGridH = getRowY(containersLong - 1) + bessWidth;
 
   const blockW = bessGridW + bessToPcs + pcsLength;
   const blockH = Math.max(bessGridH, pcsWidth);
@@ -163,8 +195,8 @@ export function buildManualSungrowLayout(
       for (let c = 0; c < containersWide; c++) {
         if (bessPlaced >= containersPerPcs) break;
 
-        const xBess = blockOriginX + c * (bessLength + bessToBess) + bessLength / 2;
-        const yBess = blockOriginY + r * (bessWidth + bessToBess) + bessWidth / 2;
+        const xBess = blockOriginX + getColX(c) + bessLength / 2;
+        const yBess = blockOriginY + getRowY(r) + bessWidth / 2;
 
         items.push({
           equipmentSpecId: bessSpecId,
@@ -249,6 +281,10 @@ export function buildManualSungrowLayout(
       rowsPerGroup,
       containersWide,
       containersLong,
+      colGroupSize,
+      rowGroupSize,
+      colGroupSeparation_m: colGroupSeparation,
+      rowGroupSeparation_m: rowGroupSeparation,
     },
   };
 }
@@ -264,6 +300,10 @@ export type BuildManualTeslaLayoutParams = {
   rowSeparation_m?: number;
   bessToBess_m?: number;
   orientationDeg?: number;
+  colGroupSize?: number;
+  rowGroupSize?: number;
+  colGroupSeparation_m?: number;
+  rowGroupSeparation_m?: number;
 };
 
 export type BuildManualTeslaLayoutResult = {
@@ -279,6 +319,10 @@ export type BuildManualTeslaLayoutResult = {
     rowsPerGroup: number;
     containersWide: number;
     containersLong: number;
+    colGroupSize?: number;
+    rowGroupSize?: number;
+    colGroupSeparation_m?: number;
+    rowGroupSeparation_m?: number;
   };
 };
 
@@ -351,6 +395,10 @@ export function buildManualTeslaLayout(
   const groupSeparation = params.groupSeparation_m !== undefined ? params.groupSeparation_m : 6.0;
   const rowSeparation = params.rowSeparation_m !== undefined ? params.rowSeparation_m : 6.0;
   const orientationDeg = params.orientationDeg !== undefined ? params.orientationDeg : 0;
+  const colGroupSize = params.colGroupSize !== undefined ? params.colGroupSize : 0;
+  const rowGroupSize = params.rowGroupSize !== undefined ? params.rowGroupSize : 0;
+  const colGroupSeparation = params.colGroupSeparation_m !== undefined ? params.colGroupSeparation_m : 6.0;
+  const rowGroupSeparation = params.rowGroupSeparation_m !== undefined ? params.rowGroupSeparation_m : 6.0;
 
   // Resolve Tesla Megapack 2 XL specs by duration
   const bessSpecId =
@@ -389,13 +437,34 @@ export function buildManualTeslaLayout(
         rowsPerGroup,
         containersWide,
         containersLong,
+        colGroupSize,
+        rowGroupSize,
+        colGroupSeparation_m: colGroupSeparation,
+        rowGroupSeparation_m: rowGroupSeparation,
       },
     };
   }
 
+  // Single block dimensions taking sub-group separations into account
+  const getColX = (c: number) => {
+    if (colGroupSize <= 0 || c < colGroupSize) {
+      return c * (bessLength + bessToBess);
+    }
+    const numG = Math.floor(c / colGroupSize);
+    return c * bessLength + (c - numG) * bessToBess + numG * colGroupSeparation;
+  };
+
+  const getRowY = (r: number) => {
+    if (rowGroupSize <= 0 || r < rowGroupSize) {
+      return r * (bessWidth + bessToBess);
+    }
+    const numG = Math.floor(r / rowGroupSize);
+    return r * bessWidth + (r - numG) * bessToBess + numG * rowGroupSeparation;
+  };
+
   // Dimensions of a single BESS block grid
-  const blockW = containersWide * (bessLength + bessToBess) - bessToBess;
-  const blockH = containersLong * (bessWidth + bessToBess) - bessToBess;
+  const blockW = getColX(containersWide - 1) + bessLength;
+  const blockH = getRowY(containersLong - 1) + bessWidth;
 
   let bessPlaced = 0;
   for (let b = 0; b < blockCount; b++) {
@@ -409,8 +478,8 @@ export function buildManualTeslaLayout(
       for (let c = 0; c < containersWide; c++) {
         if (bessPlaced >= bessCount) break;
 
-        const xBess = blockOriginX + c * (bessLength + bessToBess) + bessLength / 2;
-        const yBess = blockOriginY + r * (bessWidth + bessToBess) + bessWidth / 2;
+        const xBess = blockOriginX + getColX(c) + bessLength / 2;
+        const yBess = blockOriginY + getRowY(r) + bessWidth / 2;
 
         items.push({
           equipmentSpecId: bessSpecId,
@@ -477,6 +546,10 @@ export function buildManualTeslaLayout(
       rowsPerGroup,
       containersWide,
       containersLong,
+      colGroupSize,
+      rowGroupSize,
+      colGroupSeparation_m: colGroupSeparation,
+      rowGroupSeparation_m: rowGroupSeparation,
     },
   };
 }

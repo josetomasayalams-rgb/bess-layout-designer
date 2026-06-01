@@ -64,7 +64,10 @@ export function TargetSizingTab({
   const [containersWide, setContainersWide] = useState<number>(4);
   const [groupCount, setGroupCount] = useState<number>(1);
   const [orientationDeg, setOrientationDeg] = useState<number>(0);
-
+  const [colGroupSize, setColGroupSize] = useState<number>(0);
+  const [rowGroupSize, setRowGroupSize] = useState<number>(0);
+  const [colGroupSeparation, setColGroupSeparation] = useState<number>(6.0);
+  const [rowGroupSeparation, setRowGroupSeparation] = useState<number>(6.0);
 
   const preset = getSmartSiteFitPresetById(presetId);
   const integrated = isIntegratedPreset(preset);
@@ -102,6 +105,10 @@ export function TargetSizingTab({
           containersWide: layoutMode === "manual" ? containersWide : undefined,
           groupCount: layoutMode === "manual" ? groupCount : undefined,
           orientationDeg: layoutMode === "manual" ? orientationDeg : undefined,
+          colGroupSize: layoutMode === "manual" ? colGroupSize : undefined,
+          rowGroupSize: layoutMode === "manual" ? rowGroupSize : undefined,
+          colGroupSeparation_m: layoutMode === "manual" ? colGroupSeparation : undefined,
+          rowGroupSeparation_m: layoutMode === "manual" ? rowGroupSeparation : undefined,
         },
       });
       setIsAnalyzing(false);
@@ -258,48 +265,107 @@ export function TargetSizingTab({
               </select>
             </div>
           ) : (
-            <div className="grid grid-cols-3 gap-2 rounded-md border border-slate-850 bg-slate-950/40 p-2.5">
-              {/* Containers Wide */}
-              <div className="space-y-1">
-                <label htmlFor="manual-wide" className="block text-[10px] text-slate-400">
-                  {isEs ? "Ancho BESS" : "BESS Columns"}
-                </label>
-                <NumberField
-                  id="manual-wide"
-                  value={containersWide}
-                  min={1}
-                  integer
-                  onChange={(val) => setContainersWide(val)}
-                  className="w-full rounded border border-slate-800 bg-slate-900 p-1 font-mono text-[11px] text-slate-100 focus:border-cyan-500 focus:outline-none"
-                />
+            <div className="space-y-2 rounded-md border border-slate-850 bg-slate-950/40 p-2.5">
+              <div className="grid grid-cols-3 gap-2">
+                {/* Containers Wide */}
+                <div className="space-y-1">
+                  <label htmlFor="manual-wide" className="block text-[10px] text-slate-400">
+                    {isEs ? "Ancho BESS" : "BESS Columns"}
+                  </label>
+                  <NumberField
+                    id="manual-wide"
+                    value={containersWide}
+                    min={1}
+                    integer
+                    onChange={(val) => setContainersWide(val)}
+                    className="w-full rounded border border-slate-800 bg-slate-900 p-1 font-mono text-[11px] text-slate-100 focus:border-cyan-500 focus:outline-none"
+                  />
+                </div>
+
+                {/* Group Count */}
+                <div className="space-y-1">
+                  <label htmlFor="manual-groups" className="block text-[10px] text-slate-400">
+                    {isEs ? "Bloques Horiz." : "Block Cols"}
+                  </label>
+                  <NumberField
+                    id="manual-groups"
+                    value={groupCount}
+                    min={1}
+                    integer
+                    onChange={(val) => setGroupCount(val)}
+                    className="w-full rounded border border-slate-800 bg-slate-900 p-1 font-mono text-[11px] text-slate-100 focus:border-cyan-500 focus:outline-none"
+                  />
+                </div>
+
+                {/* Orientation Deg */}
+                <div className="space-y-1">
+                  <label htmlFor="manual-angle" className="block text-[10px] text-slate-400">
+                    {isEs ? "Orientación (°)" : "Orientation (°)"}
+                  </label>
+                  <NumberField
+                    id="manual-angle"
+                    value={orientationDeg}
+                    onChange={(val) => setOrientationDeg(val)}
+                    className="w-full rounded border border-slate-800 bg-slate-900 p-1 font-mono text-[11px] text-slate-100 focus:border-cyan-500 focus:outline-none"
+                  />
+                </div>
               </div>
 
-              {/* Group Count */}
-              <div className="space-y-1">
-                <label htmlFor="manual-groups" className="block text-[10px] text-slate-400">
-                  {isEs ? "Bloques Horiz." : "Block Cols"}
-                </label>
-                <NumberField
-                  id="manual-groups"
-                  value={groupCount}
-                  min={1}
-                  integer
-                  onChange={(val) => setGroupCount(val)}
-                  className="w-full rounded border border-slate-800 bg-slate-900 p-1 font-mono text-[11px] text-slate-100 focus:border-cyan-500 focus:outline-none"
-                />
+              {/* Sub-group separations columns/rows */}
+              <div className="grid grid-cols-2 gap-2 border-t border-slate-800/40 pt-2">
+                <div className="space-y-1">
+                  <label htmlFor="manual-col-group" className="block text-[10px] text-slate-400">
+                    {isEs ? "Separar cols. (cada N)" : "Separate cols (every N)"}
+                  </label>
+                  <NumberField
+                    id="manual-col-group"
+                    value={colGroupSize}
+                    min={0}
+                    integer
+                    onChange={(val) => setColGroupSize(val)}
+                    className="w-full rounded border border-slate-800 bg-slate-900 p-1 font-mono text-[11px] text-slate-100 focus:border-cyan-500 focus:outline-none"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label htmlFor="manual-col-sep" className="block text-[10px] text-slate-400">
+                    {isEs ? "Sep. columnas (m)" : "Col Separation (m)"}
+                  </label>
+                  <NumberField
+                    id="manual-col-sep"
+                    value={colGroupSeparation}
+                    min={0}
+                    onChange={(val) => setColGroupSeparation(val)}
+                    className="w-full rounded border border-slate-800 bg-slate-900 p-1 font-mono text-[11px] text-slate-100 focus:border-cyan-500 focus:outline-none"
+                  />
+                </div>
               </div>
 
-              {/* Orientation Deg */}
-              <div className="space-y-1">
-                <label htmlFor="manual-angle" className="block text-[10px] text-slate-400">
-                  {isEs ? "Orientación (°)" : "Orientation (°)"}
-                </label>
-                <NumberField
-                  id="manual-angle"
-                  value={orientationDeg}
-                  onChange={(val) => setOrientationDeg(val)}
-                  className="w-full rounded border border-slate-800 bg-slate-900 p-1 font-mono text-[11px] text-slate-100 focus:border-cyan-500 focus:outline-none"
-                />
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <label htmlFor="manual-row-group" className="block text-[10px] text-slate-400">
+                    {isEs ? "Separar filas (cada N)" : "Separate rows (every N)"}
+                  </label>
+                  <NumberField
+                    id="manual-row-group"
+                    value={rowGroupSize}
+                    min={0}
+                    integer
+                    onChange={(val) => setRowGroupSize(val)}
+                    className="w-full rounded border border-slate-800 bg-slate-900 p-1 font-mono text-[11px] text-slate-100 focus:border-cyan-500 focus:outline-none"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label htmlFor="manual-row-sep" className="block text-[10px] text-slate-400">
+                    {isEs ? "Sep. filas (m)" : "Row Separation (m)"}
+                  </label>
+                  <NumberField
+                    id="manual-row-sep"
+                    value={rowGroupSeparation}
+                    min={0}
+                    onChange={(val) => setRowGroupSeparation(val)}
+                    className="w-full rounded border border-slate-800 bg-slate-900 p-1 font-mono text-[11px] text-slate-100 focus:border-cyan-500 focus:outline-none"
+                  />
+                </div>
               </div>
             </div>
           )}
@@ -329,43 +395,76 @@ export function TargetSizingTab({
         )
       ) : (
         <div className="space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-850 pb-2">
-            <h5 className="text-xs font-bold text-slate-400">
-              {isEs ? "Alternativas de layout" : "Layout Alternatives"}
-            </h5>
-            <button
-              onClick={onDiscard}
-              className="text-[11px] text-slate-500 hover:text-slate-350"
-            >
-              {isEs ? "Nueva búsqueda" : "New search"}
-            </button>
-          </div>
-
-          {result.candidates.length > 0 ? (
+          {overrides.layoutMode === "manual" ? (
             <>
-              <p className="text-[10px] text-slate-500">
-                {isEs
-                  ? `${result.candidates.length} alternativas — selecciona una para ajustarla y aplicarla.`
-                  : `${result.candidates.length} alternatives — select one to adjust and apply.`}
-              </p>
-              <div className="space-y-2.5 max-h-[420px] overflow-y-auto pr-1">
-                {result.candidates.map((candidate) => (
-                  <AlternativeCard
-                    key={candidate.id}
-                    candidate={candidate}
-                    isSelected={candidate.id === selectedAlternativeId}
-                    onSelect={() => onSelectAlternative(candidate.id)}
-                    locale={locale}
-                    polygon={polygon}
-                    anchor={anchor}
-                  />
-                ))}
+              <div className="flex items-center justify-between border-b border-slate-850 pb-2">
+                <h5 className="text-xs font-bold text-slate-200">
+                  {isEs ? "Vista Previa de Layout Manual" : "Manual Layout Preview"}
+                </h5>
+                <button
+                  onClick={onDiscard}
+                  className="text-[11px] text-cyan-400 hover:text-cyan-300 font-semibold"
+                >
+                  {isEs ? "Nueva búsqueda/Parámetros" : "New search/Parameters"}
+                </button>
+              </div>
+
+              <div className="rounded-md border border-cyan-500/25 bg-cyan-500/5 p-2.5 text-xs text-slate-350 space-y-1.5 shadow-sm">
+                <div className="flex items-center gap-2 font-bold text-cyan-400">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
+                  </span>
+                  {isEs ? "Vista previa activa en el mapa" : "Active preview on the map"}
+                </div>
+                <p className="text-[10px] text-slate-400 leading-normal">
+                  {isEs
+                    ? "El diseño manual se proyecta en el mapa con contornos celestes segmentados. Modifica las dimensiones con los controles de abajo. Haz clic en 'Recalcular' para refrescar el mapa, o 'Aplicar' para consolidar."
+                    : "The manual design is projected on the map with dashed light blue outlines. Adjust distances using the controls below. Click 'Recalculate' to refresh the map, or 'Apply' to commit."}
+                </p>
               </div>
             </>
           ) : (
-            <p className="text-xs text-slate-500">
-              {isEs ? "No se generaron alternativas válidas." : "No valid alternatives generated."}
-            </p>
+            <>
+              <div className="flex items-center justify-between border-b border-slate-850 pb-2">
+                <h5 className="text-xs font-bold text-slate-400">
+                  {isEs ? "Alternativas de layout" : "Layout Alternatives"}
+                </h5>
+                <button
+                  onClick={onDiscard}
+                  className="text-[11px] text-slate-500 hover:text-slate-350"
+                >
+                  {isEs ? "Nueva búsqueda" : "New search"}
+                </button>
+              </div>
+
+              {result.candidates.length > 0 ? (
+                <>
+                  <p className="text-[10px] text-slate-500">
+                    {isEs
+                      ? `${result.candidates.length} alternativas — selecciona una para ajustarla y aplicarla.`
+                      : `${result.candidates.length} alternatives — select one to adjust and apply.`}
+                  </p>
+                  <div className="space-y-2.5 max-h-[420px] overflow-y-auto pr-1">
+                    {result.candidates.map((candidate) => (
+                      <AlternativeCard
+                        key={candidate.id}
+                        candidate={candidate}
+                        isSelected={candidate.id === selectedAlternativeId}
+                        onSelect={() => onSelectAlternative(candidate.id)}
+                        locale={locale}
+                        polygon={polygon}
+                        anchor={anchor}
+                      />
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <p className="text-xs text-slate-500">
+                  {isEs ? "No se generaron alternativas válidas." : "No valid alternatives generated."}
+                </p>
+              )}
+            </>
           )}
 
           {selectedAlternative && (

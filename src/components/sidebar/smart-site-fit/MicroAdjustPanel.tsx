@@ -323,6 +323,64 @@ export function MicroAdjustPanel({
               </div>
             </div>
 
+            {/* Sub-group columns separation */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="block text-[11px] text-slate-400" htmlFor="manual-col-group-size-adj">
+                  {isEs ? "Separar cols. (cada N)" : "Separate cols (every N)"}
+                </label>
+                <NumberField
+                  id="manual-col-group-size-adj"
+                  value={overrides.colGroupSize ?? 0}
+                  min={0}
+                  integer
+                  onChange={(val) => onUpdateOverrides({ colGroupSize: val })}
+                  className="w-full rounded border border-slate-800 bg-slate-950 p-1 text-[11px] font-mono text-slate-100 focus:border-cyan-500 focus:outline-none"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="block text-[11px] text-slate-400" htmlFor="manual-col-group-sep-adj">
+                  {isEs ? "Sep. columnas (m)" : "Col Separation (m)"}
+                </label>
+                <NumberField
+                  id="manual-col-group-sep-adj"
+                  value={overrides.colGroupSeparation_m ?? 6.0}
+                  min={0}
+                  onChange={(val) => onUpdateOverrides({ colGroupSeparation_m: val })}
+                  className="w-full rounded border border-slate-800 bg-slate-950 p-1 text-[11px] font-mono text-slate-100 focus:border-cyan-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            {/* Sub-group rows separation */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="block text-[11px] text-slate-400" htmlFor="manual-row-group-size-adj">
+                  {isEs ? "Separar filas (cada N)" : "Separate rows (every N)"}
+                </label>
+                <NumberField
+                  id="manual-row-group-size-adj"
+                  value={overrides.rowGroupSize ?? 0}
+                  min={0}
+                  integer
+                  onChange={(val) => onUpdateOverrides({ rowGroupSize: val })}
+                  className="w-full rounded border border-slate-800 bg-slate-950 p-1 text-[11px] font-mono text-slate-100 focus:border-cyan-500 focus:outline-none"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="block text-[11px] text-slate-400" htmlFor="manual-row-group-sep-adj">
+                  {isEs ? "Sep. filas (m)" : "Row Separation (m)"}
+                </label>
+                <NumberField
+                  id="manual-row-group-sep-adj"
+                  value={overrides.rowGroupSeparation_m ?? 6.0}
+                  min={0}
+                  onChange={(val) => onUpdateOverrides({ rowGroupSeparation_m: val })}
+                  className="w-full rounded border border-slate-800 bg-slate-950 p-1 text-[11px] font-mono text-slate-100 focus:border-cyan-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
             {/* Spacings inside blocks */}
             <div className="grid grid-cols-2 gap-3">
               {/* BESS to BESS separation */}
