@@ -54,7 +54,14 @@ export type SmartSiteFitShapeKind =
   | "wide_grid"
   | "deep_grid"
   | "multi_block"
-  | "split_blocks";
+  | "split_blocks"
+  // Market-representative families (R5-C). `spine_ribs` is the classic
+  // utility-scale "fishbone": a central access road (spine) with PCS on the
+  // centerline and BESS rows branching off as ribs. `perimeter_ring` hugs the
+  // site boundary with an open central yard for a substation, pond or future
+  // expansion.
+  | "spine_ribs"
+  | "perimeter_ring";
 
 export interface SmartSiteFitShapeCandidate {
   id: string;

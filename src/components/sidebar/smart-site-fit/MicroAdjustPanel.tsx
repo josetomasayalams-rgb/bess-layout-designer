@@ -252,6 +252,14 @@ export function MicroAdjustPanel({
             {!integrated && (
               <option value="split_blocks">{isEs ? "Bloques Separados" : "Split Blocks"}</option>
             )}
+            {!integrated && (
+              <option value="spine_ribs">{isEs ? "Espina de Pez" : "Fishbone"}</option>
+            )}
+            {!integrated && (
+              <option value="perimeter_ring">
+                {isEs ? "Anillo Perimetral" : "Perimeter Ring"}
+              </option>
+            )}
           </select>
         </div>
 

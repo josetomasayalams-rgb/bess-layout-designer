@@ -339,8 +339,15 @@ export function scoreCandidate(
     // Reward kinds that suit a square terrain
     if (
       terrainClass === "square" &&
-      (kind === "compact_grid" || kind === "two_row_block" || kind === "multi_block")
+      (kind === "compact_grid" ||
+        kind === "two_row_block" ||
+        kind === "multi_block" ||
+        kind === "perimeter_ring")
     ) {
+      terrainFitScore = Math.min(10, terrainFitScore + 2);
+    }
+    // The fishbone spine suits elongated sites with a central service road.
+    if (terrainClass === "wide" && kind === "spine_ribs") {
       terrainFitScore = Math.min(10, terrainFitScore + 2);
     }
   }

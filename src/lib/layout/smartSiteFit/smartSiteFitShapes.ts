@@ -1,4 +1,5 @@
 import type { SmartSiteFitShapeCandidate, SmartSiteFitStrategy } from "./smartSiteFitTypes";
+import { defaultConstraints } from "@/data/defaultConstraints";
 
 export interface ShapeLayoutItem {
   equipmentSpecId: string;
@@ -6,6 +7,23 @@ export interface ShapeLayoutItem {
   y_m: number;
   blockIndex: number;
 }
+
+/**
+ * Corridor / road / inter-block widths used by the shape builders. They are
+ * sourced from the editable `defaultConstraints` (a single source of truth for
+ * preliminary layout spacing) rather than hardcoded, so a project that tunes its
+ * service corridor or access road also retunes every generated shape. Each is a
+ * `preliminary_assumption`, not a normative clearance.
+ */
+const constraintValue = (id: string, fallback: number): number =>
+  defaultConstraints.find((c) => c.id === id)?.value_m ?? fallback;
+
+/** Maintenance aisle between the two BESS rows of a `two_row_block`. */
+const SERVICE_CORRIDOR_M = constraintValue("service_corridor_width", 4);
+/** Central access road for the `spine_ribs` fishbone and `split_blocks` split. */
+const ACCESS_ROAD_M = constraintValue("access_road_width", 6);
+/** Gap that keeps `multi_block` blocks visually independent (modular). */
+const BLOCK_GAP_M = constraintValue("access_road_width", 6);
 
 export function generateSmartSiteFitShapes(input: {
   bessCount: number;
@@ -136,6 +154,45 @@ export function generateSmartSiteFitShapes(input: {
     });
   }
 
+  // 8. Spine + Ribs (fishbone): a central access road with PCS on the centerline
+  // and BESS rows branching off as ribs, alternating above and below. The
+  // canonical utility-scale arrangement for elongated sites with a service road.
+  if (pcsCount >= 2) {
+    shapes.push({
+      id: "spine_ribs",
+      kind: "spine_ribs",
+      label: "Espina de Pez",
+      description:
+        "Vía de acceso central con PCS sobre el eje y filas de contenedores ramificadas a ambos lados.",
+      rows: 3,
+      columns: pcsCount,
+      blocks: pcsCount,
+      bessPerBlock: containersPerPcs,
+      pcsPlacement: "centerline",
+      targetAspectRatio: 5,
+    });
+  }
+
+  // 9. Perimeter Ring: equipment hugs the site boundary leaving an open central
+  // yard (e.g. for a future substation, retention pond or expansion).
+  if (pcsCount >= 2 && bessCount >= 12) {
+    const cells = pcsCount + bessCount;
+    const side = Math.max(3, Math.ceil((cells + 4) / 4));
+    shapes.push({
+      id: "perimeter_ring",
+      kind: "perimeter_ring",
+      label: "Anillo Perimetral",
+      description:
+        "Equipos dispuestos en el perímetro dejando un patio central libre para subestación o expansión.",
+      rows: side,
+      columns: side,
+      blocks: pcsCount,
+      bessPerBlock: containersPerPcs,
+      pcsPlacement: "distributed",
+      targetAspectRatio: 1,
+    });
+  }
+
   return shapes;
 }
 
@@ -197,7 +254,8 @@ export function estimateShapeFootprint(
       const bessCols = Math.ceil(containersPerPcs / 2);
       const bessRowLength = bessCols * BESS_LENGTH_M + (bessCols - 1) * bessToBess;
       const blockLength = bessRowLength + bessToPcs + PCS_LENGTH_M;
-      const blockHeight = 2 * BESS_WIDTH_M + bessToBess;
+      // The two rows are split by a maintenance service corridor.
+      const blockHeight = 2 * BESS_WIDTH_M + SERVICE_CORRIDOR_M;
       return {
         width_m: blockLength,
         height_m: pcs * blockHeight + (pcs - 1) * pcsToPcs,
@@ -237,11 +295,35 @@ export function estimateShapeFootprint(
       const bessRowLength = bessCols * BESS_LENGTH_M + (bessCols - 1) * bessToBess;
       const blockLength = bessRowLength + bessToPcs + PCS_LENGTH_M;
       const blockHeight = 2 * BESS_WIDTH_M + bessToBess;
-      const splitSpace = shape.kind === "split_blocks" && blockCols > 1 ? 6.0 : 0.0;
+      // multi_block keeps each per-PCS block modular with a wider gap;
+      // split_blocks stays tightly stepped but adds a central access road.
+      const interBlock = shape.kind === "multi_block" ? BLOCK_GAP_M : pcsToPcs;
+      const splitSpace = shape.kind === "split_blocks" && blockCols > 1 ? ACCESS_ROAD_M : 0.0;
       return {
-        width_m: blockCols * blockLength + (blockCols - 1) * pcsToPcs + splitSpace,
-        height_m: blockRows * blockHeight + (blockRows - 1) * pcsToPcs,
+        width_m: blockCols * blockLength + (blockCols - 1) * interBlock + splitSpace,
+        height_m: blockRows * blockHeight + (blockRows - 1) * interBlock,
       };
+    }
+
+    case "spine_ribs": {
+      const roadHalf = ACCESS_ROAD_M / 2;
+      const ribCols = Math.max(1, Math.floor(Math.sqrt(containersPerPcs)));
+      const ribRows = Math.ceil(containersPerPcs / ribCols);
+      const ribW = ribCols * BESS_LENGTH_M + (ribCols - 1) * bessToBess;
+      const ribH = ribRows * BESS_WIDTH_M + (ribRows - 1) * bessToBess;
+      const pitchX = Math.max(ribW, PCS_LENGTH_M) + pcsToPcs;
+      return {
+        width_m: pcs * pitchX - pcsToPcs,
+        height_m: 2 * (roadHalf + bessToPcs + ribH),
+      };
+    }
+
+    case "perimeter_ring": {
+      const cellX = Math.max(BESS_LENGTH_M, PCS_LENGTH_M) + bessToBess;
+      const cellY = Math.max(BESS_WIDTH_M, PCS_WIDTH_M) + bessToBess;
+      const cells = pcs + pcs * containersPerPcs;
+      const side = Math.max(3, Math.ceil((cells + 4) / 4));
+      return { width_m: side * cellX, height_m: side * cellY };
     }
 
     default:
@@ -297,7 +379,9 @@ export function buildShapeLayout(
       const bessCols = Math.ceil(containersPerPcs / 2);
       const bessRowLength = bessCols * bessLength + (bessCols - 1) * bessToBess;
       const blockLength = bessRowLength + bessToPcs + pcsLength;
-      const blockHeight = 2 * bessWidth + bessToBess;
+      // A maintenance service corridor splits the two BESS rows.
+      const aisle = SERVICE_CORRIDOR_M;
+      const blockHeight = 2 * bessWidth + aisle;
 
       for (let i = 0; i < pcsCount; i++) {
         const blockCenterY = (i - (pcsCount - 1) / 2) * (blockHeight + pcsToPcs);
@@ -314,7 +398,9 @@ export function buildShapeLayout(
           const rIdx = b < bessCols ? 0 : 1;
           const cIdx = b < bessCols ? b : b - bessCols;
           const xBess = -blockLength / 2 + cIdx * (bessLength + bessToBess) + bessLength / 2;
-          const yBess = blockCenterY + (rIdx === 0 ? (bessWidth / 2 + bessToBess / 2) : (-bessWidth / 2 - bessToBess / 2));
+          const yBess =
+            blockCenterY +
+            (rIdx === 0 ? bessWidth / 2 + aisle / 2 : -bessWidth / 2 - aisle / 2);
 
           items.push({
             equipmentSpecId: equipment.bessSpecId,
@@ -397,20 +483,23 @@ export function buildShapeLayout(
       const blockLength = bessRowLength + bessToPcs + pcsLength;
       const blockHeight = 2 * bessWidth + bessToBess;
 
-      const splitSpace = shape.kind === "split_blocks" ? 6.0 : 0.0;
+      // multi_block separates each per-PCS block with a wider modular gap;
+      // split_blocks stays tightly stepped but inserts a central access road.
+      const interBlock = shape.kind === "multi_block" ? BLOCK_GAP_M : pcsToPcs;
+      const splitSpace = shape.kind === "split_blocks" ? ACCESS_ROAD_M : 0.0;
       const midCol = (blockCols - 1) / 2;
 
       for (let i = 0; i < pcsCount; i++) {
         const br = Math.floor(i / blockCols);
         const bc = i % blockCols;
 
-        let blockCenterX = (bc - midCol) * (blockLength + pcsToPcs);
+        let blockCenterX = (bc - midCol) * (blockLength + interBlock);
         if (splitSpace > 0 && blockCols > 1) {
           if (bc > midCol) blockCenterX += splitSpace / 2;
           else if (bc < midCol) blockCenterX -= splitSpace / 2;
         }
 
-        const blockCenterY = (br - (blockRows - 1) / 2) * (blockHeight + pcsToPcs);
+        const blockCenterY = (br - (blockRows - 1) / 2) * (blockHeight + interBlock);
 
         // PCS is centered vertically, at the right end of the block
         const xPcs = blockCenterX + blockLength / 2 - pcsLength / 2;
@@ -434,6 +523,91 @@ export function buildShapeLayout(
             y_m: yBess,
             blockIndex: i,
           });
+        }
+      }
+      break;
+    }
+
+    case "spine_ribs": {
+      // Central access road along x; PCS on the centerline; each PCS's BESS form
+      // a perpendicular rib, alternating above and below the road (fishbone).
+      const roadHalf = ACCESS_ROAD_M / 2;
+      const ribCols = Math.max(1, Math.floor(Math.sqrt(containersPerPcs)));
+      const ribW = ribCols * bessLength + (ribCols - 1) * bessToBess;
+      const pitchX = Math.max(ribW, pcsLength) + pcsToPcs;
+      const nearEdge = roadHalf + bessToPcs;
+
+      for (let i = 0; i < pcsCount; i++) {
+        const xCenter = (i - (pcsCount - 1) / 2) * pitchX;
+        const dir = i % 2 === 0 ? 1 : -1;
+
+        items.push({
+          equipmentSpecId: equipment.pcsSpecId,
+          x_m: xCenter,
+          y_m: 0,
+          blockIndex: i,
+        });
+
+        for (let b = 0; b < containersPerPcs; b++) {
+          const rIdx = Math.floor(b / ribCols);
+          const cIdx = b % ribCols;
+          const x = xCenter - ribW / 2 + cIdx * (bessLength + bessToBess) + bessLength / 2;
+          const yMag = nearEdge + rIdx * (bessWidth + bessToBess) + bessWidth / 2;
+          items.push({
+            equipmentSpecId: equipment.bessSpecId,
+            x_m: x,
+            y_m: dir * yMag,
+            blockIndex: i,
+          });
+        }
+      }
+      break;
+    }
+
+    case "perimeter_ring": {
+      // Equipment walks the border of a square ring, one PCS leading its own
+      // BESS cluster, leaving the interior cells open. Cell pitch takes the
+      // larger of the two footprints so any item fits any slot without overlap.
+      const cellX = Math.max(bessLength, pcsLength) + bessToBess;
+      const cellY = Math.max(bessWidth, pcsWidth) + bessToBess;
+      const totalCells = pcsCount + pcsCount * containersPerPcs;
+      const side = Math.max(3, Math.ceil((totalCells + 4) / 4));
+      const cols = side;
+      const rows = side;
+
+      const border: Array<{ r: number; c: number }> = [];
+      for (let c = 0; c < cols; c++) border.push({ r: 0, c });
+      for (let r = 1; r < rows; r++) border.push({ r, c: cols - 1 });
+      for (let c = cols - 2; c >= 0; c--) border.push({ r: rows - 1, c });
+      for (let r = rows - 2; r >= 1; r--) border.push({ r, c: 0 });
+
+      const cellToXY = (r: number, c: number) => ({
+        x_m: (c - (cols - 1) / 2) * cellX,
+        y_m: ((rows - 1) / 2 - r) * cellY,
+      });
+
+      let slot = 0;
+      for (let i = 0; i < pcsCount; i++) {
+        const pc = border[slot % border.length];
+        const pPos = cellToXY(pc.r, pc.c);
+        items.push({
+          equipmentSpecId: equipment.pcsSpecId,
+          x_m: pPos.x_m,
+          y_m: pPos.y_m,
+          blockIndex: i,
+        });
+        slot++;
+
+        for (let b = 0; b < containersPerPcs; b++) {
+          const bc = border[slot % border.length];
+          const bPos = cellToXY(bc.r, bc.c);
+          items.push({
+            equipmentSpecId: equipment.bessSpecId,
+            x_m: bPos.x_m,
+            y_m: bPos.y_m,
+            blockIndex: i,
+          });
+          slot++;
         }
       }
       break;
