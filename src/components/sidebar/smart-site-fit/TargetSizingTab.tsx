@@ -19,6 +19,15 @@ import { MicroAdjustPanel } from "./MicroAdjustPanel";
 import { BessSystemSelector } from "./BessSystemSelector";
 import { NumberField } from "@/components/ui/NumberField";
 import { Loader2 } from "lucide-react";
+import { toLngLat, toLocal } from "@/lib/geometry/projection";
+import {
+  resolveContainersPerPcs,
+  resolveSeparatePcsEquipment,
+} from "@/lib/layout/smartSiteFit/smartSiteFitEquipmentResolution";
+import {
+  buildManualSungrowLayout,
+  buildManualTeslaLayout,
+} from "@/lib/layout/smartSiteFit/smartSiteFitManual";
 
 interface TargetSizingTabProps {
   result: SmartSiteFitResult | null;
@@ -70,7 +79,10 @@ export function TargetSizingTab({
   const [colGroupSeparation, setColGroupSeparation] = useState<number>(6.0);
   const [rowGroupSeparation, setRowGroupSeparation] = useState<number>(6.0);
 
-  const preset = getSmartSiteFitPresetById(presetId);
+  const preset = React.useMemo(
+    () => getSmartSiteFitPresetById(presetId),
+    [presetId]
+  );
   const integrated = isIntegratedPreset(preset);
   const durationOptions = preset.supportedDurations ?? [2, 4, 8, 16];
 
@@ -130,6 +142,194 @@ export function TargetSizingTab({
     if (!selectedAlternative) return null;
     return buildSmartSiteFitPreview(selectedAlternative, { polygon, anchor });
   }, [selectedAlternative, polygon, anchor]);
+
+  const livePreview = React.useMemo(() => {
+    if (layoutMode !== "manual") return null;
+
+    try {
+      const isTesla = isIntegratedPreset(preset);
+      let resultItems = [];
+      let bessCount = 0;
+      let pcsCount = 0;
+
+      if (!isTesla) {
+        // Sungrow / separate PCS
+        const eq = resolveSeparatePcsEquipment(preset, duration);
+        const bessPerPcs = resolveContainersPerPcs(preset, duration);
+
+        pcsCount = Math.ceil(targetMW / eq.powerPerPcsMW);
+        if (pcsCount <= 0) pcsCount = 1;
+        bessCount = pcsCount * bessPerPcs;
+        const containersPerPcs = Math.ceil(bessCount / pcsCount);
+
+        const manualResult = buildManualSungrowLayout({
+          containersPerPcs,
+          pcsCount,
+          containersWide,
+          groupCount,
+          orientationDeg,
+          colGroupSize,
+          rowGroupSize,
+          colGroupSeparation_m: colGroupSeparation,
+          rowGroupSeparation_m: rowGroupSeparation,
+          // Spacing defaults used by engine:
+          bessToBess_m: overrides.bessToBess_m ?? 3.0,
+          bessToPcs_m: overrides.bessToPcs_m ?? 3.0,
+          pcsToPcs_m: overrides.pcsToPcs_m ?? 3.0,
+          groupSeparation_m: overrides.groupSeparation_m ?? 6.0,
+          rowSeparation_m: overrides.rowSeparation_m ?? 6.0,
+        });
+        resultItems = manualResult.items;
+      } else {
+        // Tesla / Integrated
+        const unitMWh = duration === 2 ? 3.854 : 3.916;
+        bessCount = Math.ceil(targetMWh / unitMWh);
+        if (bessCount <= 0) bessCount = 1;
+
+        const manualResult = buildManualTeslaLayout({
+          bessCount,
+          durationHours: duration,
+          containersWide,
+          groupCount,
+          orientationDeg,
+          colGroupSize,
+          rowGroupSize,
+          colGroupSeparation_m: colGroupSeparation,
+          rowGroupSeparation_m: rowGroupSeparation,
+          // Spacing defaults used by engine:
+          bessToBess_m: overrides.bessToBess_m ?? 3.0,
+          groupSeparation_m: overrides.groupSeparation_m ?? 6.0,
+          rowSeparation_m: overrides.rowSeparation_m ?? 6.0,
+        });
+        resultItems = manualResult.items;
+      }
+
+      // Convert items to PlacedEquipment
+      const dummyAnchor = anchor || { lng0: -70.64827, lat0: -33.45694 }; // Santiago de Chile default if no anchor
+      const placedEquipment = resultItems.map((item, idx) => {
+        const lngLat = toLngLat({ x_m: item.x_m, y_m: item.y_m }, dummyAnchor);
+        return {
+          id: `live-mock-${item.equipmentSpecId}-${item.blockIndex}-${idx}`,
+          equipmentSpecId: item.equipmentSpecId,
+          anchor: lngLat,
+          rotation_deg: orientationDeg,
+          groupId: `group-${item.blockIndex}`,
+          blockId: `block-${item.blockIndex}`,
+          classification: "preliminary_assumption" as const,
+          sourceReliability: "preliminary_assumption" as const,
+          blockIndex: item.blockIndex,
+        };
+      });
+
+      const mockCandidate = {
+        id: "live-manual-alternative",
+        strategy: strategy,
+        placedEquipment,
+        score: {
+          total: 100,
+          insidePolygon: 100,
+          noCollisions: 100,
+          boundaryMargin: 100,
+          siteUtilization: 100,
+          rowRegularity: 100,
+          corridorEfficiency: 100,
+          ratioCompliance: 100,
+        },
+        warnings: [],
+        assumptions: [],
+      };
+
+      // Calculate footprint envelope in meters
+      let minX = Infinity;
+      let maxX = -Infinity;
+      let minY = Infinity;
+      let maxY = -Infinity;
+
+      for (const item of resultItems) {
+        const isPcs = item.equipmentSpecId.includes("pcs");
+        const isTesla = item.equipmentSpecId.includes("tesla");
+        const length = isPcs ? 6.058 : (isTesla ? 8.8 : 9.34);
+        const width = isPcs ? 2.438 : (isTesla ? 1.65 : 1.73);
+
+        const x0 = item.x_m - length / 2;
+        const x1 = item.x_m + length / 2;
+        const y0 = item.y_m - width / 2;
+        const y1 = item.y_m + width / 2;
+
+        if (x0 < minX) minX = x0;
+        if (x1 > maxX) maxX = x1;
+        if (y0 < minY) minY = y0;
+        if (y1 > maxY) maxY = y1;
+      }
+
+      const layoutWidthM = resultItems.length > 0 ? maxX - minX : 0;
+      const layoutHeightM = resultItems.length > 0 ? maxY - minY : 0;
+
+      return {
+        preview: buildSmartSiteFitPreview(mockCandidate, { polygon, anchor: dummyAnchor }),
+        bessCount,
+        pcsCount,
+        layoutWidthM,
+        layoutHeightM,
+      };
+    } catch (err) {
+      console.error("Failed to generate live manual preview:", err);
+      return null;
+    }
+  }, [
+    layoutMode,
+    preset,
+    duration,
+    targetMW,
+    targetMWh,
+    containersWide,
+    groupCount,
+    orientationDeg,
+    colGroupSize,
+    rowGroupSize,
+    colGroupSeparation,
+    rowGroupSeparation,
+    overrides,
+    polygon,
+    anchor,
+    strategy,
+  ]);
+
+  const selectedDimensions = React.useMemo(() => {
+    if (!selectedAlternative) return null;
+    const placed = selectedAlternative.placedEquipment;
+    if (placed.length === 0) return null;
+
+    const resolvedAnchor = anchor || { lng0: placed[0].anchor.lng, lat0: placed[0].anchor.lat };
+
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minY = Infinity;
+    let maxY = -Infinity;
+
+    for (const item of placed) {
+      const isPcs = item.equipmentSpecId.includes("pcs");
+      const isTesla = item.equipmentSpecId.includes("tesla");
+      const length = isPcs ? 6.058 : (isTesla ? 8.8 : 9.34);
+      const width = isPcs ? 2.438 : (isTesla ? 1.65 : 1.73);
+
+      const local = toLocal(item.anchor, resolvedAnchor);
+      const x0 = local.x_m - length / 2;
+      const x1 = local.x_m + length / 2;
+      const y0 = local.y_m - width / 2;
+      const y1 = local.y_m + width / 2;
+
+      if (x0 < minX) minX = x0;
+      if (x1 > maxX) maxX = x1;
+      if (y0 < minY) minY = y0;
+      if (y1 > maxY) maxY = y1;
+    }
+
+    return {
+      widthM: maxX - minX,
+      heightM: maxY - minY,
+    };
+  }, [selectedAlternative, anchor]);
 
   const selectedSummary = selectedAlternative
     ? summarizePlacedEquipment(selectedAlternative.placedEquipment)
@@ -373,6 +573,225 @@ export function TargetSizingTab({
                   />
                 </div>
               </div>
+
+              {/* Live manual layout preview */}
+              {livePreview && livePreview.preview && livePreview.preview.blocks.length > 0 && (
+                <div className="mt-3.5 border-t border-slate-800/60 pt-3.5 space-y-2">
+                  <div className="flex items-center justify-between text-[10px] text-slate-400">
+                    <span className="font-semibold uppercase tracking-wider text-slate-500">
+                      {isEs ? "Esquema del bloque (Vista previa)" : "Block Diagram (Live Preview)"}
+                    </span>
+                    <span className="font-mono text-cyan-400 text-[10px]">
+                      {livePreview.bessCount} BESS {livePreview.pcsCount > 0 ? `· ${livePreview.pcsCount} PCS` : ""}
+                    </span>
+                  </div>
+                  <div className="rounded border border-slate-900 bg-slate-950/80 p-2.5 flex flex-col items-center justify-center gap-2.5 shadow-sm">
+                    <svg
+                      viewBox={`-8 -8 ${livePreview.preview.width + 20} ${livePreview.preview.height + 20}`}
+                      preserveAspectRatio="xMidYMid meet"
+                      className="h-32 w-full transition-all duration-300 rounded bg-slate-950 border border-slate-900 shadow-inner"
+                      role="img"
+                      aria-label={isEs ? "Visor preliminar de layout manual" : "Preliminary manual layout schematic"}
+                    >
+                      <defs>
+                        <linearGradient id="live-bess-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.9" />
+                          <stop offset="100%" stopColor="#0891b2" stopOpacity="0.7" />
+                        </linearGradient>
+                        <linearGradient id="live-pcs-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#fbbf24" stopOpacity="0.95" />
+                          <stop offset="100%" stopColor="#d97706" stopOpacity="0.8" />
+                        </linearGradient>
+                        <pattern id="live-grid-bg" width="6" height="6" patternUnits="userSpaceOnUse">
+                          <path d="M 6 0 L 0 0 0 6" fill="none" stroke="rgba(51, 65, 85, 0.25)" strokeWidth="0.15" />
+                        </pattern>
+                      </defs>
+
+                      {/* Grid Background */}
+                      <rect x="-8" y="-8" width={livePreview.preview.width + 20} height={livePreview.preview.height + 20} fill="url(#live-grid-bg)" />
+
+                      {/* Site Outline */}
+                      {livePreview.preview.site && (
+                        <polygon
+                          points={livePreview.preview.site.points.map((p) => `${p.x},${p.y}`).join(" ")}
+                          fill="rgba(15, 23, 42, 0.3)"
+                          stroke="rgba(148, 163, 184, 0.4)"
+                          strokeWidth={0.5}
+                          strokeDasharray="2 2"
+                        />
+                      )}
+
+                      {/* Blocks */}
+                      {livePreview.preview.blocks.map((b, i) => {
+                        const isPcs = b.kind === "pcs";
+                        const rx = 0.2;
+                        const ry = 0.2;
+                        return (
+                          <g key={i}>
+                            {/* Shadow/Glow */}
+                            <rect
+                              x={b.x}
+                              y={b.y}
+                              width={Math.max(b.w, 0.4)}
+                              height={Math.max(b.h, 0.4)}
+                              fill={isPcs ? "rgba(245, 158, 11, 0.15)" : "rgba(6, 182, 212, 0.12)"}
+                              rx={rx}
+                              ry={ry}
+                              filter="blur(0.5px)"
+                            />
+                            {/* Main Container */}
+                            <rect
+                              x={b.x}
+                              y={b.y}
+                              width={Math.max(b.w, 0.4)}
+                              height={Math.max(b.h, 0.4)}
+                              fill={isPcs ? "url(#live-pcs-grad)" : "url(#live-bess-grad)"}
+                              stroke={isPcs ? "rgba(245, 158, 11, 0.85)" : "rgba(34, 211, 238, 0.8)"}
+                              strokeWidth={0.25}
+                              rx={rx}
+                              ry={ry}
+                            />
+                            {/* Compartment subdivisions */}
+                            {!isPcs && b.w > b.h && (
+                              <g opacity={0.35}>
+                                {Array.from({ length: 4 }).map((_, idx) => {
+                                  const lineX = b.x + (b.w / 5) * (idx + 1);
+                                  return (
+                                    <line
+                                      key={idx}
+                                      x1={lineX}
+                                      y1={b.y + 0.2}
+                                      x2={lineX}
+                                      y2={b.y + b.h - 0.2}
+                                      stroke="#0f172a"
+                                      strokeWidth={0.12}
+                                    />
+                                  );
+                                })}
+                              </g>
+                            )}
+                            {!isPcs && b.h > b.w && (
+                              <g opacity={0.35}>
+                                {Array.from({ length: 4 }).map((_, idx) => {
+                                  const lineY = b.y + (b.h / 5) * (idx + 1);
+                                  return (
+                                    <line
+                                      key={idx}
+                                      x1={b.x + 0.2}
+                                      y1={lineY}
+                                      x2={b.x + b.w - 0.2}
+                                      y2={lineY}
+                                      stroke="#0f172a"
+                                      strokeWidth={0.12}
+                                    />
+                                  );
+                                })}
+                              </g>
+                            )}
+                            {/* Transformer Line Indicator for PCS */}
+                            {isPcs && (
+                              <g opacity={0.65}>
+                                <circle
+                                  cx={b.x + b.w / 2}
+                                  cy={b.y + b.h / 2}
+                                  r={Math.min(b.w, b.h) / 3.5}
+                                  fill="none"
+                                  stroke="#78350f"
+                                  strokeWidth={0.2}
+                                />
+                                <line
+                                  x1={b.x + b.w / 2}
+                                  y1={b.y + b.h / 2 - Math.min(b.w, b.h) / 4}
+                                  x2={b.x + b.w / 2}
+                                  y2={b.y + b.h / 2 + Math.min(b.w, b.h) / 4}
+                                  stroke="#78350f"
+                                  strokeWidth={0.2}
+                                />
+                              </g>
+                            )}
+                          </g>
+                        );
+                      })}
+
+                      {/* Dimension Lines */}
+                      {livePreview.layoutWidthM > 0 && (
+                        <g>
+                          <g stroke="rgba(148, 163, 184, 0.4)" strokeWidth="0.3" fill="none">
+                            <line x1={0} y1={livePreview.preview.height + 4} x2={livePreview.preview.width} y2={livePreview.preview.height + 4} />
+                            <line x1={0} y1={livePreview.preview.height + 3} x2={0} y2={livePreview.preview.height + 5} />
+                            <line x1={livePreview.preview.width} y1={livePreview.preview.height + 3} x2={livePreview.preview.width} y2={livePreview.preview.height + 5} />
+                            <line x1={0} y1={livePreview.preview.height} x2={0} y2={livePreview.preview.height + 3.5} strokeDasharray="1 1" strokeWidth="0.15" />
+                            <line x1={livePreview.preview.width} y1={livePreview.preview.height} x2={livePreview.preview.width} y2={livePreview.preview.height + 3.5} strokeDasharray="1 1" strokeWidth="0.15" />
+                          </g>
+                          <text
+                            x={livePreview.preview.width / 2}
+                            y={livePreview.preview.height + 8.5}
+                            fill="#22d3ee"
+                            fontSize="3"
+                            fontFamily="ui-monospace, monospace"
+                            fontWeight="bold"
+                            textAnchor="middle"
+                          >
+                            {`${livePreview.layoutWidthM.toFixed(1)} m`}
+                          </text>
+                        </g>
+                      )}
+
+                      {livePreview.layoutHeightM > 0 && (
+                        <g>
+                          <g stroke="rgba(148, 163, 184, 0.4)" strokeWidth="0.3" fill="none">
+                            <line x1={livePreview.preview.width + 4} y1={0} x2={livePreview.preview.width + 4} y2={livePreview.preview.height} />
+                            <line x1={livePreview.preview.width + 3} y1={0} x2={livePreview.preview.width + 5} y2={0} />
+                            <line x1={livePreview.preview.width + 3} y1={livePreview.preview.height} x2={livePreview.preview.width + 5} y2={livePreview.preview.height} />
+                            <line x1={livePreview.preview.width} y1={0} x2={livePreview.preview.width + 3.5} strokeDasharray="1 1" strokeWidth="0.15" />
+                            <line x1={livePreview.preview.width} y1={livePreview.preview.height} x2={livePreview.preview.width + 3.5} strokeDasharray="1 1" strokeWidth="0.15" />
+                          </g>
+                          <text
+                            x={livePreview.preview.width + 7.5}
+                            y={livePreview.preview.height / 2}
+                            fill="#22d3ee"
+                            fontSize="3"
+                            fontFamily="ui-monospace, monospace"
+                            fontWeight="bold"
+                            textAnchor="middle"
+                            transform={`rotate(90, ${livePreview.preview.width + 7.5}, ${livePreview.preview.height / 2})`}
+                          >
+                            {`${livePreview.layoutHeightM.toFixed(1)} m`}
+                          </text>
+                        </g>
+                      )}
+                    </svg>
+
+                    <div className="w-full grid grid-cols-2 gap-2 text-[10px] text-slate-400 border-t border-slate-900 pt-2 font-sans">
+                      <div className="flex justify-between bg-slate-900/40 p-1.5 rounded">
+                        <span className="text-slate-500">{isEs ? "Dimensiones:" : "Footprint:"}</span>
+                        <span className="font-semibold font-mono text-slate-200">
+                          {livePreview.layoutWidthM.toFixed(1)}m × {livePreview.layoutHeightM.toFixed(1)}m
+                        </span>
+                      </div>
+                      <div className="flex justify-between bg-slate-900/40 p-1.5 rounded">
+                        <span className="text-slate-500">{isEs ? "Área estimada:" : "Est. Area:"}</span>
+                        <span className="font-semibold font-mono text-slate-200">
+                          {(livePreview.layoutWidthM * livePreview.layoutHeightM).toLocaleString(undefined, { maximumFractionDigits: 0 })} m²
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-center gap-4 text-[9px] text-slate-500 font-medium">
+                      <span className="flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full bg-cyan-400/80"></span>
+                        {isEs ? "Contenedores BESS" : "BESS Enclosures"}
+                      </span>
+                      {livePreview.pcsCount > 0 && (
+                        <span className="flex items-center gap-1.5">
+                          <span className="h-2 w-2 rounded-full bg-amber-400/90"></span>
+                          {isEs ? "Estación PCS/MV" : "PCS/MV Station"}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -441,36 +860,199 @@ export function TargetSizingTab({
                       {selectedBessCount} BESS {selectedPcsCount > 0 ? `· ${selectedPcsCount} PCS` : ""}
                     </span>
                   </div>
-                  <div className="rounded border border-slate-900 bg-slate-950/80 p-2 flex flex-col items-center justify-center gap-2">
+                  <div className="rounded border border-slate-900 bg-slate-950/80 p-2.5 flex flex-col items-center justify-center gap-2.5 shadow-sm">
                     <svg
-                      viewBox={`0 0 ${preview.width} ${preview.height}`}
+                      viewBox={`-8 -8 ${preview.width + 20} ${preview.height + 20}`}
                       preserveAspectRatio="xMidYMid meet"
-                      className="h-24 w-full transition-all duration-300"
+                      className="h-32 w-full transition-all duration-300 rounded bg-slate-950 border border-slate-900 shadow-inner"
                       role="img"
                       aria-label={isEs ? "Visor de layout manual" : "Manual layout schematic"}
                     >
+                      <defs>
+                        <linearGradient id="result-bess-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.9" />
+                          <stop offset="100%" stopColor="#0891b2" stopOpacity="0.7" />
+                        </linearGradient>
+                        <linearGradient id="result-pcs-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#fbbf24" stopOpacity="0.95" />
+                          <stop offset="100%" stopColor="#d97706" stopOpacity="0.8" />
+                        </linearGradient>
+                        <pattern id="result-grid-bg" width="6" height="6" patternUnits="userSpaceOnUse">
+                          <path d="M 6 0 L 0 0 0 6" fill="none" stroke="rgba(51, 65, 85, 0.25)" strokeWidth="0.15" />
+                        </pattern>
+                      </defs>
+
+                      {/* Grid Background */}
+                      <rect x="-8" y="-8" width={preview.width + 20} height={preview.height + 20} fill="url(#result-grid-bg)" />
+
+                      {/* Site Outline */}
                       {preview.site && (
                         <polygon
                           points={preview.site.points.map((p) => `${p.x},${p.y}`).join(" ")}
-                          fill="none"
-                          stroke="rgb(71 85 105 / 0.7)"
-                          strokeWidth={0.6}
-                          strokeDasharray="2 1.5"
+                          fill="rgba(15, 23, 42, 0.3)"
+                          stroke="rgba(148, 163, 184, 0.4)"
+                          strokeWidth={0.5}
+                          strokeDasharray="2 2"
                         />
                       )}
-                      {preview.blocks.map((b, i) => (
-                        <rect
-                          key={i}
-                          x={b.x}
-                          y={b.y}
-                          width={Math.max(b.w, 0.4)}
-                          height={Math.max(b.h, 0.4)}
-                          fill={b.kind === "pcs" ? "rgb(251 191 36 / 0.9)" : "rgb(34 211 238 / 0.75)"}
-                          rx={0.2}
-                          ry={0.2}
-                        />
-                      ))}
+
+                      {/* Blocks */}
+                      {preview.blocks.map((b, i) => {
+                        const isPcs = b.kind === "pcs";
+                        const rx = 0.2;
+                        const ry = 0.2;
+                        return (
+                          <g key={i}>
+                            {/* Shadow/Glow */}
+                            <rect
+                              x={b.x}
+                              y={b.y}
+                              width={Math.max(b.w, 0.4)}
+                              height={Math.max(b.h, 0.4)}
+                              fill={isPcs ? "rgba(245, 158, 11, 0.15)" : "rgba(6, 182, 212, 0.12)"}
+                              rx={rx}
+                              ry={ry}
+                              filter="blur(0.5px)"
+                            />
+                            {/* Main Container */}
+                            <rect
+                              x={b.x}
+                              y={b.y}
+                              width={Math.max(b.w, 0.4)}
+                              height={Math.max(b.h, 0.4)}
+                              fill={isPcs ? "url(#result-pcs-grad)" : "url(#result-bess-grad)"}
+                              stroke={isPcs ? "rgba(245, 158, 11, 0.85)" : "rgba(34, 211, 238, 0.8)"}
+                              strokeWidth={0.25}
+                              rx={rx}
+                              ry={ry}
+                            />
+                            {/* Compartment subdivisions */}
+                            {!isPcs && b.w > b.h && (
+                              <g opacity={0.35}>
+                                {Array.from({ length: 4 }).map((_, idx) => {
+                                  const lineX = b.x + (b.w / 5) * (idx + 1);
+                                  return (
+                                    <line
+                                      key={idx}
+                                      x1={lineX}
+                                      y1={b.y + 0.2}
+                                      x2={lineX}
+                                      y2={b.y + b.h - 0.2}
+                                      stroke="#0f172a"
+                                      strokeWidth={0.12}
+                                    />
+                                  );
+                                })}
+                              </g>
+                            )}
+                            {!isPcs && b.h > b.w && (
+                              <g opacity={0.35}>
+                                {Array.from({ length: 4 }).map((_, idx) => {
+                                  const lineY = b.y + (b.h / 5) * (idx + 1);
+                                  return (
+                                    <line
+                                      key={idx}
+                                      x1={b.x + 0.2}
+                                      y1={lineY}
+                                      x2={b.x + b.w - 0.2}
+                                      y2={lineY}
+                                      stroke="#0f172a"
+                                      strokeWidth={0.12}
+                                    />
+                                  );
+                                })}
+                              </g>
+                            )}
+                            {/* Transformer Line Indicator for PCS */}
+                            {isPcs && (
+                              <g opacity={0.65}>
+                                <circle
+                                  cx={b.x + b.w / 2}
+                                  cy={b.y + b.h / 2}
+                                  r={Math.min(b.w, b.h) / 3.5}
+                                  fill="none"
+                                  stroke="#78350f"
+                                  strokeWidth={0.2}
+                                />
+                                <line
+                                  x1={b.x + b.w / 2}
+                                  y1={b.y + b.h / 2 - Math.min(b.w, b.h) / 4}
+                                  x2={b.x + b.w / 2}
+                                  y2={b.y + b.h / 2 + Math.min(b.w, b.h) / 4}
+                                  stroke="#78350f"
+                                  strokeWidth={0.2}
+                                />
+                              </g>
+                            )}
+                          </g>
+                        );
+                      })}
+
+                      {/* Dimension Lines */}
+                      {selectedDimensions && selectedDimensions.widthM > 0 && (
+                        <g>
+                          <g stroke="rgba(148, 163, 184, 0.4)" strokeWidth="0.3" fill="none">
+                            <line x1={0} y1={preview.height + 4} x2={preview.width} y2={preview.height + 4} />
+                            <line x1={0} y1={preview.height + 3} x2={0} y2={preview.height + 5} />
+                            <line x1={preview.width} y1={preview.height + 3} x2={preview.width} y2={preview.height + 5} />
+                            <line x1={0} y1={preview.height} x2={0} y2={preview.height + 3.5} strokeDasharray="1 1" strokeWidth="0.15" />
+                            <line x1={preview.width} y1={preview.height} x2={preview.width} y2={preview.height + 3.5} strokeDasharray="1 1" strokeWidth="0.15" />
+                          </g>
+                          <text
+                            x={preview.width / 2}
+                            y={preview.height + 8.5}
+                            fill="#22d3ee"
+                            fontSize="3"
+                            fontFamily="ui-monospace, monospace"
+                            fontWeight="bold"
+                            textAnchor="middle"
+                          >
+                            {`${selectedDimensions.widthM.toFixed(1)} m`}
+                          </text>
+                        </g>
+                      )}
+
+                      {selectedDimensions && selectedDimensions.heightM > 0 && (
+                        <g>
+                          <g stroke="rgba(148, 163, 184, 0.4)" strokeWidth="0.3" fill="none">
+                            <line x1={preview.width + 4} y1={0} x2={preview.width + 4} y2={preview.height} />
+                            <line x1={preview.width + 3} y1={0} x2={preview.width + 5} y2={0} />
+                            <line x1={preview.width + 3} y1={preview.height} x2={preview.width + 5} y2={preview.height} />
+                            <line x1={preview.width} y1={0} x2={preview.width + 3.5} strokeDasharray="1 1" strokeWidth="0.15" />
+                            <line x1={preview.width} y1={preview.height} x2={preview.width + 3.5} strokeDasharray="1 1" strokeWidth="0.15" />
+                          </g>
+                          <text
+                            x={preview.width + 7.5}
+                            y={preview.height / 2}
+                            fill="#22d3ee"
+                            fontSize="3"
+                            fontFamily="ui-monospace, monospace"
+                            fontWeight="bold"
+                            textAnchor="middle"
+                            transform={`rotate(90, ${preview.width + 7.5}, ${preview.height / 2})`}
+                          >
+                            {`${selectedDimensions.heightM.toFixed(1)} m`}
+                          </text>
+                        </g>
+                      )}
                     </svg>
+
+                    {selectedDimensions && (
+                      <div className="w-full grid grid-cols-2 gap-2 text-[10px] text-slate-400 border-t border-slate-900 pt-2 font-sans">
+                        <div className="flex justify-between bg-slate-900/40 p-1.5 rounded">
+                          <span className="text-slate-500">{isEs ? "Dimensiones:" : "Footprint:"}</span>
+                          <span className="font-semibold font-mono text-slate-200">
+                            {selectedDimensions.widthM.toFixed(1)}m × {selectedDimensions.heightM.toFixed(1)}m
+                          </span>
+                        </div>
+                        <div className="flex justify-between bg-slate-900/40 p-1.5 rounded">
+                          <span className="text-slate-500">{isEs ? "Área estimada:" : "Est. Area:"}</span>
+                          <span className="font-semibold font-mono text-slate-200">
+                            {(selectedDimensions.widthM * selectedDimensions.heightM).toLocaleString(undefined, { maximumFractionDigits: 0 })} m²
+                          </span>
+                        </div>
+                      </div>
+                    )}
 
                     <div className="flex justify-center gap-4 text-[9px] text-slate-500 font-medium">
                       <span className="flex items-center gap-1.5">

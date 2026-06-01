@@ -235,7 +235,7 @@ describe("TargetSizingTab", () => {
     expect(screen.getByText(/The 8h and 16h configurations are calculated/i)).toBeDefined();
   });
 
-  it("renders layout configuration dropdown and supports choosing manual", () => {
+  it("renders layout configuration dropdown and supports choosing manual and shows live preview", () => {
     render(<TargetSizingTab {...defaultProps} />);
 
     const modeSelect = screen.getByLabelText(/Layout Configuration/i) as HTMLSelectElement;
@@ -249,6 +249,9 @@ describe("TargetSizingTab", () => {
     expect(screen.getByLabelText(/BESS Columns/i)).toBeDefined();
     expect(screen.getByLabelText(/Block Cols/i)).toBeDefined();
     expect(screen.getByLabelText(/Orientation/i)).toBeDefined();
+
+    // Verify live preview diagram is shown
+    expect(screen.getByLabelText("Preliminary manual layout schematic")).toBeDefined();
   });
 
   it("runs manual analysis with columns, blocks and orientation overrides", async () => {
