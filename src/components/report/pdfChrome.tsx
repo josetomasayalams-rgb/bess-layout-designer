@@ -14,7 +14,7 @@
  * upcoming `pdfPrimitives.tsx` extraction.
  */
 
-import { Page, Text, View, Svg, Circle, Line, Rect } from "@react-pdf/renderer";
+import { Page, Text, View } from "@react-pdf/renderer";
 import {
   REPORT_COLORS,
   REPORT_FONTS,
@@ -140,20 +140,8 @@ export function CoverPage({ data }: Props) {
   ];
 
   return (
-    <Page size="A4" style={s.page}>
+    <Page size="A4" style={s.coverPage}>
       <Watermark />
-      {/* Blueprint background decoration */}
-      <View style={{ position: "absolute", top: 40, right: 30, width: 200, height: 200, opacity: 0.15 }}>
-        <Svg viewBox="0 0 100 100" style={{ width: "100%", height: "100%" }}>
-          <Circle cx="50" cy="50" r="40" fill="none" stroke={REPORT_COLORS.accent} strokeWidth="0.8" strokeDasharray="3 3" />
-          <Circle cx="50" cy="50" r="25" fill="none" stroke={REPORT_COLORS.accent} strokeWidth="0.5" />
-          <Circle cx="50" cy="50" r="10" fill="none" stroke={REPORT_COLORS.accent} strokeWidth="0.5" />
-          <Line x1="5" y1="50" x2="95" y2="50" stroke={REPORT_COLORS.accent} strokeWidth="0.5" strokeDasharray="2 2" />
-          <Line x1="50" y1="5" x2="50" y2="95" stroke={REPORT_COLORS.accent} strokeWidth="0.5" strokeDasharray="2 2" />
-          <Rect x="30" y="30" width="40" height="40" fill="none" stroke={REPORT_COLORS.accent} strokeWidth="0.8" />
-          <Rect x="35" y="35" width="30" height="30" fill="none" stroke={REPORT_COLORS.accent} strokeWidth="0.5" strokeDasharray="1 1" />
-        </Svg>
-      </View>
       <View style={s.coverWrap}>
         <View>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 9, marginBottom: 4 }}>

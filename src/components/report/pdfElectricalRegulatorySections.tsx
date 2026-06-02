@@ -34,10 +34,12 @@ function SingleLineDiagram({ data }: { data: TechnicalReportData }) {
   const pcsSpec = e.stationRows[0];
   const pcsModel = pcsSpec ? pcsSpec.model : "PCS Station";
 
-  // Voltajes y parámetros del sistema
-  const mvVoltage = e.buses[0]?.nominalVoltageKv 
-    || e.feeders[0]?.nominalVoltageKv 
-    || 33;
+  // Voltajes y parámetros del sistema. NO se inventan valores: si no hay dato
+  // de barra/feeder, la tensión MT queda "no definida" (validar EPC/fabricante)
+  // en lugar de mostrar un valor por defecto que se leería como dato real.
+  const mvVoltageKv =
+    e.buses[0]?.nominalVoltageKv ?? e.feeders[0]?.nominalVoltageKv ?? null;
+  const mvVoltageLabel = mvVoltageKv != null ? `${mvVoltageKv} kV` : "MT no definida";
 
   const mainTransformer = e.mainTransformer;
   const poi = e.poi;
@@ -216,7 +218,7 @@ function SingleLineDiagram({ data }: { data: TechnicalReportData }) {
           textAnchor="middle"
           style={{ fontFamily: REPORT_FONTS.mono, fontSize: 6.5, fill: muted }}
         >
-          {isIntegrated ? "Salida CA Directa" : `${fmtNum(k.installedPowerMVA, 1)} MVA · ${e.stations[0]?.blockTransformer ? `${e.stations[0].blockTransformer.lvVoltageKv.value}/${e.stations[0].blockTransformer.hvVoltageKv.value} kV` : `0.9/${mvVoltage} kV`}`}
+          {isIntegrated ? "Salida CA Directa" : `${fmtNum(k.installedPowerMVA, 1)} MVA${e.stations[0]?.blockTransformer ? ` · ${e.stations[0].blockTransformer.lvVoltageKv.value}/${e.stations[0].blockTransformer.hvVoltageKv.value} kV` : " · BT/MT no def."}`}
         </Text>
 
         {/* Bounding box de acoplamiento CA para sistemas integrados (ej. Tesla Megapack) */}
@@ -287,7 +289,7 @@ function SingleLineDiagram({ data }: { data: TechnicalReportData }) {
           textAnchor="middle"
           style={{ fontFamily: REPORT_FONTS.mono, fontSize: 6.5, fill: muted }}
         >
-          {`Colector MT · ${mvVoltage} kV`}
+          {`Colector MT · ${mvVoltageLabel}`}
         </Text>
 
         {/* ---------------------------------------------------- */}
@@ -325,7 +327,7 @@ function SingleLineDiagram({ data }: { data: TechnicalReportData }) {
         >
           {mainTransformer
             ? `${fmtNum(mainTransformer.ratedPowerMVA.value, 0)} MVA`
-            : "Referencia Externa"}
+            : "No definido"}
         </Text>
         <Text
           x={365}
@@ -334,8 +336,8 @@ function SingleLineDiagram({ data }: { data: TechnicalReportData }) {
           style={{ fontFamily: REPORT_FONTS.mono, fontSize: 6.5, fill: muted }}
         >
           {mainTransformer
-            ? `${mainTransformer.windings.hvKv} / ${mainTransformer.windings.mv1Kv || mvVoltage} kV · ${mainTransformer.vectorGroup || "YNd11"}`
-            : `110 / ${mvVoltage} kV · YNd11`}
+            ? `${mainTransformer.windings.hvKv} / ${mainTransformer.windings.mv1Kv ?? mvVoltageKv ?? "—"} kV · ${mainTransformer.vectorGroup || "—"}`
+            : "No definido · validar EPC"}
         </Text>
 
         {/* ---------------------------------------------------- */}
@@ -381,7 +383,7 @@ function SingleLineDiagram({ data }: { data: TechnicalReportData }) {
           textAnchor="middle"
           style={{ fontFamily: REPORT_FONTS.monoBold, fontSize: 6.5, fill: accent }}
         >
-          {poi ? poi.busName : "Conexión Red"}
+          {poi ? poi.busName : "POI no definido"}
         </Text>
         <Text
           x={470}
@@ -389,7 +391,7 @@ function SingleLineDiagram({ data }: { data: TechnicalReportData }) {
           textAnchor="middle"
           style={{ fontFamily: REPORT_FONTS.mono, fontSize: 6.5, fill: muted }}
         >
-          {poi ? `${poi.voltageKv} kV` + (poi.declaredCapacityMVA ? ` · ${fmtNum(poi.declaredCapacityMVA.value, 0)} MVA` : "") : "110 kV"}
+          {poi ? `${poi.voltageKv} kV` + (poi.declaredCapacityMVA ? ` · ${fmtNum(poi.declaredCapacityMVA.value, 0)} MVA` : "") : "Validar EPC"}
         </Text>
       </Svg>
       <Text style={s.imageCaption}>{caption}</Text>

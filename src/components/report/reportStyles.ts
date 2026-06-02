@@ -27,6 +27,20 @@ export const reportStyles = StyleSheet.create({
     paddingHorizontal: 48,
     lineHeight: 1.4,
   },
+  // Cover: clean, intentional — a single bold accent band at the very top,
+  // no decorative geometry.
+  coverPage: {
+    backgroundColor: REPORT_COLORS.paper,
+    color: REPORT_COLORS.body,
+    fontFamily: REPORT_FONTS.body,
+    fontSize: 9.5,
+    paddingTop: 54,
+    paddingBottom: 48,
+    paddingHorizontal: 48,
+    lineHeight: 1.4,
+    borderTopWidth: 7,
+    borderTopColor: REPORT_COLORS.accent,
+  },
   pageHeader: {
     position: "absolute",
     top: 22,
@@ -66,9 +80,7 @@ export const reportStyles = StyleSheet.create({
     flex: 1,
     flexDirection: "column",
     justifyContent: "space-between",
-    borderTopWidth: 10,
-    borderTopColor: REPORT_COLORS.ink,
-    paddingTop: 20,
+    paddingTop: 6,
   },
   coverTopLine: {
     fontFamily: REPORT_FONTS.dataBold,
@@ -179,11 +191,14 @@ export const reportStyles = StyleSheet.create({
     color: REPORT_COLORS.accent,
   },
   subTitle: {
-    marginTop: 10,
-    marginBottom: 4,
+    marginTop: 15,
+    marginBottom: 6,
+    paddingBottom: 3,
     fontFamily: REPORT_FONTS.bodyBold,
-    fontSize: 11,
+    fontSize: 11.5,
     color: REPORT_COLORS.ink,
+    borderBottomWidth: 0.5,
+    borderBottomColor: REPORT_COLORS.rule,
   },
   paragraph: {
     fontSize: 9.5,
@@ -200,14 +215,12 @@ export const reportStyles = StyleSheet.create({
   // ──────── Table ────────
   table: {
     borderTopWidth: 0.5,
-    borderLeftWidth: 0.5,
     borderColor: REPORT_COLORS.rule,
-    marginTop: 4,
+    marginTop: 6,
   },
   tableRow: {
     flexDirection: "row",
     borderBottomWidth: 0.5,
-    borderRightWidth: 0.5,
     borderColor: REPORT_COLORS.rule,
   },
   tableRowAlt: {
@@ -224,19 +237,15 @@ export const reportStyles = StyleSheet.create({
     fontSize: 7.5,
     letterSpacing: 0.6,
     textTransform: "uppercase",
-    paddingVertical: 4,
-    paddingHorizontal: 6,
-    borderRightWidth: 0.5,
-    borderRightColor: REPORT_COLORS.rule,
+    paddingVertical: 5,
+    paddingHorizontal: 7,
   },
   tableCell: {
     fontFamily: REPORT_FONTS.data,
     fontSize: 8.5,
-    paddingVertical: 3,
-    paddingHorizontal: 6,
+    paddingVertical: 4,
+    paddingHorizontal: 7,
     color: REPORT_COLORS.body,
-    borderRightWidth: 0.5,
-    borderRightColor: REPORT_COLORS.rule,
   },
   tableCellRight: {
     textAlign: "right",
@@ -340,17 +349,18 @@ export const reportStyles = StyleSheet.create({
   kpiCard: {
     flexGrow: 1,
     flexBasis: "22%",
-    minWidth: 96,
+    minWidth: 100,
     borderWidth: 0.5,
     borderColor: REPORT_COLORS.rule,
-    borderRadius: 4,
+    borderRadius: 6,
     backgroundColor: REPORT_COLORS.paperAlt,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
+    paddingVertical: 11,
+    paddingHorizontal: 12,
   },
   kpiCardAccent: {
-    borderTopWidth: 2,
+    borderTopWidth: 3,
     borderTopColor: REPORT_COLORS.accent,
+    backgroundColor: REPORT_COLORS.paper,
   },
   kpiCardLabel: {
     fontFamily: REPORT_FONTS.dataBold,
@@ -361,9 +371,9 @@ export const reportStyles = StyleSheet.create({
   },
   kpiCardValue: {
     fontFamily: REPORT_FONTS.bodyBold,
-    fontSize: 16,
+    fontSize: 20,
     color: REPORT_COLORS.ink,
-    marginTop: 3,
+    marginTop: 4,
   },
   kpiCardUnit: {
     fontFamily: REPORT_FONTS.data,
@@ -514,10 +524,10 @@ export const reportStyles = StyleSheet.create({
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginBottom: 9,
-    paddingBottom: 5,
-    borderBottomWidth: 1,
+    gap: 9,
+    marginBottom: 12,
+    paddingBottom: 7,
+    borderBottomWidth: 2,
     borderBottomColor: REPORT_COLORS.accent,
   },
   sectionNumberChip: {
@@ -533,7 +543,7 @@ export const reportStyles = StyleSheet.create({
   sectionHeaderTitle: {
     flex: 1,
     fontFamily: REPORT_FONTS.bodyBold,
-    fontSize: 14,
+    fontSize: 16,
     color: REPORT_COLORS.ink,
   },
 

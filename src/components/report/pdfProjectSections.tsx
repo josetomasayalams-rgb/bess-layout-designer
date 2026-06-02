@@ -224,17 +224,32 @@ export function DesignSection({ data, embedded }: ReportSectionProps) {
         ]}
       />
 
-      <Text style={s.subTitle}>Arquitectura derivada</Text>
+      <Text style={s.subTitle}>Inventario colocado vs. dimensionamiento</Text>
       <DefGrid
         items={[
-          { label: "Contenedores BESS", value: fmtInt(sizing.containers) },
-          { label: "Contenedores en layout", value: fmtInt(k.containers) },
+          { label: "Contenedores colocados (layout)", value: fmtInt(k.containers) },
+          {
+            label: "Contenedores estimados (dimensionamiento)",
+            value: sizing.containers > 0 ? fmtInt(sizing.containers) : "—",
+          },
+          {
+            label: "Diferencia (faltan / sobran)",
+            value:
+              sizing.containers > 0
+                ? fmtInt(sizing.containers - k.containers)
+                : "—",
+          },
           { label: "Estaciones PCS/trafo", value: fmtInt(k.stations) },
           { label: "Feeders MT", value: fmtInt(k.feeders) },
-          { label: "Contenedores / estación", value: k.containersPerStation !== null ? fmtNum(k.containersPerStation, 2) : "—" },
           { label: "Potencia instalada", value: `${fmtNum(k.installedPowerMVA, 0)} MVA` },
         ]}
       />
+      <Text style={s.note}>
+        &quot;Colocados&quot; son los contenedores efectivamente posicionados en el
+        layout. &quot;Estimados&quot; es la cantidad teórica del dimensionamiento para
+        la energía objetivo (referencial, no necesariamente alcanzada en este
+        layout preliminar); no debe leerse como inventario real.
+      </Text>
 
       {k.source !== "documented_targets" ? (
         <Text style={s.note}>

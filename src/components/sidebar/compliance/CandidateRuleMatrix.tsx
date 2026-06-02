@@ -6,7 +6,6 @@ import {
   HelpCircle,
   AlertTriangle,
   CheckCircle2,
-  Info,
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
