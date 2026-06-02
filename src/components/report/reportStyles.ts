@@ -7,31 +7,14 @@
  */
 
 import { StyleSheet } from "@react-pdf/renderer";
+import { reportTheme } from "./reportTheme";
 
-export const REPORT_COLORS = {
-  ink: "#0f172a", // negro tinta (slate-900)
-  body: "#334155", // texto cuerpo (slate-700)
-  muted: "#64748b", // notas, captions (slate-500)
-  rule: "#cbd5e1", // líneas separadoras finas (slate-300)
-  paper: "#ffffff",
-  paperAlt: "#f8fafc", // fondo de tablas alternadas (slate-50)
-  accent: "#0284c7", // azul de ingeniería (sky-600)
-  warn: "#b45309",
-  danger: "#991b1b",
-  ok: "#166534",
-  pendingTone: "#7c2d12",
-} as const;
+// Colors and fonts now live in the renderer-neutral `reportTheme` (so the
+// in-app preview can share them); re-exported here unchanged for the many
+// pdf*.tsx consumers that import them from this module.
+export const REPORT_COLORS = reportTheme.color;
 
-export const REPORT_FONTS = {
-  body: "Times-Roman",
-  bodyBold: "Times-Bold",
-  bodyItalic: "Times-Italic",
-  data: "Helvetica",
-  dataBold: "Helvetica-Bold",
-  dataItalic: "Helvetica-Oblique",
-  mono: "Courier",
-  monoBold: "Courier-Bold",
-} as const;
+export const REPORT_FONTS = reportTheme.font;
 
 export const reportStyles = StyleSheet.create({
   page: {
