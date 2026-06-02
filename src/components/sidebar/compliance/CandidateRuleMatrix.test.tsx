@@ -124,7 +124,7 @@ describe("CandidateRuleMatrix", () => {
 
     expect(screen.getByText("Matriz normativa candidata")).toBeDefined();
     expect(screen.getByText("2 reglas")).toBeDefined();
-    expect(screen.getAllByText("Sin inconformidades").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Sin inconf.").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Inconformidad").length).toBeGreaterThanOrEqual(1);
   });
 
@@ -148,7 +148,7 @@ describe("CandidateRuleMatrix", () => {
     // Rule title
     expect(screen.getByText("Distancia BESS a deslinde")).toBeDefined();
     // Rule outcome badge
-    expect(screen.getAllByText("Sin inconformidades").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Sin inconf.").length).toBeGreaterThanOrEqual(1);
 
     // Violation message
     expect(screen.getByText("· Distancia insuficiente")).toBeDefined();

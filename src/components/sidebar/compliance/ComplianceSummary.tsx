@@ -23,22 +23,34 @@ export function ComplianceSummary({
   statusCopy,
   statusLabel,
 }: ComplianceSummaryProps) {
+  const statusBadgeLabel = isEs
+    ? {
+        compliant: "Sin inconformidades",
+        compliant_with_warnings: "Sin inconf. (con adv.)",
+        non_compliant: "Inconformidades",
+        not_evaluated: "No evaluado",
+      }[result.projectStatus]
+    : {
+        compliant: "No nonconformities",
+        compliant_with_warnings: "No nonconf. (warnings)",
+        non_compliant: "Nonconformities",
+        not_evaluated: "Not evaluated",
+      }[result.projectStatus];
+
   return (
     <>
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <div>
+      <div className="mb-3 flex flex-col gap-1.5 border-b border-slate-800 pb-3">
+        <div className="flex items-center justify-between gap-3">
           <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-200">
             {isEs ? "Cumplimiento normativo" : "Regulatory compliance"}
           </h2>
-          <p className="mt-0.5 text-[11px] text-slate-500">
-            {isEs
-              ? "Motor de reglas activo: distancias BESS, límite del sitio y clearances eléctricos preliminares."
-              : "Active rule engine: BESS distances, site boundary and preliminary electrical clearances."}
-          </p>
+          <span className={`rounded-full border px-2 py-0.5 text-[9px] uppercase tracking-wide shrink-0 ${statusCopy.className}`}>
+            {statusBadgeLabel}
+          </span>
         </div>
-        <span className={`rounded-full border px-2 py-1 text-[10px] uppercase tracking-wide ${statusCopy.className}`}>
+        <p className="text-[10px] leading-normal text-slate-400">
           {statusLabel}
-        </span>
+        </p>
       </div>
 
       <div className="grid grid-cols-4 gap-2">

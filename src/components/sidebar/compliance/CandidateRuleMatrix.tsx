@@ -78,12 +78,12 @@ export function CandidateRuleMatrix({
       <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
         <CountTile
           value={ruleEvaluation.totals.pass}
-          label={isEs ? "Sin inconformidades" : "No nonconf."}
+          label={isEs ? "Sin inconf." : "No nonconf."}
           className="text-emerald-200"
         />
         <CountTile
           value={ruleEvaluation.totals.violation}
-          label={isEs ? "Inconformidades" : "Nonconformities"}
+          label={isEs ? "Inconformid." : "Nonconform."}
           className="text-rose-200"
         />
         <CountTile
