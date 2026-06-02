@@ -9,13 +9,13 @@
 import { StyleSheet } from "@react-pdf/renderer";
 
 export const REPORT_COLORS = {
-  ink: "#0f172a", // negro tinta
-  body: "#1f2937", // texto cuerpo
-  muted: "#475569", // notas, captions
-  rule: "#94a3b8", // líneas separadoras finas
+  ink: "#0f172a", // negro tinta (slate-900)
+  body: "#334155", // texto cuerpo (slate-700)
+  muted: "#64748b", // notas, captions (slate-500)
+  rule: "#cbd5e1", // líneas separadoras finas (slate-300)
   paper: "#ffffff",
-  paperAlt: "#f8fafc", // fondo de tablas alternadas
-  accent: "#1e3a8a", // azul ingeniería para titulares
+  paperAlt: "#f8fafc", // fondo de tablas alternadas (slate-50)
+  accent: "#0284c7", // azul de ingeniería (sky-600)
   warn: "#b45309",
   danger: "#991b1b",
   ok: "#166534",

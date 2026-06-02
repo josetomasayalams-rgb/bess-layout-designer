@@ -54,11 +54,11 @@ export type SiteSvgModel = {
 const PADDING_M = 30;
 
 const COLOR_BY_TYPE: Record<string, { fill: string; stroke: string }> = {
-  battery_container: { fill: "#1f3a8a", stroke: "#0b1f5c" },
-  pcs_mv_station: { fill: "#92400e", stroke: "#7c2d12" },
-  mv_transformer: { fill: "#3f3f46", stroke: "#27272a" },
-  substation_area: { fill: "#525252", stroke: "#404040" },
-  default: { fill: "#475569", stroke: "#1f2937" },
+  battery_container: { fill: "#e0f7fa", stroke: "#00acc1" }, // Cyan para BESS
+  pcs_mv_station: { fill: "#fff3e0", stroke: "#fb8c00" }, // Amber/Orange para PCS/MV
+  mv_transformer: { fill: "#f1f5f9", stroke: "#475569" },
+  substation_area: { fill: "#e2e8f0", stroke: "#64748b" },
+  default: { fill: "#f8fafc", stroke: "#94a3b8" },
 };
 
 function chooseScaleBar(widthM: number): number {

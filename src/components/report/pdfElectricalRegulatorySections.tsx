@@ -1,4 +1,4 @@
-import { Line, Rect, Svg, Text, View } from "@react-pdf/renderer";
+import { Circle, G, Line, Path, Rect, Svg, Text, View } from "@react-pdf/renderer";
 import { REPORT_COLORS, REPORT_FONTS, reportStyles as s } from "./reportStyles";
 import { documentTitle, type TechnicalReportData } from "@/lib/report/buildReportData";
 import { selectSldStages } from "@/lib/report/sldStages";
@@ -14,90 +14,382 @@ import {
 type ReportSectionProps = { data: TechnicalReportData };
 
 /**
- * Diagrama unilineal conceptual (single-line diagram) dibujado en SVG.
- *
- * Se dibuja con primitivas vectoriales (Rect / Line / Polygon) en lugar de
- * glifos de flecha tipográficos, que el set de fuentes estándar de
- * @react-pdf/renderer (WinAnsi) no puede codificar y renderiza como cajas
- * `notdef`. Las puntas de flecha son triángulos vectoriales.
+ * Diagrama unilineal conceptual (single-line diagram) dinámico dibujado en SVG.
+ * Se dibuja con primitivas vectoriales (Rect / Line / Path / Circle) y se adapta
+ * dinámicamente a la configuración del BESS (modelo, cantidad, potencia, feeders,
+ * transformador y POI).
  */
-function SingleLineDiagram({ isIntegrated }: { isIntegrated: boolean }) {
-  const { stages, caption } = selectSldStages(isIntegrated);
-  const BOX_W = 88;
-  const BOX_H = 44;
-  const STEP = 106; // BOX_W + gap
-  const TOP = 18;
-  const MID = TOP + BOX_H / 2;
-  const VB_W = 520;
-  const VB_H = 80;
+function SingleLineDiagram({ data }: { data: TechnicalReportData }) {
+  const k = data.reportKpis;
+  const e = data.electrical;
+  const isIntegrated = k.isIntegrated;
+  const { caption } = selectSldStages(isIntegrated);
+
+  // Extraer información del modelo de batería
+  const batterySpec = data.equipmentInventory.find((item) => item.type === "battery_container");
+  const batteryModel = batterySpec ? batterySpec.model : "BESS Standard";
+
+  // Extraer información del PCS
+  const pcsSpec = e.stationRows[0];
+  const pcsModel = pcsSpec ? pcsSpec.model : "PCS Station";
+
+  // Voltajes y parámetros del sistema
+  const mvVoltage = e.buses[0]?.nominalVoltageKv 
+    || e.feeders[0]?.nominalVoltageKv 
+    || 33;
+
+  const mainTransformer = e.mainTransformer;
+  const poi = e.poi;
+
+  const color = REPORT_COLORS.ink;
+  const accent = REPORT_COLORS.accent;
+  const muted = REPORT_COLORS.muted;
+
+  // Renderizar interruptor de potencia (breaker)
+  const renderBreaker = (x: number, y: number) => (
+    <G key={`brk-${x}-${y}`}>
+      <Rect
+        x={x - 4}
+        y={y - 4}
+        width={8}
+        height={8}
+        fill="#ffffff"
+        stroke={color}
+        strokeWidth={1}
+      />
+      <Line
+        x1={x - 4}
+        y1={y + 4}
+        x2={x + 4}
+        y2={y - 4}
+        stroke={color}
+        strokeWidth={1}
+      />
+    </G>
+  );
 
   return (
     <View style={s.sldWrap}>
-      <Svg viewBox={`0 0 ${VB_W} ${VB_H}`} style={{ width: "100%", height: 88 }}>
-        {stages.map((_, i) => {
-          const x = i * STEP;
-          return (
+      <Svg viewBox="0 0 520 150" style={{ width: "100%", height: 150 }}>
+        {/* Fondo de papel milimetrado sutil */}
+        {Array.from({ length: 16 }).map((_, i) => (
+          <Line
+            key={`g-lh-${i}`}
+            x1={0}
+            y1={i * 10}
+            x2={520}
+            y2={i * 10}
+            stroke="#f1f5f9"
+            strokeWidth={0.5}
+          />
+        ))}
+        {Array.from({ length: 53 }).map((_, i) => (
+          <Line
+            key={`g-lv-${i}`}
+            x1={i * 10}
+            y1={0}
+            x2={i * 10}
+            y2={150}
+            stroke="#f1f5f9"
+            strokeWidth={0.5}
+          />
+        ))}
+
+        {/* ---------------------------------------------------- */}
+        {/* ETAPA 1: BESS CONTAINER (LADO CC) (x = 55, y = 65) */}
+        {/* ---------------------------------------------------- */}
+        {/* Contorno físico del contenedor */}
+        <Rect
+          x={25}
+          y={35}
+          width={60}
+          height={60}
+          rx={4}
+          fill="#eff6ff"
+          stroke={accent}
+          strokeWidth={1}
+          strokeDasharray={isIntegrated ? "3 3" : undefined}
+        />
+        {/* Símbolo de placas de baterías */}
+        <Line x1={42} y1={50} x2={68} y2={50} stroke={color} strokeWidth={2} />
+        <Line x1={48} y1={54} x2={62} y2={54} stroke={color} strokeWidth={1} />
+        <Line x1={42} y1={58} x2={68} y2={58} stroke={color} strokeWidth={2} />
+        <Line x1={48} y1={62} x2={62} y2={62} stroke={color} strokeWidth={1} />
+        <Line x1={42} y1={66} x2={68} y2={66} stroke={color} strokeWidth={2} />
+        <Line x1={48} y1={70} x2={62} y2={70} stroke={color} strokeWidth={1} />
+        {/* Terminales positivo y negativo */}
+        <Line x1={55} y1={44} x2={55} y2={50} stroke={color} strokeWidth={1} />
+        <Line x1={55} y1={70} x2={55} y2={76} stroke={color} strokeWidth={1} />
+        <Text x={65} y={48} style={{ fontSize: 7, fontFamily: REPORT_FONTS.dataBold, fill: REPORT_COLORS.ok }}>+</Text>
+        <Text x={65} y={74} style={{ fontSize: 7, fontFamily: REPORT_FONTS.dataBold, fill: REPORT_COLORS.danger }}>-</Text>
+
+        <Text
+          x={55}
+          y={110}
+          textAnchor="middle"
+          style={{ fontFamily: REPORT_FONTS.dataBold, fontSize: 8, fill: color }}
+        >
+          BESS (Lado CC)
+        </Text>
+        <Text
+          x={55}
+          y={122}
+          textAnchor="middle"
+          style={{ fontFamily: REPORT_FONTS.monoBold, fontSize: 6.5, fill: accent }}
+        >
+          {`${k.containers} x ${batteryModel}`}
+        </Text>
+        <Text
+          x={55}
+          y={132}
+          textAnchor="middle"
+          style={{ fontFamily: REPORT_FONTS.mono, fontSize: 6.5, fill: muted }}
+        >
+          {`${fmtNum(k.grossEnergyMWh, 1)} MWh (CC)`}
+        </Text>
+
+        {/* Conexión Etapa 1 -> 2 */}
+        <Line x1={85} y1={65} x2={125} y2={65} stroke={color} strokeWidth={1.2} />
+
+        {/* ---------------------------------------------------- */}
+        {/* ETAPA 2: CONVERSIÓN (PCS) (x = 155, y = 65) */}
+        {/* ---------------------------------------------------- */}
+        {/* Contorno físico del PCS si es separado */}
+        {!isIntegrated && (
+          <Rect
+            x={125}
+            y={35}
+            width={60}
+            height={60}
+            rx={4}
+            fill="#eff6ff"
+            stroke={accent}
+            strokeWidth={1}
+          />
+        )}
+        {/* Caja de inversor DC/AC diagonal */}
+        <Rect
+          x={139}
+          y={43}
+          width={32}
+          height={24}
+          rx={2}
+          fill="#ffffff"
+          stroke={color}
+          strokeWidth={1.2}
+        />
+        <Line x1={139} y1={67} x2={171} y2={43} stroke={color} strokeWidth={1.2} />
+        {/* Símbolo CC (=) abajo-izquierda */}
+        <Line x1={144} y1={58} x2={152} y2={58} stroke={color} strokeWidth={1} />
+        <Line x1={144} y1={61} x2={152} y2={61} stroke={color} strokeWidth={1} strokeDasharray="1.5 1" />
+        {/* Símbolo CA (~) arriba-derecha */}
+        <Path d="M 158 52 C 160 49, 162 49, 164 52 C 166 55, 168 55, 170 52" fill="none" stroke={color} strokeWidth={1} />
+
+        {/* Círculos de devanado para Transformador de Bloque (Sólo PCS separado) */}
+        {!isIntegrated && (
+          <G>
+            <Circle cx={155} cy={77} r={6} fill="none" stroke={color} strokeWidth={1} />
+            <Circle cx={155} cy={85} r={6} fill="none" stroke={color} strokeWidth={1} />
+          </G>
+        )}
+
+        <Text
+          x={155}
+          y={110}
+          textAnchor="middle"
+          style={{ fontFamily: REPORT_FONTS.dataBold, fontSize: 8, fill: color }}
+        >
+          {isIntegrated ? "PCS Integrado" : "PCS + Trafo BT/MT"}
+        </Text>
+        <Text
+          x={155}
+          y={122}
+          textAnchor="middle"
+          style={{ fontFamily: REPORT_FONTS.monoBold, fontSize: 6.5, fill: accent }}
+        >
+          {isIntegrated ? "Inversor en Unidad" : `${k.stations} x ${pcsModel}`}
+        </Text>
+        <Text
+          x={155}
+          y={132}
+          textAnchor="middle"
+          style={{ fontFamily: REPORT_FONTS.mono, fontSize: 6.5, fill: muted }}
+        >
+          {isIntegrated ? "Salida CA Directa" : `${fmtNum(k.installedPowerMVA, 1)} MVA · ${e.stations[0]?.blockTransformer ? `${e.stations[0].blockTransformer.lvVoltageKv.value}/${e.stations[0].blockTransformer.hvVoltageKv.value} kV` : `0.9/${mvVoltage} kV`}`}
+        </Text>
+
+        {/* Bounding box de acoplamiento CA para sistemas integrados (ej. Tesla Megapack) */}
+        {isIntegrated && (
+          <G>
             <Rect
-              key={`box-${i}`}
-              x={x}
-              y={TOP}
-              width={BOX_W}
-              height={BOX_H}
-              rx={4}
-              fill="#eff6ff"
-              stroke={REPORT_COLORS.accent}
-              strokeWidth={0.8}
+              x={18}
+              y={28}
+              width={174}
+              height={74}
+              rx={6}
+              fill="none"
+              stroke={accent}
+              strokeWidth={1}
+              strokeDasharray="4 3"
             />
-          );
-        })}
-        {/* Conectores con punta de flecha vectorial */}
-        {stages.slice(0, -1).map((_, i) => {
-          const fromX = i * STEP + BOX_W;
-          const toX = (i + 1) * STEP;
-          return (
-            <Line
-              key={`ln-${i}`}
-              x1={fromX + 1}
-              y1={MID}
-              x2={toX - 5}
-              y2={MID}
-              stroke={REPORT_COLORS.accent}
-              strokeWidth={1.2}
-            />
-          );
-        })}
-        {stages.slice(0, -1).map((_, i) => {
-          const tipX = (i + 1) * STEP;
-          return (
-            <Svg key={`ah-${i}`}>
-              <Line x1={tipX - 6} y1={MID - 3} x2={tipX} y2={MID} stroke={REPORT_COLORS.accent} strokeWidth={1.2} />
-              <Line x1={tipX - 6} y1={MID + 3} x2={tipX} y2={MID} stroke={REPORT_COLORS.accent} strokeWidth={1.2} />
-            </Svg>
-          );
-        })}
-        {stages.map((st, i) => {
-          const cx = i * STEP + BOX_W / 2;
-          return (
-            <Svg key={`tx-${i}`}>
-              <Text
-                x={cx}
-                y={MID - 1}
-                textAnchor="middle"
-                style={{ fontFamily: REPORT_FONTS.dataBold, fontSize: 7.5, fill: REPORT_COLORS.ink }}
-              >
-                {st.title}
-              </Text>
-              <Text
-                x={cx}
-                y={MID + 9}
-                textAnchor="middle"
-                style={{ fontFamily: REPORT_FONTS.data, fontSize: 6, fill: REPORT_COLORS.muted }}
-              >
-                {st.sub}
-              </Text>
-            </Svg>
-          );
-        })}
+            <Text
+              x={105}
+              y={24}
+              textAnchor="middle"
+              style={{ fontFamily: REPORT_FONTS.dataBold, fontSize: 6, fill: accent }}
+            >
+              UNIDAD INTEGRADA (CA ACOPLADO)
+            </Text>
+          </G>
+        )}
+
+        {/* ---------------------------------------------------- */}
+        {/* ETAPA 3: BARRA COLECTORA MT / FEEDERS (x = 260, y = 65) */}
+        {/* ---------------------------------------------------- */}
+        {/* Conexión de alimentación entrante */}
+        <Line x1={185} y1={65} x2={205} y2={65} stroke={color} strokeWidth={1.2} />
+        {/* Alimentador 1 (Arriba) */}
+        <Path d="M 205 65 L 210 50 L 260 50" fill="none" stroke={color} strokeWidth={1.2} />
+        {/* Alimentador 2 (Abajo) */}
+        <Path d="M 205 65 L 210 80 L 260 80" fill="none" stroke={color} strokeWidth={1.2} />
+
+        {/* Interruptores de potencia en los alimentadores */}
+        {renderBreaker(230, 50)}
+        {renderBreaker(230, 80)}
+
+        {/* Barra vertical de MT colectora gruesa */}
+        <Line x1={260} y1={40} x2={260} y2={90} stroke={color} strokeWidth={2.5} />
+
+        {/* Salida desde barra hacia transformador principal */}
+        <Path d="M 260 65 L 335 65" fill="none" stroke={color} strokeWidth={1.2} />
+        {renderBreaker(295, 65)}
+
+        <Text
+          x={260}
+          y={110}
+          textAnchor="middle"
+          style={{ fontFamily: REPORT_FONTS.dataBold, fontSize: 8, fill: color }}
+        >
+          Barra / Colector MT
+        </Text>
+        <Text
+          x={260}
+          y={122}
+          textAnchor="middle"
+          style={{ fontFamily: REPORT_FONTS.monoBold, fontSize: 6.5, fill: accent }}
+        >
+          {`${k.feeders} x Feeder(s) MT`}
+        </Text>
+        <Text
+          x={260}
+          y={132}
+          textAnchor="middle"
+          style={{ fontFamily: REPORT_FONTS.mono, fontSize: 6.5, fill: muted }}
+        >
+          {`Colector MT · ${mvVoltage} kV`}
+        </Text>
+
+        {/* ---------------------------------------------------- */}
+        {/* ETAPA 4: TRANSFORMADOR PRINCIPAL (x = 365, y = 65) */}
+        {/* ---------------------------------------------------- */}
+        {/* Círculos entrelazados de devanados */}
+        <Circle cx={357} cy={65} r={12} fill="none" stroke={color} strokeWidth={1.2} />
+        <Circle cx={373} cy={65} r={12} fill="none" stroke={color} strokeWidth={1.2} />
+        
+        {/* Símbolo de estrella (Y) inside first winding */}
+        <Line x1={357} y1={65} x2={357} y2={59} stroke={color} strokeWidth={0.8} />
+        <Line x1={357} y1={65} x2={352} y2={69} stroke={color} strokeWidth={0.8} />
+        <Line x1={357} y1={65} x2={362} y2={69} stroke={color} strokeWidth={0.8} />
+        
+        {/* Símbolo de triángulo (Delta) inside second winding */}
+        <Path d="M 373 58 L 368 68 L 378 68 Z" fill="none" stroke={color} strokeWidth={0.8} />
+
+        {/* Salida a subestación / POI */}
+        <Line x1={385} y1={65} x2={445} y2={65} stroke={color} strokeWidth={1.2} />
+        {renderBreaker(415, 65)}
+
+        <Text
+          x={365}
+          y={110}
+          textAnchor="middle"
+          style={{ fontFamily: REPORT_FONTS.dataBold, fontSize: 8, fill: color }}
+        >
+          Trafo Principal
+        </Text>
+        <Text
+          x={365}
+          y={122}
+          textAnchor="middle"
+          style={{ fontFamily: REPORT_FONTS.monoBold, fontSize: 6.5, fill: accent }}
+        >
+          {mainTransformer
+            ? `${fmtNum(mainTransformer.ratedPowerMVA.value, 0)} MVA`
+            : "Referencia Externa"}
+        </Text>
+        <Text
+          x={365}
+          y={132}
+          textAnchor="middle"
+          style={{ fontFamily: REPORT_FONTS.mono, fontSize: 6.5, fill: muted }}
+        >
+          {mainTransformer
+            ? `${mainTransformer.windings.hvKv} / ${mainTransformer.windings.mv1Kv || mvVoltage} kV · ${mainTransformer.vectorGroup || "YNd11"}`
+            : `110 / ${mvVoltage} kV · YNd11`}
+        </Text>
+
+        {/* ---------------------------------------------------- */}
+        {/* ETAPA 5: PUNTO DE CONEXIÓN (POI) (x = 465, y = 65) */}
+        {/* ---------------------------------------------------- */}
+        {/* Símbolo de torre de transmisión de AT */}
+        <G stroke={color} strokeWidth={1} fill="none">
+          {/* Estructura central */}
+          <Line x1={458} y1={90} x2={482} y2={90} />
+          <Line x1={458} y1={90} x2={466} y2={35} />
+          <Line x1={482} y1={90} x2={474} y2={35} />
+          <Line x1={466} y1={35} x2={474} y2={35} />
+          {/* Crucetas internas */}
+          <Line x1={458} y1={90} x2={474} y2={70} />
+          <Line x1={482} y1={90} x2={466} y2={70} />
+          <Line x1={466} y1={70} x2={474} y2={70} />
+          <Line x1={466} y1={70} x2={474} y2={50} />
+          <Line x1={474} y1={70} x2={466} y2={50} />
+          <Line x1={466} y1={50} x2={474} y2={50} />
+          <Line x1={466} y1={50} x2={470} y2={35} />
+          <Line x1={474} y1={50} x2={470} y2={35} />
+          {/* Brazos laterales (crucetas) */}
+          <Line x1={452} y1={50} x2={488} y2={50} />
+          <Line x1={448} y1={70} x2={492} y2={70} />
+          {/* Cadenas de aisladores sutiles */}
+          <Line x1={452} y1={50} x2={452} y2={58} strokeWidth={1.5} />
+          <Line x1={488} y1={50} x2={488} y2={58} strokeWidth={1.5} />
+          <Line x1={448} y1={70} x2={448} y2={78} strokeWidth={1.5} />
+          <Line x1={492} y1={70} x2={492} y2={78} strokeWidth={1.5} />
+        </G>
+
+        <Text
+          x={470}
+          y={110}
+          textAnchor="middle"
+          style={{ fontFamily: REPORT_FONTS.dataBold, fontSize: 8, fill: color }}
+        >
+          POI / Red Eléctrica
+        </Text>
+        <Text
+          x={470}
+          y={122}
+          textAnchor="middle"
+          style={{ fontFamily: REPORT_FONTS.monoBold, fontSize: 6.5, fill: accent }}
+        >
+          {poi ? poi.busName : "Conexión Red"}
+        </Text>
+        <Text
+          x={470}
+          y={132}
+          textAnchor="middle"
+          style={{ fontFamily: REPORT_FONTS.mono, fontSize: 6.5, fill: muted }}
+        >
+          {poi ? `${poi.voltageKv} kV` + (poi.declaredCapacityMVA ? ` · ${fmtNum(poi.declaredCapacityMVA.value, 0)} MVA` : "") : "110 kV"}
+        </Text>
       </Svg>
       <Text style={s.imageCaption}>{caption}</Text>
     </View>
@@ -115,7 +407,7 @@ export function ElectricalSection({ data }: ReportSectionProps) {
           : "La arquitectura conceptual encadena el contenedor BESS (lado DC), el PCS con transformador BT/MT integrado, el feeder de media tensión, la barra y seccionamiento MT, y el punto de conexión (POI). La fuente de los datos eléctricos se cita cuando está disponible; los campos vacíos representan información pendiente de validación de fabricante o EPC."}
       </Text>
 
-      <SingleLineDiagram isIntegrated={k.isIntegrated} />
+      <SingleLineDiagram data={data} />
 
       {k.isIntegrated ? (
         <AlertCard
