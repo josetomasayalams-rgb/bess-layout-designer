@@ -69,9 +69,6 @@ export function RegulatoryCompliancePanel() {
   const locale = useUiStore((s) => s.locale);
   const isEs = locale === "es";
 
-  const loadPreset = useProjectStore((s) => s.loadBessDelDesiertoPresetV12);
-  const clearPreset = useProjectStore((s) => s.clearProjectV12Slices);
-
   const profile = getRegulatoryProfile(activeProfileId);
   const result = validateBessLayout({ placed, polygon, anchor, profile, context });
 
@@ -165,9 +162,6 @@ export function RegulatoryCompliancePanel() {
         activeRuleProfileId={activeRuleProfileId}
         setActiveRuleProfileId={setActiveRuleProfileId}
         isEs={isEs}
-        hasArchitecture={conversionStations.length > 0}
-        onLoadPreset={loadPreset}
-        onClearPreset={clearPreset}
       />
     </section>
   );

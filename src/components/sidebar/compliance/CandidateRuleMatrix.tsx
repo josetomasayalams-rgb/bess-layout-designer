@@ -23,9 +23,6 @@ export interface CandidateRuleMatrixProps {
   activeRuleProfileId: RegulatoryRuleProfileId;
   setActiveRuleProfileId: (profileId: RegulatoryRuleProfileId) => void;
   isEs: boolean;
-  hasArchitecture: boolean;
-  onLoadPreset: () => void;
-  onClearPreset: () => void;
 }
 
 export function CandidateRuleMatrix({
@@ -33,9 +30,6 @@ export function CandidateRuleMatrix({
   activeRuleProfileId,
   setActiveRuleProfileId,
   isEs,
-  hasArchitecture,
-  onLoadPreset,
-  onClearPreset,
 }: CandidateRuleMatrixProps) {
   return (
     <div className="mt-5 border-t border-slate-800 pt-4">
@@ -49,12 +43,7 @@ export function CandidateRuleMatrix({
         </span>
       </div>
 
-      <PresetLoader
-        isEs={isEs}
-        hasArchitecture={hasArchitecture}
-        onLoadPreset={onLoadPreset}
-        onClearPreset={onClearPreset}
-      />
+
 
       <label className="block text-[10px] uppercase tracking-wide text-slate-500">
         {isEs ? "Perfil de reglas" : "Rule profile"}
@@ -225,52 +214,7 @@ export function CandidateRuleMatrix({
   );
 }
 
-interface PresetLoaderProps {
-  isEs: boolean;
-  hasArchitecture: boolean;
-  onLoadPreset: () => void;
-  onClearPreset: () => void;
-}
 
-function PresetLoader({
-  isEs,
-  hasArchitecture,
-  onLoadPreset,
-  onClearPreset,
-}: PresetLoaderProps) {
-  return (
-    <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-slate-800 bg-slate-900/40 px-2.5 py-2">
-      <span className="text-[10px] uppercase tracking-wide text-slate-500">
-        {isEs ? "Arquitectura v1.2" : "v1.2 architecture"}
-      </span>
-      <button
-        type="button"
-        onClick={onLoadPreset}
-        className="rounded-md border border-violet-500/40 bg-violet-500/10 px-2 py-1 text-[11px] font-medium text-violet-100 hover:border-violet-300"
-      >
-        {isEs ? "Cargar BESS del Desierto" : "Load BESS del Desierto"}
-      </button>
-      {hasArchitecture ? (
-        <button
-          type="button"
-          onClick={onClearPreset}
-          className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[11px] text-slate-200 hover:border-slate-500"
-        >
-          {isEs ? "Limpiar" : "Clear"}
-        </button>
-      ) : null}
-      <span className="ml-auto text-[10px] text-slate-500">
-        {hasArchitecture
-          ? isEs
-            ? "Cargada"
-            : "Loaded"
-          : isEs
-            ? "No cargada"
-            : "Not loaded"}
-      </span>
-    </div>
-  );
-}
 
 function CountTile({
   value,

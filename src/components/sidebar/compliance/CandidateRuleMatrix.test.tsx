@@ -107,8 +107,6 @@ describe("CandidateRuleMatrix", () => {
 
   it("renders heading and correct counts in Spanish", () => {
     const setActiveRuleProfileId = vi.fn();
-    const onLoadPreset = vi.fn();
-    const onClearPreset = vi.fn();
 
     render(
       <CandidateRuleMatrix
@@ -116,9 +114,6 @@ describe("CandidateRuleMatrix", () => {
         activeRuleProfileId="chile-utility-predesign"
         setActiveRuleProfileId={setActiveRuleProfileId}
         isEs={true}
-        hasArchitecture={false}
-        onLoadPreset={onLoadPreset}
-        onClearPreset={onClearPreset}
       />
     );
 
@@ -130,8 +125,6 @@ describe("CandidateRuleMatrix", () => {
 
   it("renders mock rules, violations and citations/capping", () => {
     const setActiveRuleProfileId = vi.fn();
-    const onLoadPreset = vi.fn();
-    const onClearPreset = vi.fn();
 
     render(
       <CandidateRuleMatrix
@@ -139,9 +132,6 @@ describe("CandidateRuleMatrix", () => {
         activeRuleProfileId="chile-utility-predesign"
         setActiveRuleProfileId={setActiveRuleProfileId}
         isEs={true}
-        hasArchitecture={true}
-        onLoadPreset={onLoadPreset}
-        onClearPreset={onClearPreset}
       />
     );
 
@@ -166,8 +156,6 @@ describe("CandidateRuleMatrix", () => {
 
   it("triggers callback when changing rule profile selector", () => {
     const setActiveRuleProfileId = vi.fn();
-    const onLoadPreset = vi.fn();
-    const onClearPreset = vi.fn();
 
     render(
       <CandidateRuleMatrix
@@ -175,9 +163,6 @@ describe("CandidateRuleMatrix", () => {
         activeRuleProfileId="chile-utility-predesign"
         setActiveRuleProfileId={setActiveRuleProfileId}
         isEs={true}
-        hasArchitecture={false}
-        onLoadPreset={onLoadPreset}
-        onClearPreset={onClearPreset}
       />
     );
 
@@ -185,31 +170,5 @@ describe("CandidateRuleMatrix", () => {
     fireEvent.change(select, { target: { value: "chile-pmgd-predesign" } });
 
     expect(setActiveRuleProfileId).toHaveBeenCalledWith("chile-pmgd-predesign");
-  });
-
-  it("triggers callbacks for preset load and clear", () => {
-    const setActiveRuleProfileId = vi.fn();
-    const onLoadPreset = vi.fn();
-    const onClearPreset = vi.fn();
-
-    render(
-      <CandidateRuleMatrix
-        ruleEvaluation={mockEvaluation}
-        activeRuleProfileId="chile-utility-predesign"
-        setActiveRuleProfileId={setActiveRuleProfileId}
-        isEs={true}
-        hasArchitecture={true}
-        onLoadPreset={onLoadPreset}
-        onClearPreset={onClearPreset}
-      />
-    );
-
-    const loadBtn = screen.getByRole("button", { name: /Cargar BESS del Desierto/i });
-    fireEvent.click(loadBtn);
-    expect(onLoadPreset).toHaveBeenCalled();
-
-    const clearBtn = screen.getByRole("button", { name: /Limpiar/i });
-    fireEvent.click(clearBtn);
-    expect(onClearPreset).toHaveBeenCalled();
   });
 });
