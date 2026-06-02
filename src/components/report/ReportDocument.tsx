@@ -8,6 +8,9 @@
 import {
   Document,
 } from "@react-pdf/renderer";
+// Side-effect import: registers the self-hosted Inter brand face before any
+// page renders. Must precede the section imports that consume the fonts.
+import "./registerReportFonts";
 import type { TechnicalReportData } from "@/lib/report/buildReportData";
 import { CoverPage } from "./pdfChrome";
 import {

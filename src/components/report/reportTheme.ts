@@ -31,17 +31,18 @@ const color = {
 } as const;
 
 /**
- * Font role → family. Phase 2 keeps the 14 standard PDF families so output is
- * unchanged; Phase 4 re-points the `body*`/`data*` roles at registered Inter
- * families while keeping these role names stable for every consumer.
+ * Font role → family. The sans roles now point at the self-hosted Inter brand
+ * face (registered in `registerReportFonts.ts`, each weight as its own family),
+ * matching the app's Inter identity. Mono roles stay on standard Courier (Inter
+ * ships no monospace). Role names are stable so every consumer is unaffected.
  */
 const font = {
-  body: "Times-Roman",
-  bodyBold: "Times-Bold",
-  bodyItalic: "Times-Italic",
-  data: "Helvetica",
-  dataBold: "Helvetica-Bold",
-  dataItalic: "Helvetica-Oblique",
+  body: "Inter",
+  bodyBold: "Inter Bold",
+  bodyItalic: "Inter Italic",
+  data: "Inter",
+  dataBold: "Inter SemiBold",
+  dataItalic: "Inter Italic",
   mono: "Courier",
   monoBold: "Courier-Bold",
 } as const;
