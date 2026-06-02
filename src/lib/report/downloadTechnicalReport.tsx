@@ -3,10 +3,8 @@
 import { pdf } from "@react-pdf/renderer";
 import { saveAs } from "file-saver";
 import { ReportDocument } from "@/components/report/ReportDocument";
-import {
-  bessDelDesiertoPendingDataV12,
-  getProjectCaseStudy,
-} from "@/data/projectCaseStudies";
+import { getProjectCaseStudy } from "@/data/projectCaseStudies";
+import { resolveReportPendingData } from "@/lib/report/resolveReportPendingData";
 import { getRegulatoryProfile } from "@/rules/regulatoryProfileMetadata";
 import { validateBessLayout } from "@/rules/bessValidationEngine";
 import { runRegulatoryEvaluation } from "@/rules/regulatoryProfileEvaluator";
@@ -105,16 +103,12 @@ export async function downloadTechnicalReportPdf({
   const caseStudy = project.selectedCaseStudyId
     ? getProjectCaseStudy(project.selectedCaseStudyId)
     : null;
-  const hasTechnicalArchitecture =
-    project.conversionStations.length > 0 ||
-    project.mvFeeders.length > 0 ||
-    project.blocks.length > 0;
-  const pendingData =
-    project.inconsistencies.length > 0 ||
-    project.assumptionsV2.length > 0 ||
-    hasTechnicalArchitecture
-      ? bessDelDesiertoPendingDataV12
-      : caseStudy?.pendingData ?? [];
+  // Case-study-specific pending data must not leak into unrelated projects:
+  // the del Desierto V12 set is used only when that case study is selected.
+  const pendingData = resolveReportPendingData(
+    project.selectedCaseStudyId,
+    caseStudy
+  );
 
   const data = buildReportData({
     projectName: project.projectName?.trim() || caseStudy?.projectName,

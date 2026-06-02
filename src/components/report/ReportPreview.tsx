@@ -26,7 +26,8 @@ import { validateBessLayout } from "@/rules/bessValidationEngine";
 import { validateElectricalTopology } from "@/lib/electrical/topologyValidation";
 import { runRegulatoryEvaluation } from "@/rules/regulatoryProfileEvaluator";
 import { downloadTechnicalReportPdf } from "@/lib/report/downloadTechnicalReport";
-import { getProjectCaseStudy, bessDelDesiertoPendingDataV12 } from "@/data/projectCaseStudies";
+import { getProjectCaseStudy } from "@/data/projectCaseStudies";
+import { resolveReportPendingData } from "@/lib/report/resolveReportPendingData";
 import { svgPolygonPath } from "@/lib/report/buildSiteSvg";
 import {
   resultSentence,
@@ -140,17 +141,13 @@ export function ReportPreview({ isOpen, onClose, includeGeocoding }: ReportPrevi
         const caseStudy = project.selectedCaseStudyId
           ? getProjectCaseStudy(project.selectedCaseStudyId)
           : null;
-        const hasTechnicalArchitecture =
-          project.conversionStations.length > 0 ||
-          project.mvFeeders.length > 0 ||
-          project.blocks.length > 0;
-        
-        const pendingData =
-          project.inconsistencies.length > 0 ||
-          project.assumptionsV2.length > 0 ||
-          hasTechnicalArchitecture
-            ? bessDelDesiertoPendingDataV12
-            : caseStudy?.pendingData ?? [];
+        // Case-study-specific pending data must not leak into unrelated
+        // projects: the del Desierto V12 set is used only when that case study
+        // is selected. Mirrors downloadTechnicalReport so preview == export.
+        const pendingData = resolveReportPendingData(
+          project.selectedCaseStudyId,
+          caseStudy
+        );
 
         const assembled = buildReportData({
           projectName: project.projectName?.trim() || caseStudy?.projectName,
