@@ -46,6 +46,6 @@ describe("PreliminaryElectricalSection", () => {
 
     expect(screen.getByText("Capacidad de corriente del barra de BT")).toBeDefined();
     expect(screen.getByText("RULE-ELEC-007")).toBeDefined();
-    expect(screen.getByText(/cumple/i)).toBeDefined();
+    expect(screen.getByText(/Sin inconformidades/i)).toBeDefined();
   });
 });

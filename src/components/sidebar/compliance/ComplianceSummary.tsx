@@ -46,7 +46,7 @@ export function ComplianceSummary({
           [isEs ? "Reglas" : "Rules", result.checkedRules],
           [isEs ? "Críticos" : "Critical", result.criticalCount],
           [isEs ? "Avisos" : "Warnings", result.warningCount],
-          [isEs ? "Cumple" : "Pass", result.compliantCount],
+          [isEs ? "Sin inconf." : "No nonconf.", result.compliantCount],
         ].map(([label, value]) => (
           <div
             key={label}

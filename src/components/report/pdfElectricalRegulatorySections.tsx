@@ -1,8 +1,9 @@
 import { Circle, G, Line, Path, Rect, Svg, Text, View } from "@react-pdf/renderer";
 import { REPORT_COLORS, REPORT_FONTS, reportStyles as s } from "./reportStyles";
 import { documentTitle, type TechnicalReportData } from "@/lib/report/buildReportData";
+import type { EvidenceRef } from "@/types/evidence";
 import { selectSldStages } from "@/lib/report/sldStages";
-import { fmtInt, fmtNum, formatIsoDate } from "./pdfFormatters";
+import { fmtInt, fmtNum, formatIsoDate, groupEvaluatedRules } from "./pdfFormatters";
 import { AlertCard, DefGrid, SectionPage, Table } from "./pdfPrimitives";
 import {
   OUTCOME_LABEL,
@@ -626,8 +627,8 @@ export function PreliminaryElectricalChecksSection({ data, embedded }: ReportSec
           <DefGrid
             items={[
               { label: "Reglas", value: fmtInt(checks.length) },
-              { label: "Cumple", value: fmtInt(block.totals.pass) },
-              { label: "Incumple", value: fmtInt(block.totals.violation) },
+              { label: "Sin inconformidades", value: fmtInt(block.totals.pass) },
+              { label: "Inconformidades", value: fmtInt(block.totals.violation) },
               { label: "No evaluable", value: fmtInt(block.totals.notEvaluable) },
               { label: "Pendiente", value: fmtInt(block.totals.pendingValidation) },
               {
@@ -719,6 +720,10 @@ export function PreliminaryElectricalChecksSection({ data, embedded }: ReportSec
             Severidad efectiva = severidad declarada acotada por nivel
             documental L1–L7 y confianza de evidencia (`severityCeiling.ts`).
             Una regla nunca puede ser más estricta que su mejor evidencia.
+            {"\n\n"}
+            Algunas reglas pueden aparecer como advertencias o checklist debido al alcance preliminar del diseño o a la falta de evidencia certificada. Su severidad final debe confirmarse durante la ingeniería de detalle.
+            {"\n\n"}
+            Some rules may appear as warnings or checklist items due to the preliminary design scope or missing certified evidence. Their final severity must be confirmed during detailed engineering.
           </Text>
         </>
       )}
@@ -745,8 +750,8 @@ export function RegulatorySection({ data, embedded }: ReportSectionProps) {
           {/* Resumen visual de estado normativo */}
           <View style={s.statusChipRow}>
             {[
-              { label: "Cumple", count: ev.totals.pass, bg: "#dcfce7", fg: REPORT_COLORS.ok, border: "#bbf7d0" },
-              { label: "Incumple", count: ev.totals.violation, bg: "#fee2e2", fg: REPORT_COLORS.danger, border: "#fecaca" },
+              { label: "Sin inconformidades", count: ev.totals.pass, bg: "#dcfce7", fg: REPORT_COLORS.ok, border: "#bbf7d0" },
+              { label: "Inconformidades", count: ev.totals.violation, bg: "#fee2e2", fg: REPORT_COLORS.danger, border: "#fecaca" },
               { label: "Revisión manual", count: ev.totals.manualCheck, bg: "#e0f2fe", fg: "#075985", border: "#bae6fd" },
               { label: "Pendiente", count: ev.totals.pending, bg: "#fef3c7", fg: REPORT_COLORS.warn, border: "#fde68a" },
               { label: "No evaluable", count: ev.totals.notEvaluable, bg: "#e2e8f0", fg: REPORT_COLORS.muted, border: "#cbd5e1" },
@@ -759,75 +764,92 @@ export function RegulatorySection({ data, embedded }: ReportSectionProps) {
                 <Text style={[s.statusChipCount, { color: chip.fg }]}>
                   {fmtInt(chip.count)}
                 </Text>
-                <Text style={[s.statusChipLabel, { color: chip.fg }]}>
+                <Text style={[s.statusChipLabel, { color: chip.fg, fontSize: chip.label.length > 12 ? 5.5 : 6.5 }]}>
                   {chip.label}
                 </Text>
               </View>
             ))}
           </View>
           <Text style={s.note}>
-            De las violaciones, {fmtInt(ev.totals.blockingViolations)} son
+            De las inconformidades detectadas, {fmtInt(ev.totals.blockingViolations)} son
             bloqueantes y {fmtInt(ev.totals.warningViolations)} son avisos.
           </Text>
 
-          <Text style={s.subTitle}>Reglas críticas o accionables</Text>
-          <View style={s.table} wrap>
-            <View style={[s.tableRow, s.tableHeaderRow]}>
-              <Text style={[s.tableHeaderCell, { width: "13%" }]}>Outcome</Text>
-              <Text style={[s.tableHeaderCell, { width: "16%" }]}>ID</Text>
-              <Text style={[s.tableHeaderCell, { width: "45%" }]}>Regla</Text>
-              <Text style={[s.tableHeaderCell, { width: "26%" }]}>Fuente</Text>
-            </View>
-            {ev.rules
-              .filter((entry) =>
-                entry.outcome === "violation" ||
-                (entry.severity === "blocking" &&
-                  ["pending_validation", "manual_check", "not_evaluable"].includes(entry.outcome))
-              )
-              .slice(0, 14)
-              .map((entry, i) => {
-              const o = OUTCOME_LABEL[entry.outcome] ?? OUTCOME_LABEL.out_of_scope;
-              const cite = entry.evidence.find(
-                (e) => e.documentId && e.documentId !== "__none__"
-              );
-              const citeText = cite
-                ? `${documentTitle(cite.documentId)}${cite.page ? ` · p.${cite.page}` : ""}${cite.section ? ` · ${cite.section}` : ""}`
-                : "—";
+          <Text style={s.subTitle}>Reglas críticas o accionables por categoría</Text>
+          {(() => {
+            const criticalRules = ev.rules.filter((entry) =>
+              entry.outcome === "violation" ||
+              (entry.severity === "blocking" &&
+                ["pending_validation", "manual_check", "not_evaluable"].includes(entry.outcome))
+            ).slice(0, 14);
+            const groups = groupEvaluatedRules(criticalRules);
+
+            if (groups.length === 0) {
               return (
-                <View
-                  key={entry.ruleId + i}
-                  style={[s.tableRow, i % 2 === 1 ? s.tableRowAlt : {}]}
-                >
-                  <View
-                    style={[
-                      s.tableCell,
-                      { width: "13%", borderRightWidth: 0.5, borderRightColor: REPORT_COLORS.rule },
-                    ]}
-                  >
-                    <Text style={[s.pill, outcomePillStyle(o.style)]}>{o.label}</Text>
-                  </View>
-                  <Text
-                    style={[
-                      s.tableCell,
-                      s.tableCellMono,
-                      { width: "16%", fontSize: 7, color: REPORT_COLORS.muted },
-                    ]}
-                  >
-                    {entry.ruleId}
-                  </Text>
-                  <Text style={[s.tableCell, { width: "45%" }]}>
-                    {entry.title}
-                  </Text>
-                  <Text style={[s.tableCell, { width: "26%", fontSize: 7.5 }]}>
-                    {citeText}
-                  </Text>
-                </View>
+                <Text style={s.note}>
+                  No se detectaron inconformidades críticas ni acciones pendientes en esta evaluación preliminar.
+                </Text>
               );
-            })}
-          </View>
+            }
+
+            return groups.map((group, gIdx) => (
+              <View key={group.title} style={{ marginTop: gIdx > 0 ? 12 : 6 }}>
+                <Text style={[s.subTitle, { fontSize: 8.5, marginBottom: 4, fontFamily: REPORT_FONTS.bodyBold }]}>
+                  {group.title}
+                </Text>
+                <View style={s.table} wrap>
+                  <View style={[s.tableRow, s.tableHeaderRow]}>
+                    <Text style={[s.tableHeaderCell, { width: "16%" }]}>Outcome</Text>
+                    <Text style={[s.tableHeaderCell, { width: "16%" }]}>ID</Text>
+                    <Text style={[s.tableHeaderCell, { width: "42%" }]}>Regla</Text>
+                    <Text style={[s.tableHeaderCell, { width: "26%" }]}>Fuente</Text>
+                  </View>
+                  {group.items.map((entry, i) => {
+                    const o = OUTCOME_LABEL[entry.outcome] ?? OUTCOME_LABEL.out_of_scope;
+                    const cite = entry.evidence.find(
+                      (e: EvidenceRef) => e.documentId && e.documentId !== "__none__"
+                    );
+                    const citeText = cite
+                      ? `${documentTitle(cite.documentId)}${cite.page ? ` · p.${cite.page}` : ""}${cite.section ? ` · ${cite.section}` : ""}`
+                      : "—";
+                    return (
+                      <View
+                        key={entry.ruleId + i}
+                        style={[s.tableRow, i % 2 === 1 ? s.tableRowAlt : {}]}
+                      >
+                        <View
+                          style={[
+                            s.tableCell,
+                            { width: "16%", borderRightWidth: 0.5, borderRightColor: REPORT_COLORS.rule },
+                          ]}
+                        >
+                          <Text style={[s.pill, outcomePillStyle(o.style)]}>{o.label}</Text>
+                        </View>
+                        <Text
+                          style={[
+                            s.tableCell,
+                            s.tableCellMono,
+                            { width: "16%", fontSize: 7, color: REPORT_COLORS.muted },
+                          ]}
+                        >
+                          {entry.ruleId}
+                        </Text>
+                        <Text style={[s.tableCell, { width: "42%" }]}>
+                          {entry.title}
+                        </Text>
+                        <Text style={[s.tableCell, { width: "26%", fontSize: 7.5 }]}>
+                          {citeText}
+                        </Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
+            ));
+          })()}
+
           <Text style={s.note}>
-            La tabla completa de reglas se movió a anexos. Esta sección sólo
-            muestra violaciones, bloqueantes y chequeos manuales relevantes.
+            La tabla completa de todas las reglas evaluadas se detalla en el Anexo A1 de este documento.
           </Text>
         </>
       )}

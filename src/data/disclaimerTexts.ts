@@ -17,7 +17,7 @@ export type DisclaimerKey =
 
 export const disclaimerTexts: Record<DisclaimerKey, string> = {
   generalMvp:
-    "Este reporte corresponde a un predimensionamiento preliminar BESS. Los resultados son utiles para evaluacion temprana de capacidad, ocupacion fisica, configuracion conceptual y comparacion de alternativas. No constituyen ingenieria de detalle ni autorizacion de construccion, interconexion, operacion o cumplimiento normativo final.",
+    "Este reporte corresponde a un predimensionamiento preliminar BESS. No certifica cumplimiento SEC ni reemplaza la ingenieria de detalle, la de detalle de la malla de tierra, la revision del fabricante, la revision de la aseguradora, ni los permisos ambientales, municipales o sectoriales. Los resultados son utiles para la evaluacion temprana de capacidad, ocupacion fisica, configuracion conceptual y comparacion de alternativas. No constituyen ingenieria de detalle ni autorizacion de construccion, interconexion, operacion o cumplimiento normativo final.",
 
   conceptualSizing:
     "Los calculos electricos son preliminares. No reemplazan estudios de flujo de carga, cortocircuito, coordinacion de protecciones, estabilidad RMS/EMT, armonicos, calidad de suministro, puesta a tierra, arco electrico ni estudios de interconexion exigidos por el Coordinador Electrico Nacional u otra autoridad.",
@@ -44,5 +44,5 @@ export const disclaimerTexts: Record<DisclaimerKey, string> = {
     "Las normas internacionales (tales como NFPA 855, UL 9540, UL 9540A, IEC 62933 o IEEE 2800) se consideran unicamente como referencias tecnicas y buenas practicas complementarias de prediseno cuando corresponda. No sustituyen los reglamentos y pliegos tecnicos obligatorios dictados por la SEC u otras autoridades locales en Chile.",
 
   shortInterface:
-    "Predimensionamiento preliminar. Requiere validacion de fabricante/EPC/AHJ y estudios de ingenieria de detalle antes de usarse para diseno, permisos, construccion u operacion.",
+    "Predimensionamiento preliminar. No certifica cumplimiento SEC ni reemplaza la ingenieria de detalle, la revision de fabricante o de aseguradora, ni permisos ambientales, municipales o sectoriales.",
 };

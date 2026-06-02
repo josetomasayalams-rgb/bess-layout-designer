@@ -1,9 +1,10 @@
 import { Text, View } from "@react-pdf/renderer";
 import { REPORT_COLORS, REPORT_FONTS, reportStyles as s } from "./reportStyles";
 import { documentTitle, type TechnicalReportData } from "@/lib/report/buildReportData";
+import type { EvidenceRef } from "@/types/evidence";
 import { AlertCard, SectionPage, Table } from "./pdfPrimitives";
 import { OUTCOME_LABEL, outcomePillStyle } from "./pdfSeverityMaps";
-import { buildNextSteps, groupExclusions } from "./pdfFormatters";
+import { buildNextSteps, groupExclusions, groupEvaluatedRules } from "./pdfFormatters";
 
 type ReportSectionProps = { data: TechnicalReportData; embedded?: boolean };
 
@@ -278,6 +279,7 @@ export function EngineeringAnnexSection({ data, embedded }: ReportSectionProps) 
 
 export function RegulatoryAnnexSection({ data }: ReportSectionProps) {
   const ev = data.regulatoryEvaluation;
+  const groups = ev ? groupEvaluatedRules(ev.rules) : [];
   return (
     <SectionPage data={data} number="A1" title="Anexo: tabla completa de reglas">
       {!ev ? (
@@ -291,47 +293,52 @@ export function RegulatoryAnnexSection({ data }: ReportSectionProps) {
             registro técnico de apoyo; la lectura ejecutiva se presenta en la
             sección de validación normativa resumida.
           </Text>
-          <View style={s.table} wrap>
-            <View style={[s.tableRow, s.tableHeaderRow]}>
-              <Text style={[s.tableHeaderCell, { width: "13%" }]}>Outcome</Text>
-              <Text style={[s.tableHeaderCell, { width: "16%" }]}>ID</Text>
-              <Text style={[s.tableHeaderCell, { width: "45%" }]}>Regla</Text>
-              <Text style={[s.tableHeaderCell, { width: "26%" }]}>Fuente</Text>
-            </View>
-            {ev.rules.map((entry, i) => {
-              const o = OUTCOME_LABEL[entry.outcome] ?? OUTCOME_LABEL.out_of_scope;
-              const cite = entry.evidence.find(
-                (e) => e.documentId && e.documentId !== "__none__"
-              );
-              const citeText = cite
-                ? `${documentTitle(cite.documentId)}${cite.page ? ` · p.${cite.page}` : ""}${cite.section ? ` · ${cite.section}` : ""}`
-                : "—";
-              return (
-                <View
-                  key={entry.ruleId + i}
-                  style={[s.tableRow, i % 2 === 1 ? s.tableRowAlt : {}]}
-                >
-                  <View
-                    style={[
-                      s.tableCell,
-                      { width: "13%", borderRightWidth: 0.5, borderRightColor: REPORT_COLORS.rule },
-                    ]}
-                  >
-                    <Text style={[s.pill, outcomePillStyle(o.style)]}>{o.label}</Text>
-                  </View>
-                  <Text style={[s.tableCell, s.tableCellMono, { width: "16%" }]}>
-                    {entry.ruleId}
-                  </Text>
-                  <Text style={[s.tableCell, { width: "45%" }]}>
-                    {entry.title}
-                  </Text>
-                  <Text style={[s.tableCell, { width: "26%", fontSize: 7.5 }]}>
-                    {citeText}
-                  </Text>
+          {groups.map((group, gIdx) => (
+            <View key={group.title} style={{ marginTop: gIdx > 0 ? 12 : 6 }}>
+              <Text style={[s.subTitle, { marginBottom: 4 }]}>{group.title}</Text>
+              <View style={s.table} wrap>
+                <View style={[s.tableRow, s.tableHeaderRow]}>
+                  <Text style={[s.tableHeaderCell, { width: "16%" }]}>Outcome</Text>
+                  <Text style={[s.tableHeaderCell, { width: "16%" }]}>ID</Text>
+                  <Text style={[s.tableHeaderCell, { width: "42%" }]}>Regla</Text>
+                  <Text style={[s.tableHeaderCell, { width: "26%" }]}>Fuente</Text>
                 </View>
-              );
-            })}
-          </View>
+                {group.items.map((entry, i) => {
+                  const o = OUTCOME_LABEL[entry.outcome] ?? OUTCOME_LABEL.out_of_scope;
+                  const cite = entry.evidence.find(
+                    (e: EvidenceRef) => e.documentId && e.documentId !== "__none__"
+                  );
+                  const citeText = cite
+                    ? `${documentTitle(cite.documentId)}${cite.page ? ` · p.${cite.page}` : ""}${cite.section ? ` · ${cite.section}` : ""}`
+                    : "—";
+                  return (
+                    <View
+                      key={entry.ruleId + i}
+                      style={[s.tableRow, i % 2 === 1 ? s.tableRowAlt : {}]}
+                    >
+                      <View
+                        style={[
+                          s.tableCell,
+                          { width: "16%", borderRightWidth: 0.5, borderRightColor: REPORT_COLORS.rule },
+                        ]}
+                      >
+                        <Text style={[s.pill, outcomePillStyle(o.style)]}>{o.label}</Text>
+                      </View>
+                      <Text style={[s.tableCell, s.tableCellMono, { width: "16%" }]}>
+                        {entry.ruleId}
+                      </Text>
+                      <Text style={[s.tableCell, { width: "42%" }]}>
+                        {entry.title}
+                      </Text>
+                      <Text style={[s.tableCell, { width: "26%", fontSize: 7.5 }]}>
+                        {citeText}
+                      </Text>
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
+          ))}
         </>
       )}
     </SectionPage>

@@ -213,6 +213,7 @@ function emptyByCategory(): RegulatoryEvaluationByCategory {
     regulatory_environmental: [],
     regulatory_fire_safety: [],
     engineering_detail: [],
+    manufacturerSpecificRules: [],
   };
 }
 
@@ -278,7 +279,11 @@ function evaluateRule(
 
   // Reglas implementadas: comparar contra outputs del motor.
   if (rule.status === "implemented") {
-    if (rule.category === "physical_layout" || rule.category === "regulatory_fire_safety") {
+    if (
+      rule.category === "physical_layout" ||
+      rule.category === "regulatory_fire_safety" ||
+      rule.category === "manufacturerSpecificRules"
+    ) {
       const matched = matchPhysicalViolations(rule, input.physicalIssues ?? []);
       if (matched.length === 0) {
         return { ...base, outcome: "pass" };

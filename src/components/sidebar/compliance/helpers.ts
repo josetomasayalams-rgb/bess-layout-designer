@@ -7,13 +7,13 @@ import type { EvaluatedRuleEntry, RuleOutcome } from "@/rules/regulatoryProfileE
 
 export const OUTCOME_LABEL: Record<RuleOutcome, { es: string; en: string; className: string }> = {
   pass: {
-    es: "Cumple",
-    en: "Pass",
+    es: "Sin inconformidades",
+    en: "No nonconformities",
     className: "border-emerald-500/40 bg-emerald-500/10 text-emerald-200",
   },
   violation: {
-    es: "Violación",
-    en: "Violation",
+    es: "Inconformidad",
+    en: "Nonconformity",
     className: "border-rose-500/40 bg-rose-500/10 text-rose-200",
   },
   manual_check: {
@@ -144,6 +144,13 @@ export function localizedIssue(issue: ValidationIssue, isEs: boolean) {
           "No se declaró manual de instalación del fabricante. Las distancias reales pueden ser más restrictivas que el perfil conservador activo.",
         recommendation:
           "Adjuntar requisitos de instalación del fabricante y compararlos contra el perfil normativo conservador.",
+      };
+    case "bess_to_bess_submetric_warning":
+      return {
+        ruleLabel: "Advertencia de espaciamiento submétrico de fabricante",
+        message: `La separación entre BESS ${objectA} y BESS ${objectB} es submétrica (${measured} < 1.0 m) y está basada en el despeje de fabricante.`,
+        recommendation:
+          "La separación cumple el despeje mecánico o de ventilación del fabricante seleccionado, pero puede ser inferior a criterios de asegurabilidad o protección contra propagación de incendio. Validar el layout con el fabricante, aseguradora y equipo de ingeniería de detalle.",
       };
     default:
       return {

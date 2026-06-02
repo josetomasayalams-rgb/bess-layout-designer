@@ -113,8 +113,8 @@ describe("resultSentence / maturityLevel", () => {
 
 describe("Spanish severity / outcome labels", () => {
   it("translates outcome codes to Spanish", () => {
-    expect(OUTCOME_LABEL.pass.label).toBe("Cumple");
-    expect(OUTCOME_LABEL.violation.label).toBe("Incumple");
+    expect(OUTCOME_LABEL.pass.label).toBe("Sin inconformidades");
+    expect(OUTCOME_LABEL.violation.label).toBe("Inconformidad");
     expect(OUTCOME_LABEL.pending_validation.label).toBe("Pendiente");
     expect(OUTCOME_LABEL.manual_check.label).toBe("Revisión");
   });

@@ -15,6 +15,7 @@ const CATEGORY_LABEL: Record<RuleCategory, { es: string; en: string }> = {
   regulatory_environmental: { es: "Ambiental", en: "Environmental" },
   regulatory_fire_safety: { es: "Incendio", en: "Fire safety" },
   engineering_detail: { es: "Ing. detalle", en: "Detail eng." },
+  manufacturerSpecificRules: { es: "Espaciamiento fabricante", en: "Manufacturer spacing" },
 };
 
 export interface CandidateRuleMatrixProps {
@@ -77,12 +78,12 @@ export function CandidateRuleMatrix({
       <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
         <CountTile
           value={ruleEvaluation.totals.pass}
-          label={isEs ? "Cumple" : "Pass"}
+          label={isEs ? "Sin inconformidades" : "No nonconf."}
           className="text-emerald-200"
         />
         <CountTile
           value={ruleEvaluation.totals.violation}
-          label={isEs ? "Violación" : "Violation"}
+          label={isEs ? "Inconformidades" : "Nonconformities"}
           className="text-rose-200"
         />
         <CountTile
@@ -203,8 +204,8 @@ export function CandidateRuleMatrix({
 
       <p className="mt-3 text-[10px] leading-snug text-slate-500">
         {isEs
-          ? "Reglas candidatas: la mayoría requiere lectura humana del PDF primario antes de promoverse a regla certificada. Esta sección no sustituye revisión legal."
-          : "Candidate rules. Most require human reading of the primary PDF before promotion. This section is not a legal review."}
+          ? "Reglas candidatas: la mayoría requiere lectura humana del PDF primario antes de promoverse a regla certificada. Algunas reglas pueden aparecer como advertencias o checklist debido al alcance preliminar del diseño o a la falta de evidencia certificada. Su severidad final debe confirmarse durante la ingeniería de detalle."
+          : "Candidate rules. Most require human reading of the primary PDF before promotion. Some rules may appear as warnings or checklist items due to the preliminary design scope or missing certified evidence. Their final severity must be confirmed during detailed engineering."}
       </p>
     </div>
   );

@@ -9,8 +9,8 @@ export const SEVERITY_PILL: Record<string, keyof typeof s> = {
 };
 
 export const OUTCOME_LABEL: Record<string, { label: string; style: keyof typeof s }> = {
-  pass: { label: "Cumple", style: "pillPass" },
-  violation: { label: "Incumple", style: "pillViolation" },
+  pass: { label: "Sin inconformidades", style: "pillPass" },
+  violation: { label: "Inconformidad", style: "pillViolation" },
   manual_check: { label: "Revisión", style: "pillManual" },
   pending_validation: { label: "Pendiente", style: "pillPending" },
   not_evaluable: { label: "No evaluable", style: "pillOut" },

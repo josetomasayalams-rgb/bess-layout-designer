@@ -15,7 +15,8 @@ export type RuleCategory =
   | "regulatory_territorial"
   | "regulatory_environmental"
   | "regulatory_fire_safety"
-  | "engineering_detail";
+  | "engineering_detail"
+  | "manufacturerSpecificRules";
 
 export type RuleStatus =
   | "candidate"

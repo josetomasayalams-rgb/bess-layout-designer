@@ -90,6 +90,7 @@ describe("CandidateRuleMatrix", () => {
       regulatory_environmental: [],
       regulatory_fire_safety: [],
       engineering_detail: [],
+      manufacturerSpecificRules: [],
     },
     totals: {
       pass: 1,
@@ -123,8 +124,8 @@ describe("CandidateRuleMatrix", () => {
 
     expect(screen.getByText("Matriz normativa candidata")).toBeDefined();
     expect(screen.getByText("2 reglas")).toBeDefined();
-    expect(screen.getAllByText("Cumple").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("Violación").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Sin inconformidades").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Inconformidad").length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders mock rules, violations and citations/capping", () => {
@@ -147,7 +148,7 @@ describe("CandidateRuleMatrix", () => {
     // Rule title
     expect(screen.getByText("Distancia BESS a deslinde")).toBeDefined();
     // Rule outcome badge
-    expect(screen.getAllByText("Cumple").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Sin inconformidades").length).toBeGreaterThanOrEqual(1);
 
     // Violation message
     expect(screen.getByText("· Distancia insuficiente")).toBeDefined();

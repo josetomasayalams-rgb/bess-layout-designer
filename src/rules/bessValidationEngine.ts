@@ -306,9 +306,27 @@ export function validateBessLayout(args: {
             required_m: required,
             source: profile.source,
             message: "BESS to BESS separation meets the active criterion.",
-            recommendation: "Keep manufacturer and AHJ validation in the project record.",
+            recommendation: "Confirm manufacturer and AHJ validation in the project record.",
           })
         );
+        if (measured < 1.0) {
+          issues.push(
+            issue({
+              id: `warn-bess-bess-submetric-${a.id}-${b.id}`,
+              severity: "warning",
+              ruleId: "bess_to_bess_submetric_warning",
+              ruleLabel: "BESS submetric manufacturer spacing warning",
+              objectAId: a.id,
+              objectBId: b.id,
+              measured_m: measured,
+              required_m: 1.0,
+              source: "Manufacturer clearance benchmark, potential fire/insurance risk",
+              basis: "requires_validation",
+              message: `BESS ${a.id.slice(0, 6)} is ${formatLength(measured, { digits: 2 })} from BESS ${b.id.slice(0, 6)}. Spacing is submetric and based on manufacturer clearance.`,
+              recommendation: "The spacing may satisfy the selected manufacturer's mechanical or ventilation clearance, but it may be below insurance or fire-propagation mitigation criteria. Validate the layout with the manufacturer, insurer, and detailed engineering team.",
+            })
+          );
+        }
       }
     }
   }

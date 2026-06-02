@@ -335,7 +335,7 @@ const EXCLUSION_TRANSLATIONS_EN: Record<string, { scope: string; reason: string;
 const DISCLAIMERS_EN: Record<string, { title: string; text: string }> = {
   generalMvp: {
     title: "General MVP Disclaimer",
-    text: "This report corresponds to a preliminary BESS predesign. Results are useful for early capacity, physical footprint, conceptual configuration, and alternative comparison. They do not constitute detailed engineering, or construction, interconnection, operation, or final regulatory compliance authorization.",
+    text: "This report corresponds to a preliminary BESS predesign. It does not certify SEC compliance or replace detailed engineering, grounding grid detailed design, manufacturer review, insurer review, or environmental, municipal, or sectorial permits. Results are useful for early capacity, physical footprint, conceptual configuration, and alternative comparison. They do not constitute detailed engineering, or construction, interconnection, operation, or final regulatory compliance authorization.",
   },
   conceptualSizing: {
     title: "Conceptual Sizing",
@@ -371,7 +371,7 @@ const DISCLAIMERS_EN: Record<string, { title: string; text: string }> = {
   },
   shortInterface: {
     title: "Short Interface Disclaimer",
-    text: "Preliminary predesign. Requires manufacturer/EPC/AHJ validation and detailed engineering studies before being used for design, permitting, construction, or operation.",
+    text: "Preliminary predesign. It does not certify SEC compliance or replace detailed engineering, manufacturer or insurer review, or environmental, municipal, or sectorial permits.",
   },
 };
 

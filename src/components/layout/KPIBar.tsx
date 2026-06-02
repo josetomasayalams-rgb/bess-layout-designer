@@ -248,10 +248,10 @@ export function KPIBar({
   const complianceValue = !hasPlaced
     ? isEs ? "No evaluado" : "Not evaluated"
     : blockingCount > 0
-      ? isEs ? "No cumple" : "Non-compliant"
+      ? isEs ? "Inconformidades detectadas" : "Nonconformities detected"
       : warningCount > 0
-        ? isEs ? "Avisos" : "Warnings"
-        : isEs ? "Cumple" : "Pass";
+        ? isEs ? "Sin inconformidades (con avisos)" : "No nonconformities (with warnings)"
+        : isEs ? "Sin inconformidades" : "No nonconformities";
   const complianceIcon =
     !hasPlaced
       ? undefined

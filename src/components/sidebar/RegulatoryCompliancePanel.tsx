@@ -19,15 +19,15 @@ import {
 
 const STATUS_COPY = {
   compliant: {
-    label: "Cumple",
+    label: "Sin inconformidades detectadas en reglas automatizadas",
     className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-200",
   },
   compliant_with_warnings: {
-    label: "Cumple con advertencias",
+    label: "Sin inconformidades detectadas en reglas automatizadas (con advertencias)",
     className: "border-amber-500/40 bg-amber-500/10 text-amber-200",
   },
   non_compliant: {
-    label: "No cumple",
+    label: "Inconformidades detectadas en reglas automatizadas",
     className: "border-rose-500/40 bg-rose-500/10 text-rose-200",
   },
   not_evaluated: {
@@ -128,9 +128,9 @@ export function RegulatoryCompliancePanel() {
   const statusLabel = isEs
     ? status.label
     : {
-        compliant: "Compliant",
-        compliant_with_warnings: "Compliant with warnings",
-        non_compliant: "Non-compliant",
+        compliant: "No nonconformities detected in automated rules",
+        compliant_with_warnings: "No nonconformities detected in automated rules (with warnings)",
+        non_compliant: "Nonconformities detected in automated rules",
         not_evaluated: "Not evaluated",
       }[result.projectStatus];
 

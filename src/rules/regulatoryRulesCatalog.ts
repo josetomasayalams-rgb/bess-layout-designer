@@ -71,7 +71,7 @@ export const regulatoryRulesCatalog = [
   }),
   rule({
     id: "RULE-PHYS-003",
-    category: "physical_layout",
+    category: "manufacturerSpecificRules",
     severity: "warning",
     title: "Container-to-container clearance from manufacturer source",
     description:

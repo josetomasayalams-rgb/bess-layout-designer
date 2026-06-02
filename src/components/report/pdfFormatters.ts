@@ -14,6 +14,7 @@
 
 import type { TechnicalReportData } from "@/lib/report/buildReportData";
 import type { ProjectExclusion } from "@/types/technical";
+import type { EvaluatedRuleEntry } from "@/rules/regulatoryProfileEvaluator";
 
 export const fmtNum = (v: number | undefined, digits = 2): string =>
   v === undefined || !Number.isFinite(v) ? "—" : v.toFixed(digits);
@@ -136,7 +137,7 @@ const EXCLUSION_CATEGORY_ORDER: ExclusionCategoryDef[] = [
   },
   {
     category: "Interconexión",
-    keywords: ["interconnect", "interconex", "grid-connection", "conexión", "conexion", "-hv", " hv", "transmis"],
+    keywords: ["interconnect", "interconex", "grid-connection", "conexion", "conexion", "-hv", " hv", "transmis"],
   },
   {
     category: "Operación y mantenimiento",
@@ -284,4 +285,51 @@ export function buildNextSteps(data: TechnicalReportData): string[] {
   );
 
   return steps;
+}
+
+export type RuleGroup = {
+  title: string;
+  items: EvaluatedRuleEntry[];
+};
+
+export function groupEvaluatedRules(rules: EvaluatedRuleEntry[]): RuleGroup[] {
+  const manufacturerIds = ["RULE-PHYS-003", "RULE-PHYS-004", "RULE-FIRE-002", "RULE-FIRE-003", "RULE-FIRE-005"];
+  const insuranceIds = ["RULE-PHYS-005", "RULE-FIRE-001", "RULE-FIRE-004"];
+  const automatedIds = [
+    "RULE-PHYS-001",
+    "RULE-PHYS-002",
+    "RULE-PHYS-011",
+    "RULE-ELEC-003",
+    "RULE-ELEC-004",
+    "RULE-ELEC-005",
+    "RULE-ELEC-006",
+    "RULE-ELEC-013",
+    "RULE-ELEC-015",
+    "RULE-ELEC-016"
+  ];
+
+  const automated: EvaluatedRuleEntry[] = [];
+  const technical: EvaluatedRuleEntry[] = [];
+  const manufacturer: EvaluatedRuleEntry[] = [];
+  const insurance: EvaluatedRuleEntry[] = [];
+
+  for (const rule of rules) {
+    if (manufacturerIds.includes(rule.ruleId)) {
+      manufacturer.push(rule);
+    } else if (insuranceIds.includes(rule.ruleId)) {
+      insurance.push(rule);
+    } else if (automatedIds.includes(rule.ruleId)) {
+      automated.push(rule);
+    } else {
+      technical.push(rule);
+    }
+  }
+
+  const groups: RuleGroup[] = [];
+  if (automated.length > 0) groups.push({ title: "Reglas automáticas evaluadas", items: automated });
+  if (technical.length > 0) groups.push({ title: "Advertencias técnicas preliminares", items: technical });
+  if (manufacturer.length > 0) groups.push({ title: "Criterios dependientes de fabricante", items: manufacturer });
+  if (insurance.length > 0) groups.push({ title: "Criterios de asegurabilidad", items: insurance });
+
+  return groups;
 }
