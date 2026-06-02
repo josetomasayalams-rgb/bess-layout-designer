@@ -23,24 +23,39 @@ La salida técnica generada por esta herramienta está dirigida a:
 
 ## 3. Estructura Física y Secciones del Reporte (Modular PDF Layout)
 
-Post-modularización (Fase 12A), el reporte PDF se estructura a través de componentes específicos de React-PDF localizados bajo [src/components/report/document/](file:///Users/josetomasayala/Desktop/App%20BESS/bess-layout-designer/src/components/report/document/):
+El reporte PDF se compone con `@react-pdf/renderer` a partir de módulos planos bajo `src/components/report/` (no existe un subdirectorio `document/`; esa referencia previa quedó obsoleta). El ensamblador raíz es `ReportDocument.tsx`.
 
 ```
-[src/components/report/document/]
-├── ReportDocument.tsx        <-- Ensamblador Raíz y Estilos Globales
-├── ReportCoverPage.tsx       <-- Portada y Disclaimer de Predimensionamiento
-├── ReportLayoutPage.tsx      <-- Sitio, Vértices, Coordenadas y Captura de Mapa
-├── ReportElectricalArchitecturePage.tsx <-- Arquitectura Eléctrica y Topología MT
-├── ReportTraceabilityPage.tsx <-- Tabla de Trazabilidad Documental de Evidencias
-└── ReportExclusionsPage.tsx  <-- Exclusiones de Ingeniería y Disclaimers
+[src/components/report/]
+├── ReportDocument.tsx                  <-- Ensamblador raíz; define la IA y agrupa secciones
+├── reportTheme.ts                      <-- Tokens neutrales (color, tipografía, escala, clasificación, estado)
+├── reportStyles.ts                     <-- StyleSheet react-pdf derivado de reportTheme
+├── registerReportFonts.ts              <-- Registra la fuente de marca Inter (WOFF self-hosted)
+├── reportProvenance.ts                 <-- Clasificación de procedencia + centinela "No disponible"
+├── Brandmark.tsx                       <-- Isotipo (disco + triángulo) como <Svg> recoloreable
+├── pdfChrome.tsx                       <-- Portada, encabezado/pie fijos y marca de agua diagonal
+├── pdfPrimitives.tsx                   <-- SectionPage (con modo embedded), Table, DefGrid, AlertCard
+├── pdfProjectSections.tsx              <-- Resumen ejecutivo, sitio, parámetros, layout
+├── pdfElectricalRegulatorySections.tsx <-- Arquitectura eléctrica + SLD, validaciones eléctricas, normativa
+└── pdfTraceabilityScopeSections.tsx    <-- Alertas/pendientes, alcance/exclusiones, anexos
 ```
 
-### Secciones Renderizadas en el Documento:
-1.  **Portada (`ReportCoverPage.tsx`):** Nombre del proyecto, fecha de generación, versión de la herramienta, metadatos clave y la advertencia general destacada (`generalMvp`).
-2.  **Sitio y Terreno (`ReportLayoutPage.tsx`):** Datos geométricos del polígono de implantación, área total ocupada, número de vértices, referencia del ancla de coordenadas local (`ProjectAnchor`) y mapa geográfico capturado conceptual.
-3.  **Configuración BESS/PCS (`ReportElectricalArchitecturePage.tsx`):** Desglose de modelos de baterías e inversores seleccionados del catálogo, cantidad de contenedores, ratios de integración, esquema unilineal simplificado (SLD), potencia agregada de transformadores y tensión nominal de barra MT.
-4.  **Trazabilidad Documental (`ReportTraceabilityPage.tsx`):** Matriz que asocia cada variable física/eléctrica modificada con su correspondiente ID de documento en `documentRegistry.ts` y su nivel de confianza documental.
-5.  **Exclusiones Explícitas (`ReportExclusionsPage.tsx`):** Declaración inalterable de estudios y disciplinas no ejecutadas por la herramienta (e.g. cortocircuito, flujo de carga) mapeadas a `exclusionRegistry.ts`, más los disclaimers específicos de protección contra incendio y compatibilidad contractual.
+### Arquitectura de Información: portada + 5 secciones de cuerpo + 2 anexos
+Secciones afines se agrupan en páginas combinadas vía `SectionPage embedded` (su contenido es idéntico; se renderizan como sub-bloques):
+
+1.  **Resumen ejecutivo:** frase de resultado, nivel de madurez, KPIs (Potencia POI, energía comercial, duración, área), top-3 alertas y próximos pasos.
+2.  **Sitio y layout** *(Sitio + Layout)*: coordenadas (decimal/DMS/UTM), área y ocupación, captura/diagrama del sitio e inventario de equipos.
+3.  **Configuración BESS y arquitectura eléctrica** *(Parámetros + Eléctrica)*: targets y arquitectura derivada, SLD conceptual, POI/transformador (sólo cuando hay dato; nunca inventado).
+4.  **Hallazgos y validación normativa** *(Normativa + Alertas)*: veredicto regulatorio, alertas de consistencia, supuestos, inconsistencias y pendientes de validación.
+5.  **Alcance, exclusiones y próximos estudios:** marco IN/NO-IN, exclusiones de ingeniería (inalterables) y el disclaimer legal.
+- **A1 — Anexo: tabla completa de reglas.**
+- **A2 — Anexo técnico:** validaciones eléctricas preliminares (ex-§5b) + checklist de ingeniería + referencias documentales.
+
+### Identidad visual y vista previa
+- **Tipografía Inter** registrada vía `Font.register` (WOFF self-hosted en `public/fonts/`); acento `sky-600 #0284c7`; colores de clasificación heredados de los tokens de la app (`certified`/`preliminary`/`pending`), ajustados para papel. El reporte es **claro (papel)** por defensibilidad de impresión.
+- **Marca de agua diagonal "PRELIMINAR · BORRADOR CONCEPTUAL"** fija en cada página.
+- **Vista previa WYSIWYG:** `ReportPreview.tsx` renderiza el MISMO `ReportDocument` dentro de `<PDFViewer>` de react-pdf; no hay una segunda implementación HTML que pueda divergir del PDF exportado.
+- Procedencia/“No disponible”: `reportProvenance.ts` traduce `EvidenceConfidence`/`reportKpis.source` a una clasificación visible y un centinela único de dato no disponible.
 
 ---
 
