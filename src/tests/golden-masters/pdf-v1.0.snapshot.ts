@@ -65,16 +65,12 @@ export const GOLDEN_MASTER_INPUT: BuildReportDataArgs = Object.freeze({
 export const GOLDEN_MASTER_PAGES = Object.freeze([
   { kind: "cover" },
   { number: "1", title: "Resumen ejecutivo" },
-  { number: "2", title: "Sitio y ubicación" },
-  { number: "3", title: "Parámetros principales del BESS" },
-  { number: "4", title: "Layout físico y ocupación del terreno" },
-  { number: "5", title: "Arquitectura eléctrica conceptual" },
-  { number: "5b", title: "Validaciones eléctricas preliminares" },
-  { number: "6", title: "Validación normativa resumida" },
-  { number: "7", title: "Alertas críticas y pendientes técnicos" },
-  { number: "8", title: "Alcance, exclusiones y próximos estudios" },
+  { number: "2", title: "Sitio y layout" },
+  { number: "3", title: "Configuración BESS y arquitectura eléctrica" },
+  { number: "4", title: "Hallazgos y validación normativa" },
+  { number: "5", title: "Alcance, exclusiones y próximos estudios" },
   { number: "A1", title: "Anexo: tabla completa de reglas" },
-  { number: "A2", title: "Anexo: checklist de ingeniería y referencias" },
+  { number: "A2", title: "Anexo técnico: validaciones eléctricas y referencias" },
 ] as const);
 
 /**

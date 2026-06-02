@@ -38,12 +38,24 @@ export function SectionPage({
   number,
   title,
   children,
+  embedded = false,
 }: {
   data: TechnicalReportData;
   number: string;
   title: string;
   children: React.ReactNode;
+  /** When true, render as a sub-block (sub-title + content, no Page/chrome) so
+   *  several sections can be grouped onto one merged page. */
+  embedded?: boolean;
 }) {
+  if (embedded) {
+    return (
+      <View style={{ marginTop: 6 }}>
+        <Text style={s.subTitle}>{title}</Text>
+        {children}
+      </View>
+    );
+  }
   return (
     <Page size="A4" style={s.page}>
       <Watermark />

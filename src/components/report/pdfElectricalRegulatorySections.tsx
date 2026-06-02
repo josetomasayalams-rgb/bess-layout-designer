@@ -11,7 +11,7 @@ import {
   outcomePillStyle,
 } from "./pdfSeverityMaps";
 
-type ReportSectionProps = { data: TechnicalReportData };
+type ReportSectionProps = { data: TechnicalReportData; embedded?: boolean };
 
 /**
  * Diagrama unilineal conceptual (single-line diagram) dinámico dibujado en SVG.
@@ -396,11 +396,11 @@ function SingleLineDiagram({ data }: { data: TechnicalReportData }) {
   );
 }
 
-export function ElectricalSection({ data }: ReportSectionProps) {
+export function ElectricalSection({ data, embedded }: ReportSectionProps) {
   const e = data.electrical;
   const k = data.reportKpis;
   return (
-    <SectionPage data={data} number="5" title="Arquitectura eléctrica conceptual">
+    <SectionPage data={data} number="5" title="Arquitectura eléctrica conceptual" embedded={embedded}>
       <Text style={s.paragraph}>
         {k.isIntegrated
           ? "En esta configuración los equipos integran el inversor/PCS dentro de la unidad y entregan corriente alterna directamente; no existe una estación PCS/MV separada que colocar. La arquitectura conceptual encadena la unidad integrada, el colector MT conceptual, el transformador elevador externo (no modelado en esta herramienta), la barra y seccionamiento MT, y el punto de conexión (POI). La fuente de los datos eléctricos se cita cuando está disponible; los campos vacíos representan información pendiente de validación de fabricante o EPC."
@@ -596,7 +596,7 @@ export function ElectricalSection({ data }: ReportSectionProps) {
   );
 }
 
-export function PreliminaryElectricalChecksSection({ data }: ReportSectionProps) {
+export function PreliminaryElectricalChecksSection({ data, embedded }: ReportSectionProps) {
   const block = data.preliminaryElectricalChecks;
   const checks = block.checks;
   return (
@@ -604,6 +604,7 @@ export function PreliminaryElectricalChecksSection({ data }: ReportSectionProps)
       data={data}
       number="5b"
       title="Validaciones eléctricas preliminares"
+      embedded={embedded}
     >
       <Text style={s.paragraph}>
         Estimaciones preliminares de referencia, ejecutadas por el motor de
@@ -725,10 +726,10 @@ export function PreliminaryElectricalChecksSection({ data }: ReportSectionProps)
   );
 }
 
-export function RegulatorySection({ data }: ReportSectionProps) {
+export function RegulatorySection({ data, embedded }: ReportSectionProps) {
   const ev = data.regulatoryEvaluation;
   return (
-    <SectionPage data={data} number="6" title="Validación normativa resumida">
+    <SectionPage data={data} number="6" title="Validación normativa resumida" embedded={embedded}>
       {!ev ? (
         <Text style={s.note}>
           No se ha activado un perfil regulatorio. Active uno desde el panel de

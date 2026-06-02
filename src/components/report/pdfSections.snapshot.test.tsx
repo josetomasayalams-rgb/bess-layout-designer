@@ -192,9 +192,9 @@ describe("pdfTraceabilityScopeSections — section numbers and titles", () => {
     });
   });
 
-  it("ScopeSection → 8. Alcance, exclusiones y próximos estudios", () => {
+  it("ScopeSection → 5. Alcance, exclusiones y próximos estudios", () => {
     expectSectionPage(callSection(ScopeSection), {
-      number: "8",
+      number: "5",
       title: "Alcance, exclusiones y próximos estudios",
     });
   });

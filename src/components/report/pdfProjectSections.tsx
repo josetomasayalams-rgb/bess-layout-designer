@@ -12,7 +12,7 @@ import {
 } from "./pdfFormatters";
 import { AlertCard, DefGrid, SectionPage, Table } from "./pdfPrimitives";
 
-type ReportSectionProps = { data: TechnicalReportData };
+type ReportSectionProps = { data: TechnicalReportData; embedded?: boolean };
 
 export function ExecutiveSection({ data }: ReportSectionProps) {
   const k = data.reportKpis;
@@ -116,7 +116,7 @@ export function ExecutiveSection({ data }: ReportSectionProps) {
   );
 }
 
-export function LocationSection({ data }: ReportSectionProps) {
+export function LocationSection({ data, embedded }: ReportSectionProps) {
   const f = data.location.formats;
   const items: { label: string; value: string }[] = [];
   if (f) {
@@ -143,7 +143,7 @@ export function LocationSection({ data }: ReportSectionProps) {
   }
 
   return (
-    <SectionPage data={data} number="2" title="Sitio y ubicación">
+    <SectionPage data={data} number="2" title="Sitio y ubicación" embedded={embedded}>
       <Text style={s.paragraph}>
         El proyecto se ubica sobre el polígono dibujado por el usuario en la
         herramienta. Las coordenadas se calculan respecto del centroide del
@@ -183,13 +183,13 @@ export function LocationSection({ data }: ReportSectionProps) {
   );
 }
 
-export function DesignSection({ data }: ReportSectionProps) {
+export function DesignSection({ data, embedded }: ReportSectionProps) {
   const t = data.designTargets;
   const sizing = data.sizingFromTargets;
   const k = data.reportKpis;
 
   return (
-    <SectionPage data={data} number="3" title="Parámetros principales del BESS">
+    <SectionPage data={data} number="3" title="Parámetros principales del BESS" embedded={embedded}>
       <DefGrid
         items={[
           {
@@ -258,7 +258,7 @@ export function DesignSection({ data }: ReportSectionProps) {
   );
 }
 
-export function LayoutSection({ data }: ReportSectionProps) {
+export function LayoutSection({ data, embedded }: ReportSectionProps) {
   const svg = data.siteSvg;
   const k = data.reportKpis;
 
@@ -279,7 +279,7 @@ export function LayoutSection({ data }: ReportSectionProps) {
   ];
 
   return (
-    <SectionPage data={data} number="4" title="Layout físico y ocupación del terreno">
+    <SectionPage data={data} number="4" title="Layout físico y ocupación del terreno" embedded={embedded}>
       <DefGrid
         items={[
           { label: "Área disponible", value: `${data.siteMetrics.areaM2.toFixed(0)} m² · ${data.siteMetrics.areaHa.toFixed(2)} ha` },

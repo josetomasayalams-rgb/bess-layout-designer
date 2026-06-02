@@ -56,19 +56,18 @@ type SectionDescriptor = {
  * Order matches `ReportDocument.tsx` lines 1463–1473.
  */
 const EXPECTED_SECTION_SEQUENCE: ReadonlyArray<SectionDescriptor> = Object.freeze([
-  // 1. Cover page — <Page> directly, no SectionPage wrapper, no number/title.
+  // Cover page — <Page> directly, no SectionPage wrapper, no number/title.
   {},
   { number: "1", title: "Resumen ejecutivo" },
-  { number: "2", title: "Sitio y ubicación" },
-  { number: "3", title: "Parámetros principales del BESS" },
-  { number: "4", title: "Layout físico y ocupación del terreno" },
-  { number: "5", title: "Arquitectura eléctrica conceptual" },
-  { number: "5b", title: "Validaciones eléctricas preliminares" },
-  { number: "6", title: "Validación normativa resumida" },
-  { number: "7", title: "Alertas críticas y pendientes técnicos" },
-  { number: "8", title: "Alcance, exclusiones y próximos estudios" },
+  // 2 merges Location + Layout; 3 merges Design + Electrical; 4 merges
+  // Regulatory + Traceability; A2 merges the preliminary electrical checks
+  // (formerly 5b) + the engineering annex. Grouped sections render embedded.
+  { number: "2", title: "Sitio y layout" },
+  { number: "3", title: "Configuración BESS y arquitectura eléctrica" },
+  { number: "4", title: "Hallazgos y validación normativa" },
+  { number: "5", title: "Alcance, exclusiones y próximos estudios" },
   { number: "A1", title: "Anexo: tabla completa de reglas" },
-  { number: "A2", title: "Anexo: checklist de ingeniería y referencias" },
+  { number: "A2", title: "Anexo técnico: validaciones eléctricas y referencias" },
 ]);
 
 /**
@@ -144,7 +143,7 @@ function describeChild(child: ChildElement): SectionDescriptor {
 }
 
 describe("ReportDocument — Phase 12A protective structural snapshot", () => {
-  it("renders exactly 12 pages (cover + 11 sections including 5b, A1 and A2)", () => {
+  it("renders exactly 8 pages (cover + 5 body sections + 2 annexes)", () => {
     const children = getDocumentChildren();
     expect(children.length).toBe(EXPECTED_SECTION_SEQUENCE.length);
   });
@@ -155,17 +154,17 @@ describe("ReportDocument — Phase 12A protective structural snapshot", () => {
     expect(observed).toEqual(EXPECTED_SECTION_SEQUENCE);
   });
 
-  it("includes the Fase 9 preliminary electrical checks section (5b) at index 6", () => {
+  it("groups findings + regulatory validation into body section 4", () => {
     const children = getDocumentChildren();
-    const sixth = describeChild(children[6]);
-    expect(sixth.number).toBe("5b");
-    expect(sixth.title).toBe("Validaciones eléctricas preliminares");
+    const fourth = describeChild(children[4]);
+    expect(fourth.number).toBe("4");
+    expect(fourth.title).toBe("Hallazgos y validación normativa");
   });
 
-  it("includes the engineering annex (A2) as the final page", () => {
+  it("includes the technical annex (A2) as the final page", () => {
     const children = getDocumentChildren();
     const last = describeChild(children[children.length - 1]);
     expect(last.number).toBe("A2");
-    expect(last.title).toBe("Anexo: checklist de ingeniería y referencias");
+    expect(last.title).toBe("Anexo técnico: validaciones eléctricas y referencias");
   });
 });

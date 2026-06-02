@@ -5,11 +5,11 @@ import { AlertCard, SectionPage, Table } from "./pdfPrimitives";
 import { OUTCOME_LABEL, outcomePillStyle } from "./pdfSeverityMaps";
 import { buildNextSteps, groupExclusions } from "./pdfFormatters";
 
-type ReportSectionProps = { data: TechnicalReportData };
+type ReportSectionProps = { data: TechnicalReportData; embedded?: boolean };
 
-export function TraceabilitySection({ data }: ReportSectionProps) {
+export function TraceabilitySection({ data, embedded }: ReportSectionProps) {
   return (
-    <SectionPage data={data} number="7" title="Alertas críticas y pendientes técnicos">
+    <SectionPage data={data} number="7" title="Alertas críticas y pendientes técnicos" embedded={embedded}>
       <Text style={s.subTitle}>Alertas de consistencia del reporte</Text>
       {data.consistencyAlerts.length === 0 ? (
         <Text style={s.note}>
@@ -125,7 +125,7 @@ export function ScopeSection({ data }: ReportSectionProps) {
   const exclusionGroups = groupExclusions(data.exclusions);
   const nextSteps = buildNextSteps(data);
   return (
-    <SectionPage data={data} number="8" title="Alcance, exclusiones y próximos estudios">
+    <SectionPage data={data} number="5" title="Alcance, exclusiones y próximos estudios">
       <Text style={s.paragraph}>
         Este predimensionamiento no incluye los estudios de detalle listados a
         continuación, agrupados por disciplina. El listado completo, ítem por
@@ -234,9 +234,9 @@ export function ScopeSection({ data }: ReportSectionProps) {
   );
 }
 
-export function EngineeringAnnexSection({ data }: ReportSectionProps) {
+export function EngineeringAnnexSection({ data, embedded }: ReportSectionProps) {
   return (
-    <SectionPage data={data} number="A2" title="Anexo: checklist de ingeniería y referencias">
+    <SectionPage data={data} number="A2" title="Anexo: checklist de ingeniería y referencias" embedded={embedded}>
       <Text style={s.subTitle}>Checklist de ingeniería de detalle</Text>
       <Table
         cols={[

@@ -111,7 +111,7 @@ describe("PDF v1.0 golden master — Document structure", () => {
     return { kind: "cover" };
   }
 
-  it("renders the canonical v1.0 page sequence (12 pages)", () => {
+  it("renders the canonical v1.0 page sequence (cover + 5 body + 2 annex)", () => {
     const children = getDocumentChildren();
     expect(children.length).toBe(GOLDEN_MASTER_PAGES.length);
 
