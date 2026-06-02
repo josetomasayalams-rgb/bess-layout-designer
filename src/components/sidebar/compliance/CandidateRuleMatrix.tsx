@@ -4,7 +4,7 @@ import { BookOpen, HelpCircle } from "lucide-react";
 import { regulatoryRuleProfiles } from "@/rules/profiles/regulatoryRuleProfiles";
 import type { RuleCategory, RegulatoryRuleProfileId } from "@/rules/types";
 import type { RegulatoryEvaluationResult } from "@/rules/regulatoryProfileEvaluator";
-import { OUTCOME_LABEL, citeLabel } from "./helpers";
+import { OUTCOME_LABEL, citeLabel, EFFECTIVE_SEVERITY_LABEL } from "./helpers";
 
 const CATEGORY_LABEL: Record<RuleCategory, { es: string; en: string }> = {
   physical_layout: { es: "Layout físico", en: "Physical layout" },
@@ -75,7 +75,7 @@ export function CandidateRuleMatrix({
         </select>
       </label>
 
-      <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
+      <div className="mt-3 grid grid-cols-2 gap-1.5">
         <CountTile
           value={ruleEvaluation.totals.pass}
           label={isEs ? "Sin inconf." : "No nonconf."}
@@ -154,7 +154,13 @@ export function CandidateRuleMatrix({
                       </div>
                       <div className="mt-0.5 font-mono text-[9px] opacity-80">
                         {entry.ruleId}
-                        {entry.severity !== "info" ? ` · ${entry.severity}` : ""}
+                        {entry.severity !== "info"
+                          ? ` · ${
+                              isEs
+                                ? (EFFECTIVE_SEVERITY_LABEL[entry.severity]?.es ?? entry.severity)
+                                : (EFFECTIVE_SEVERITY_LABEL[entry.severity]?.en ?? entry.severity)
+                            }`
+                          : ""}
                       </div>
                       {entry.violations.length > 0 ? (
                         <ul className="mt-1 space-y-0.5">
@@ -171,8 +177,16 @@ export function CandidateRuleMatrix({
                       {entry.severityCappedBy ? (
                         <div className="mt-1 rounded-sm border border-slate-600/30 bg-slate-900/40 px-1.5 py-1 text-[9px] leading-snug text-slate-300">
                           {isEs ? "Severidad limitada" : "Severity capped"}:{" "}
-                          <span className="font-mono">{entry.severityCappedBy.from}</span> →{" "}
-                          <span className="font-mono">{entry.severity}</span>{" "}
+                          <span className="font-mono">
+                            {isEs
+                              ? (EFFECTIVE_SEVERITY_LABEL[entry.severityCappedBy.from]?.es ?? entry.severityCappedBy.from)
+                              : (EFFECTIVE_SEVERITY_LABEL[entry.severityCappedBy.from]?.en ?? entry.severityCappedBy.from)}
+                          </span> →{" "}
+                          <span className="font-mono">
+                            {isEs
+                              ? (EFFECTIVE_SEVERITY_LABEL[entry.severity]?.es ?? entry.severity)
+                              : (EFFECTIVE_SEVERITY_LABEL[entry.severity]?.en ?? entry.severity)}
+                          </span>{" "}
                           ({entry.severityCappedBy.by === "document_level"
                             ? isEs ? "nivel documental" : "document level"
                             : isEs ? "confianza de evidencia" : "evidence confidence"})
@@ -268,13 +282,13 @@ function CountTile({
   className?: string;
 }) {
   return (
-    <div className="rounded-md border border-slate-800 bg-slate-900/60 p-2">
-      <div className={`font-mono text-base font-semibold ${className}`}>
-        {value}
-      </div>
-      <div className="text-[9px] uppercase tracking-wide text-slate-500">
+    <div className="flex items-center justify-between rounded-md border border-slate-800 bg-slate-900/60 px-2.5 py-1.5 min-w-0">
+      <span className="truncate text-[10px] font-medium uppercase tracking-wider text-slate-400">
         {label}
-      </div>
+      </span>
+      <span className={`font-mono text-sm font-semibold shrink-0 ml-2 ${className}`}>
+        {value}
+      </span>
     </div>
   );
 }

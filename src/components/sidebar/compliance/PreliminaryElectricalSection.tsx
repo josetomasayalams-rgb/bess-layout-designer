@@ -101,8 +101,16 @@ export function PreliminaryElectricalSection({
                 {capped ? (
                   <div className="mt-1 rounded-sm border border-slate-600/30 bg-slate-900/40 px-1.5 py-1 text-[9px] leading-snug text-slate-300">
                     {isEs ? "Severidad limitada" : "Severity capped"}:{" "}
-                    <span className="font-mono">{capped.from}</span> →{" "}
-                    <span className="font-mono">{entry.severity}</span>{" "}
+                    <span className="font-mono">
+                      {isEs
+                        ? (EFFECTIVE_SEVERITY_LABEL[capped.from]?.es ?? capped.from)
+                        : (EFFECTIVE_SEVERITY_LABEL[capped.from]?.en ?? capped.from)}
+                    </span> →{" "}
+                    <span className="font-mono">
+                      {isEs
+                        ? (EFFECTIVE_SEVERITY_LABEL[entry.severity]?.es ?? entry.severity)
+                        : (EFFECTIVE_SEVERITY_LABEL[entry.severity]?.en ?? entry.severity)}
+                    </span>{" "}
                     ({capped.by === "document_level"
                       ? isEs ? "nivel documental" : "document level"
                       : isEs ? "confianza de evidencia" : "evidence confidence"})

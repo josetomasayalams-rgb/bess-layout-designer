@@ -158,8 +158,8 @@ describe("CandidateRuleMatrix", () => {
 
     // Severity Capped display
     expect(screen.getByText(/Severidad limitada/)).toBeDefined();
-    expect(screen.getByText("blocking")).toBeDefined();
-    expect(screen.getByText("warning")).toBeDefined();
+    expect(screen.getByText("Bloqueante")).toBeDefined();
+    expect(screen.getByText("Advertencia")).toBeDefined();
     expect(screen.getByText(/nivel documental/)).toBeDefined();
     expect(screen.getByText("Capped because of rule profile constraints")).toBeDefined();
   });
