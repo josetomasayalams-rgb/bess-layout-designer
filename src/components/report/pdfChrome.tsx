@@ -123,7 +123,7 @@ export function CoverPage({ data }: Props) {
 
   // KPIs secundarios — inventario físico y potencia instalada.
   const secondaryKpis = [
-    { label: "Contenedores BESS", value: fmtInt(k.containers), unit: "u." },
+    { label: "Contenedores (layout)", value: fmtInt(k.containers), unit: "u." },
     { label: "Estaciones PCS/MV", value: fmtInt(k.stations), unit: "u." },
     { label: "Feeders MT", value: fmtInt(k.feeders), unit: "u." },
     {

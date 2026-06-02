@@ -38,9 +38,13 @@ export function registerReportFonts(): void {
     src: "/fonts/inter-latin-400-italic.woff",
   });
 
-  // Inter's metrics make react-pdf's default hyphenation too aggressive for
-  // short technical labels; disable word-splitting so labels stay intact.
-  Font.registerHyphenationCallback((word) => [word]);
+  // Don't hyphenate ordinary words (keeps prose/labels clean), but DO allow
+  // long delimited tokens — document IDs, paths, model codes like
+  // "SUNGROW-ST2752UX-MANUAL-V12" — to wrap after their separators so dense
+  // annex tables don't overflow or visually concatenate.
+  Font.registerHyphenationCallback((word) =>
+    word.length > 14 ? word.split(/(?<=[-_/.])/) : [word]
+  );
 }
 
 registerReportFonts();

@@ -714,6 +714,69 @@ function buildStationRows(stations: ConversionStation[]): ReportStationRow[] {
   }));
 }
 
+// ──────────────────────────────────────────────────────────────────
+// Manufacturer-evidence matching — never cite a manufacturer's datasheet/
+// manual as evidence for equipment of a DIFFERENT manufacturer (e.g. Sungrow
+// docs must not back a Tesla Megapack project). Report-layer guard only; it
+// does not alter rule evaluation.
+// ──────────────────────────────────────────────────────────────────
+
+const MANUFACTURER_DOC_SOURCES = new Set<string>([
+  "manufacturer_datasheet",
+  "manufacturer_manual",
+  "manufacturer_whitepaper",
+]);
+
+const KNOWN_MANUFACTURERS = [
+  "sungrow",
+  "tesla",
+  "megapack",
+  "byd",
+  "catl",
+  "huawei",
+  "sma",
+  "power electronics",
+  "fluence",
+  "samsung",
+  "wartsila",
+];
+
+/** Equipment manufacturers actually present in the placed layout (lowercased). */
+function projectManufacturers(placed: PlacedEquipment[]): Set<string> {
+  const set = new Set<string>();
+  for (const p of placed) {
+    const spec = equipmentCatalog.find((s) => s.id === p.equipmentSpecId);
+    if (spec?.manufacturer) set.add(spec.manufacturer.toLowerCase());
+  }
+  return set;
+}
+
+function documentManufacturer(doc: DocumentRegistryEntry): string | null {
+  const hay = `${doc.id} ${doc.title}`.toLowerCase();
+  return KNOWN_MANUFACTURERS.find((m) => hay.includes(m)) ?? null;
+}
+
+/**
+ * True when a document is acceptable evidence for this project. Standards and
+ * non-manufacturer docs always pass; a manufacturer-specific doc passes only if
+ * its manufacturer matches one present in the layout. When no equipment is
+ * placed we cannot disprove a match, so we keep it.
+ */
+function docEvidenceMatchesProject(
+  doc: DocumentRegistryEntry,
+  projectMfrs: Set<string>
+): boolean {
+  if (!MANUFACTURER_DOC_SOURCES.has(doc.source)) return true;
+  const mfr = documentManufacturer(doc);
+  if (!mfr || projectMfrs.size === 0) return true;
+  // The Tesla family doc-manufacturer tokens ("tesla"/"megapack") both count.
+  if ((mfr === "tesla" || mfr === "megapack") &&
+      (projectMfrs.has("tesla") || projectMfrs.has("megapack"))) {
+    return true;
+  }
+  return projectMfrs.has(mfr);
+}
+
 function collectDocReferences(args: {
   designTargets: ProjectDesignTargets;
   assumptions: ProjectAssumption[];
@@ -762,12 +825,17 @@ function collectDocReferences(args: {
       collectEvidence(spec.compliance.certifications);
   }
 
-  // Mantener el orden del registry oficial para la portada.
-  return documentRegistry.filter((d) => refs.has(d.id));
+  // Mantener el orden del registry oficial para la portada, excluyendo
+  // evidencia de un fabricante distinto al equipo del proyecto.
+  const projectMfrs = projectManufacturers(args.placed);
+  return documentRegistry.filter(
+    (d) => refs.has(d.id) && docEvidenceMatchesProject(d, projectMfrs)
+  );
 }
 
 function buildPreliminaryElectricalBlock(
-  evaluation: RegulatoryEvaluationResult | null
+  evaluation: RegulatoryEvaluationResult | null,
+  projectMfrs: Set<string>
 ): ReportPreliminaryElectricalBlock {
   const empty: ReportPreliminaryElectricalBlock = {
     checks: [],
@@ -787,10 +855,16 @@ function buildPreliminaryElectricalBlock(
     let citation: string | null = null;
     if (cite) {
       const doc = findDocument(cite.documentId);
-      const title = doc?.title ?? cite.documentId;
-      const page = cite.page ? ` · p.${cite.page}` : "";
-      const section = cite.section ? ` · §${cite.section}` : "";
-      citation = `${title}${page}${section}`;
+      if (doc && !docEvidenceMatchesProject(doc, projectMfrs)) {
+        // Evidencia de un fabricante distinto al equipo del proyecto: no se cita
+        // como evidencia válida para este equipo (requiere datos del fabricante).
+        citation = "Requiere evidencia del fabricante del equipo seleccionado";
+      } else {
+        const title = doc?.title ?? cite.documentId;
+        const page = cite.page ? ` · p.${cite.page}` : "";
+        const section = cite.section ? ` · §${cite.section}` : "";
+        citation = `${title}${page}${section}`;
+      }
     }
     return {
       ruleId: entry.ruleId,
@@ -1069,7 +1143,8 @@ export function buildReportData(args: BuildReportDataArgs): TechnicalReportData 
 
     regulatoryEvaluation: args.regulatoryEvaluation,
     preliminaryElectricalChecks: buildPreliminaryElectricalBlock(
-      args.regulatoryEvaluation
+      args.regulatoryEvaluation,
+      projectManufacturers(args.placed)
     ),
 
     assumptions: args.assumptions,
