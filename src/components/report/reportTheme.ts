@@ -78,6 +78,44 @@ const radius = {
   pill: 999,
 } as const;
 
-export const reportTheme = { color, font, type, space, radius } as const;
+/**
+ * Data-classification palette, carried verbatim from the app's semantic tokens
+ * (globals.css: certified #3b82f6, preliminary #f59e0b, pending #f43f5e) but
+ * darkened 1–2 steps for legible contrast on white paper. Each role is a
+ * text / fill / border triplet so a value's basis is shown, not asserted.
+ * `calculated` is the neutral "derived from other values" tone.
+ */
+const classification = {
+  certified: { text: "#1d4ed8", fill: "#eff6ff", border: "#bfdbfe" },
+  preliminary: { text: "#b45309", fill: "#fffbeb", border: "#fde68a" },
+  pending: { text: "#be123c", fill: "#fff1f2", border: "#fecdd3" },
+  calculated: { text: "#475569", fill: "#f8fafc", border: "#e2e8f0" },
+} as const;
+
+/** Semantic status palette (print-tuned), mirroring the app's status tokens. */
+const status = {
+  compliant: { text: "#15803d", fill: "#f0fdf4", border: "#bbf7d0" },
+  warning: { text: "#b45309", fill: "#fffbeb", border: "#fde68a" },
+  critical: { text: "#be123c", fill: "#fff1f2", border: "#fecdd3" },
+  info: { text: "#075985", fill: "#f0f9ff", border: "#bae6fd" },
+} as const;
+
+/** Diagonal "preliminary" page watermark. */
+const watermark = {
+  text: "PRELIMINAR · BORRADOR CONCEPTUAL",
+  color: "#0f172a",
+  opacity: 0.05,
+} as const;
+
+export const reportTheme = {
+  color,
+  font,
+  type,
+  space,
+  radius,
+  classification,
+  status,
+  watermark,
+} as const;
 
 export type ReportTheme = typeof reportTheme;

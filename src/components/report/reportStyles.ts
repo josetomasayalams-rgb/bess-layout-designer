@@ -214,10 +214,12 @@ export const reportStyles = StyleSheet.create({
     backgroundColor: REPORT_COLORS.paperAlt,
   },
   tableHeaderRow: {
-    backgroundColor: REPORT_COLORS.ink,
+    backgroundColor: REPORT_COLORS.paperAlt,
+    borderBottomWidth: 1,
+    borderBottomColor: REPORT_COLORS.accent,
   },
   tableHeaderCell: {
-    color: REPORT_COLORS.paper,
+    color: REPORT_COLORS.ink,
     fontFamily: REPORT_FONTS.dataBold,
     fontSize: 7.5,
     letterSpacing: 0.6,
@@ -277,9 +279,9 @@ export const reportStyles = StyleSheet.create({
 
   // ──────── Pills ────────
   pill: {
-    paddingHorizontal: 5,
+    paddingHorizontal: 6,
     paddingVertical: 1,
-    borderRadius: 2,
+    borderRadius: reportTheme.radius.pill,
     fontSize: 7,
     fontFamily: REPORT_FONTS.dataBold,
     letterSpacing: 0.5,

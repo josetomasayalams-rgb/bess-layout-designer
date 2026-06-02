@@ -20,6 +20,8 @@ import {
   REPORT_FONTS,
   reportStyles as s,
 } from "./reportStyles";
+import { reportTheme } from "./reportTheme";
+import { Brandmark } from "./Brandmark";
 import {
   fmtInt,
   fmtNum,
@@ -30,13 +32,44 @@ import type { TechnicalReportData } from "@/lib/report/buildReportData";
 
 type Props = { data: TechnicalReportData };
 
+/**
+ * Fixed diagonal "preliminary" watermark, repeated on every physical page
+ * (required by docs/report-spec.md §6). Rendered first inside each <Page> so it
+ * sits behind content; faint enough not to impair legibility or printing.
+ */
+export function Watermark() {
+  return (
+    <Text
+      fixed
+      style={{
+        position: "absolute",
+        top: "44%",
+        left: 0,
+        right: 0,
+        textAlign: "center",
+        fontFamily: REPORT_FONTS.dataBold,
+        fontSize: 44,
+        letterSpacing: 3,
+        color: reportTheme.watermark.color,
+        opacity: reportTheme.watermark.opacity,
+        transform: "rotate(-30deg)",
+      }}
+    >
+      {reportTheme.watermark.text}
+    </Text>
+  );
+}
+
 export function PageHeader({ data }: Props) {
   return (
     <View style={s.pageHeader} fixed>
-      <Text>
-        {data.metadata.projectName}{" "}
-        {data.location.describedPlace ? `· ${data.location.describedPlace}` : ""}
-      </Text>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+        <Brandmark size={9} discColor={REPORT_COLORS.accent} />
+        <Text>
+          {data.metadata.projectName}{" "}
+          {data.location.describedPlace ? `· ${data.location.describedPlace}` : ""}
+        </Text>
+      </View>
       <Text>{data.metadata.reportId}</Text>
     </View>
   );
@@ -108,6 +141,7 @@ export function CoverPage({ data }: Props) {
 
   return (
     <Page size="A4" style={s.page}>
+      <Watermark />
       {/* Blueprint background decoration */}
       <View style={{ position: "absolute", top: 40, right: 30, width: 200, height: 200, opacity: 0.15 }}>
         <Svg viewBox="0 0 100 100" style={{ width: "100%", height: "100%" }}>
@@ -122,9 +156,12 @@ export function CoverPage({ data }: Props) {
       </View>
       <View style={s.coverWrap}>
         <View>
-          <Text style={s.coverTopLine}>
-            PREDIMENSIONAMIENTO PRELIMINAR BESS · REPORTE TÉCNICO
-          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 9, marginBottom: 4 }}>
+            <Brandmark size={30} discColor={REPORT_COLORS.ink} />
+            <Text style={s.coverTopLine}>
+              PREDIMENSIONAMIENTO PRELIMINAR BESS · REPORTE TÉCNICO
+            </Text>
+          </View>
           <View style={s.coverDivider} />
           <Text style={s.coverTitle}>{data.metadata.title}</Text>
           <Text style={s.coverSubtitle}>{data.metadata.projectName}</Text>
@@ -232,8 +269,8 @@ export function CoverPage({ data }: Props) {
                   fontSize: 7.5,
                   letterSpacing: 0.4,
                   textTransform: "uppercase",
-                  color: REPORT_COLORS.warn,
-                  backgroundColor: "#fef3c7",
+                  color: REPORT_COLORS.ink,
+                  backgroundColor: "#e2e8f0",
                   borderRadius: 3,
                   paddingVertical: 3,
                   paddingHorizontal: 8,

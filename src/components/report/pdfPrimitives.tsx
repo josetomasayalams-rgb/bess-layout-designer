@@ -26,7 +26,7 @@
 import type React from "react";
 import { Page, Text, View } from "@react-pdf/renderer";
 import { REPORT_COLORS, reportStyles as s } from "./reportStyles";
-import { PageFooter, PageHeader } from "./pdfChrome";
+import { PageFooter, PageHeader, Watermark } from "./pdfChrome";
 import type { TechnicalReportData } from "@/lib/report/buildReportData";
 
 // ──────────────────────────────────────────────────────────────────
@@ -46,6 +46,7 @@ export function SectionPage({
 }) {
   return (
     <Page size="A4" style={s.page}>
+      <Watermark />
       <PageHeader data={data} />
       <View>
         <View style={s.sectionHeader}>
