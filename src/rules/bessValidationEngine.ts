@@ -4,6 +4,8 @@ import { formatLength } from "@/lib/units/formatUnits";
 import {
   distanceBetweenRectangles,
   distanceRectToPolygonBoundary,
+  distancePointToPolyline,
+  distancePolylineToPolyline,
 } from "@/lib/geometry/distance";
 import {
   rectanglesIntersect,
@@ -95,44 +97,6 @@ function issue(args: {
 }
 
 // Constants imported from defaultConstraints
-
-function distancePointToSegment(
-  point: LocalPoint,
-  a: LocalPoint,
-  b: LocalPoint
-): number {
-  const dx = b.x_m - a.x_m;
-  const dy = b.y_m - a.y_m;
-  const lengthSq = dx * dx + dy * dy;
-  if (lengthSq <= 1e-12) {
-    return Math.hypot(point.x_m - a.x_m, point.y_m - a.y_m);
-  }
-  const t = Math.max(
-    0,
-    Math.min(1, ((point.x_m - a.x_m) * dx + (point.y_m - a.y_m) * dy) / lengthSq)
-  );
-  const projection = { x_m: a.x_m + t * dx, y_m: a.y_m + t * dy };
-  return Math.hypot(point.x_m - projection.x_m, point.y_m - projection.y_m);
-}
-
-function distancePointToPolyline(point: LocalPoint, path: LocalPoint[]): number {
-  if (path.length === 0) return Infinity;
-  if (path.length === 1) {
-    return Math.hypot(point.x_m - path[0].x_m, point.y_m - path[0].y_m);
-  }
-  let min = Infinity;
-  for (let index = 1; index < path.length; index += 1) {
-    min = Math.min(min, distancePointToSegment(point, path[index - 1], path[index]));
-  }
-  return min;
-}
-
-function distancePolylineToPolyline(a: LocalPoint[], b: LocalPoint[]): number {
-  let min = Infinity;
-  for (const point of a) min = Math.min(min, distancePointToPolyline(point, b));
-  for (const point of b) min = Math.min(min, distancePointToPolyline(point, a));
-  return min;
-}
 
 function rectConservativeRadius(rect: RotatedRectLocal): number {
   return Math.hypot(rect.length_m / 2, rect.width_m / 2);

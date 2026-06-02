@@ -107,3 +107,33 @@ export function distanceRectToPolygonBoundary(
   }
   return min;
 }
+
+export function distancePointToPolyline(point: LocalPoint, path: LocalPoint[]): number {
+  if (path.length === 0) return Infinity;
+  if (path.length === 1) {
+    return Math.hypot(point.x_m - path[0].x_m, point.y_m - path[0].y_m);
+  }
+  let min = Infinity;
+  for (let index = 1; index < path.length; index += 1) {
+    min = Math.min(min, distancePointToSegment(point, path[index - 1], path[index]));
+  }
+  return min;
+}
+
+export function distancePolylineToPolyline(a: LocalPoint[], b: LocalPoint[]): number {
+  if (a.length === 0 || b.length === 0) return Infinity;
+  if (a.length === 1) return distancePointToPolyline(a[0], b);
+  if (b.length === 1) return distancePointToPolyline(b[0], a);
+
+  let min = Infinity;
+  for (let i = 1; i < a.length; i++) {
+    const a1 = a[i - 1];
+    const a2 = a[i];
+    for (let j = 1; j < b.length; j++) {
+      const b1 = b[j - 1];
+      const b2 = b[j];
+      min = Math.min(min, distanceSegmentToSegment(a1, a2, b1, b2));
+    }
+  }
+  return min;
+}
