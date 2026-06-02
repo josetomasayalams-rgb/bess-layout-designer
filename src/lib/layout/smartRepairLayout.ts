@@ -8,6 +8,7 @@ import {
   distanceRectToPolygonBoundary,
   distancePointToPolyline,
   distancePolylineToPolyline,
+  distanceRectToPolyline,
 } from "@/lib/geometry/distance";
 import type { LngLat, LocalPoint, ProjectAnchor, RotatedRectLocal } from "@/types/geometry";
 import type { PlacedEquipment } from "@/types/equipment";
@@ -54,16 +55,10 @@ export interface SmartRepairPlan {
   };
 }
 
-function rectConservativeRadius(rect: RotatedRectLocal): number {
-  return Math.hypot(rect.length_m / 2, rect.width_m / 2);
-}
-
 function cableClearanceToObject(route: CableRoute, rect: RotatedRectLocal): number {
   return Math.max(
     0,
-    distancePointToPolyline(rect.center, route.path) -
-      route.corridorWidth_m / 2 -
-      rectConservativeRadius(rect)
+    distanceRectToPolyline(rect, route.path) - route.corridorWidth_m / 2
   );
 }
 

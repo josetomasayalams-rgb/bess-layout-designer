@@ -137,3 +137,35 @@ export function distancePolylineToPolyline(a: LocalPoint[], b: LocalPoint[]): nu
   }
   return min;
 }
+
+export function distanceRectToPolyline(rect: RotatedRectLocal, path: LocalPoint[]): number {
+  if (path.length === 0) return Infinity;
+  const corners = rectCorners(rect);
+  const rectEdges = edges(corners);
+
+  let min = Infinity;
+
+  if (path.length === 1) {
+    const pt = path[0];
+    if (pointInPolygon(pt, corners)) return 0;
+    for (const [r1, r2] of rectEdges) {
+      min = Math.min(min, distancePointToSegment(pt, r1, r2));
+    }
+    return min;
+  }
+
+  for (let i = 1; i < path.length; i++) {
+    const p1 = path[i - 1];
+    const p2 = path[i];
+    for (const [r1, r2] of rectEdges) {
+      min = Math.min(min, distanceSegmentToSegment(r1, r2, p1, p2));
+      if (min === 0) return 0;
+    }
+  }
+
+  if (pointInPolygon(path[0], corners)) {
+    return 0;
+  }
+
+  return min;
+}

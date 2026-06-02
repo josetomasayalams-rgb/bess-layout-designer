@@ -6,6 +6,7 @@ import {
   distanceRectToPolygonBoundary,
   distancePointToPolyline,
   distancePolylineToPolyline,
+  distanceRectToPolyline,
 } from "@/lib/geometry/distance";
 import {
   rectanglesIntersect,
@@ -98,10 +99,6 @@ function issue(args: {
 
 // Constants imported from defaultConstraints
 
-function rectConservativeRadius(rect: RotatedRectLocal): number {
-  return Math.hypot(rect.length_m / 2, rect.width_m / 2);
-}
-
 function accessDistanceToObject(
   rect: RotatedRectLocal,
   accessRoads: AccessRoad[]
@@ -117,9 +114,7 @@ function accessDistanceToObject(
 function cableClearanceToObject(route: CableRoute, rect: RotatedRectLocal): number {
   return Math.max(
     0,
-    distancePointToPolyline(rect.center, route.path) -
-      route.corridorWidth_m / 2 -
-      rectConservativeRadius(rect)
+    distanceRectToPolyline(rect, route.path) - route.corridorWidth_m / 2
   );
 }
 
