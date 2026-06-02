@@ -23,6 +23,7 @@
 
 import { regulatoryRulesCatalog } from "@/rules/regulatoryRulesCatalog";
 import { getRegulatoryRuleProfile } from "@/rules/profiles/regulatoryRuleProfiles";
+import { diagnosticCatalog } from "./diagnosticCatalog";
 import type {
   RegulatoryRuleDefinition,
   RegulatoryRuleProfileId,
@@ -92,6 +93,11 @@ export type EvaluatedRuleEntry = {
   }[];
   evidence: EvidenceRef[];
   notes?: string;
+  simpleTitle?: { es: string; en: string };
+  diagnostic?: { es: string; en: string };
+  diagnosticImpact?: { es: string; en: string };
+  diagnosticAction?: { es: string; en: string };
+  riskLevel?: "critical" | "important" | "om_insurance" | "engineering_pending" | "info";
 };
 
 export type RegulatoryEvaluationTotals = {
@@ -252,6 +258,7 @@ function evaluateRule(
   input: RegulatoryEvaluationInput
 ): EvaluatedRuleEntry {
   const { severity: effSeverity, cappedBy } = effectiveSeverity(rule);
+  const diag = diagnosticCatalog[rule.id];
   const base: EvaluatedRuleEntry = {
     ruleId: rule.id,
     category: rule.category,
@@ -265,6 +272,11 @@ function evaluateRule(
     violations: [],
     evidence: rule.evidence,
     notes: rule.notes,
+    simpleTitle: diag?.simpleTitle ?? { es: rule.title, en: rule.title },
+    diagnostic: diag?.diagnostic ?? { es: rule.description, en: rule.description },
+    diagnosticImpact: diag?.diagnosticImpact,
+    diagnosticAction: diag?.diagnosticAction,
+    riskLevel: diag?.riskLevel ?? (effSeverity === "blocking" ? "critical" : effSeverity === "warning" ? "important" : "info"),
   };
 
   // Reglas explícitamente fuera de alcance v1.

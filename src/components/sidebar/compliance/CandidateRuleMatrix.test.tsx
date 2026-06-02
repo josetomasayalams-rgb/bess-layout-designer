@@ -19,14 +19,7 @@ describe("CandidateRuleMatrix", () => {
         declaredSeverity: "warning",
         severityCappedBy: null,
         violations: [],
-        evidence: [
-          {
-            documentId: "NFPA-855-2023",
-            confidence: "documented",
-            page: 45,
-            section: "4.3.1",
-          },
-        ],
+        evidence: [],
       },
       {
         ruleId: "RULE-PHYS-002",
@@ -42,7 +35,14 @@ describe("CandidateRuleMatrix", () => {
           detail: "Capped because of rule profile constraints",
         },
         violations: [{ message: "Distancia insuficiente" }],
-        evidence: [],
+        evidence: [
+          {
+            documentId: "NFPA-855-2023",
+            confidence: "documented",
+            page: 45,
+            section: "4.3.1",
+          },
+        ],
       },
     ],
     byCategory: {
@@ -57,14 +57,7 @@ describe("CandidateRuleMatrix", () => {
           declaredSeverity: "warning",
           severityCappedBy: null,
           violations: [],
-          evidence: [
-            {
-              documentId: "NFPA-855-2023",
-              confidence: "documented",
-              page: 45,
-              section: "4.3.1",
-            },
-          ],
+          evidence: [],
         },
         {
           ruleId: "RULE-PHYS-002",
@@ -80,7 +73,14 @@ describe("CandidateRuleMatrix", () => {
             detail: "Capped because of rule profile constraints",
           },
           violations: [{ message: "Distancia insuficiente" }],
-          evidence: [],
+          evidence: [
+            {
+              documentId: "NFPA-855-2023",
+              confidence: "documented",
+              page: 45,
+              section: "4.3.1",
+            },
+          ],
         },
       ],
       electrical: [],
@@ -117,10 +117,10 @@ describe("CandidateRuleMatrix", () => {
       />
     );
 
-    expect(screen.getByText("Matriz normativa candidata")).toBeDefined();
+    expect(screen.getByText("Diagnóstico Normativo Inteligente")).toBeDefined();
     expect(screen.getByText("2 reglas")).toBeDefined();
     expect(screen.getAllByText("Sin inconf.").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("Inconformidad").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Inconformid.").length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders mock rules, violations and citations/capping", () => {
@@ -135,9 +135,13 @@ describe("CandidateRuleMatrix", () => {
       />
     );
 
+    // Expand the passed criteria accordion
+    const passedBtn = screen.getByRole("button", { name: /criterios evaluados sin/i });
+    fireEvent.click(passedBtn);
+
     // Rule title
     expect(screen.getByText("Distancia BESS a deslinde")).toBeDefined();
-    // Rule outcome badge
+    // Rule outcome count tile
     expect(screen.getAllByText("Sin inconf.").length).toBeGreaterThanOrEqual(1);
 
     // Violation message

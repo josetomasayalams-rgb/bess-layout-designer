@@ -43,6 +43,11 @@ export type RegulatoryRuleDefinition = {
   evidence: EvidenceRef[];
   notes?: string;
   appliesToProfiles: string[];
+  simpleTitle?: { es: string; en: string };
+  diagnostic?: { es: string; en: string };
+  diagnosticImpact?: { es: string; en: string };
+  diagnosticAction?: { es: string; en: string };
+  riskLevel?: "critical" | "important" | "om_insurance" | "engineering_pending" | "info";
 };
 
 export type RegulatoryRuleProfileId =
