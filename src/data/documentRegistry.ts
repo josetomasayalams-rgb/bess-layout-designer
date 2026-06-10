@@ -206,6 +206,134 @@ export const documentRegistry: readonly DocumentRegistryEntry[] = [
     publishedAt: "2021-06",
     isPrimary: true,
   },
+  // B1 — Marco RIC + pliegos RIC faltantes (ingesta biblioteca markdown)
+  {
+    id: "SEC-DECRETO-8-2019",
+    title:
+      "Decreto 8/2019 — Reglamento de Seguridad de las Instalaciones de Consumo de Energía Eléctrica (RSIE)",
+    source: "decree",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_SEC_RGR_RIC/SEC_RIC_PLIEGOS/SEC_Decreto_8_Reglamento_Instalaciones_Consumo.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/03_SEC_RIC_INSTALACIONES_CONSUMO/SEC_Decreto_8_Reglamento_Instalaciones_Consumo.pdf",
+    publishedAt: "2019",
+    isPrimary: true,
+  },
+  {
+    id: "SEC-REX-33877-2020",
+    title: "SEC Res. Ex. 33877/2020 — Dicta Pliegos Técnicos Normativos RIC",
+    source: "sec_ric",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_SEC_RGR_RIC/SEC_RIC_PLIEGOS/SEC_REX_33877_2020_Dicta_Pliegos_RIC.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/03_SEC_RIC_INSTALACIONES_CONSUMO/SEC_REX_33877_2020_Dicta_Pliegos_RIC.pdf",
+    publishedAt: "2020",
+    isPrimary: true,
+  },
+  {
+    id: "SEC-RIC-01",
+    title: "SEC RIC 01 — Empalmes",
+    source: "sec_ric",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_SEC_RGR_RIC/SEC_RIC_PLIEGOS/SEC_RIC_01_Empalmes.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/03_SEC_RIC_INSTALACIONES_CONSUMO/SEC_RIC_01_Empalmes.pdf",
+    isPrimary: true,
+  },
+  {
+    id: "SEC-RIC-02-2021-06",
+    title: "SEC RIC 02 — Tableros eléctricos (2021/06)",
+    source: "sec_ric",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_SEC_RGR_RIC/SEC_RIC_PLIEGOS/SEC_RIC_02_Tableros_Electricos_2021_06.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/03_SEC_RIC_INSTALACIONES_CONSUMO/SEC_RIC_02_Tableros_Electricos_2021_06.pdf",
+    publishedAt: "2021-06",
+    isPrimary: true,
+  },
+  {
+    id: "SEC-RIC-03-V1.1",
+    title: "SEC RIC 03 — Alimentadores y demanda (V1.1)",
+    source: "sec_ric",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_SEC_RGR_RIC/SEC_RIC_PLIEGOS/SEC_RIC_03_Alimentadores_Demanda_V1_1.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/03_SEC_RIC_INSTALACIONES_CONSUMO/SEC_RIC_03_Alimentadores_Demanda_V1_1.pdf",
+    version: "V1.1",
+    isPrimary: true,
+  },
+  {
+    id: "SEC-RIC-08",
+    title: "SEC RIC 08 — Sistemas de emergencia",
+    source: "sec_ric",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_SEC_RGR_RIC/SEC_RIC_PLIEGOS/SEC_RIC_08_Sistemas_Emergencia.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/03_SEC_RIC_INSTALACIONES_CONSUMO/SEC_RIC_08_Sistemas_Emergencia.pdf",
+    isPrimary: true,
+  },
+  {
+    id: "SEC-RIC-09",
+    title: "SEC RIC 09 — Sistemas de autogeneración",
+    source: "sec_ric",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_SEC_RGR_RIC/SEC_RIC_PLIEGOS/SEC_RIC_09_Sistemas_Autogeneracion.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/03_SEC_RIC_INSTALACIONES_CONSUMO/SEC_RIC_09_Sistemas_Autogeneracion.pdf",
+    isPrimary: true,
+  },
+  {
+    id: "SEC-RIC-10",
+    title: "SEC RIC 10 — Instalaciones de uso general",
+    source: "sec_ric",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_SEC_RGR_RIC/SEC_RIC_PLIEGOS/SEC_RIC_10_Instalaciones_Uso_General.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/03_SEC_RIC_INSTALACIONES_CONSUMO/SEC_RIC_10_Instalaciones_Uso_General.pdf",
+    isPrimary: true,
+  },
+  {
+    id: "SEC-RIC-12",
+    title: "SEC RIC 12 — Ambientes explosivos",
+    source: "sec_ric",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_SEC_RGR_RIC/SEC_RIC_PLIEGOS/SEC_RIC_12_Ambientes_Explosivos.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/03_SEC_RIC_INSTALACIONES_CONSUMO/SEC_RIC_12_Ambientes_Explosivos.pdf",
+    isPrimary: true,
+  },
+  {
+    id: "SEC-RIC-14",
+    title: "SEC RIC 14 — Eficiencia energética en edificios",
+    source: "sec_ric",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_SEC_RGR_RIC/SEC_RIC_PLIEGOS/SEC_RIC_14_Eficiencia_Energetica_Edificios.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/03_SEC_RIC_INSTALACIONES_CONSUMO/SEC_RIC_14_Eficiencia_Energetica_Edificios.pdf",
+    isPrimary: true,
+  },
+  {
+    id: "SEC-RIC-15-2024",
+    title:
+      "SEC RIC 15 — Infraestructura de recarga de vehículos eléctricos (2024)",
+    source: "sec_ric",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_SEC_RGR_RIC/SEC_RIC_PLIEGOS/SEC_RIC_15_Infraestructura_Recarga_Vehiculos_Electricos_2024.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/03_SEC_RIC_INSTALACIONES_CONSUMO/SEC_RIC_15_Infraestructura_Recarga_Vehiculos_Electricos_2024.pdf",
+    publishedAt: "2024",
+    isPrimary: true,
+  },
+  {
+    id: "SEC-RIC-16",
+    title: "SEC RIC 16 — Subsistemas de distribución",
+    source: "sec_ric",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_SEC_RGR_RIC/SEC_RIC_PLIEGOS/SEC_RIC_16_Subsistemas_Distribucion.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/03_SEC_RIC_INSTALACIONES_CONSUMO/SEC_RIC_16_Subsistemas_Distribucion.pdf",
+    isPrimary: true,
+  },
   {
     id: "SEC-RPTD-01-2021",
     title: "SEC RPTD 01 — Tensiones y frecuencias nominales (2021)",
@@ -779,7 +907,697 @@ export const documentRegistry: readonly DocumentRegistryEntry[] = [
       "01_NORMATIVA_CHILE/01_MARCO_ELECTRICO_GENERAL_Y_ALMACENAMIENTO/reglamentos_clave_app_bess_chile.pdf",
     isPrimary: false,
   },
+  // ──────────────────────────────────────────────────────────────────
+  // B2–B5 — Ingesta biblioteca markdown (normativa completa y trazada)
+  // ──────────────────────────────────────────────────────────────────
+  // B2 — SEC RPTD: pliegos faltantes + resoluciones (dictan/modifican) + SGIIE
+  {
+    id: "SEC-RPTD-03-2020",
+    title: "SEC RPTD 03 — Proyectos y estudios",
+    source: "sec_rptd",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_CHILE/04_SEC_RPTD_PRODUCCION_TRANSPORTE_ALMACENAMIENTO/SEC_RPTD_03_Proyectos_Estudios_2020.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/04_SEC_RPTD_PRODUCCION_TRANSPORTE_ALMACENAMIENTO/SEC_RPTD_03_Proyectos_Estudios_2020.pdf",
+    publishedAt: "2020",
+    isPrimary: true,
+  },
+  {
+    id: "SEC-RPTD-04-2020",
+    title: "SEC RPTD 04 — Conductores",
+    source: "sec_rptd",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_CHILE/04_SEC_RPTD_PRODUCCION_TRANSPORTE_ALMACENAMIENTO/SEC_RPTD_04_Conductores_2020.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/04_SEC_RPTD_PRODUCCION_TRANSPORTE_ALMACENAMIENTO/SEC_RPTD_04_Conductores_2020.pdf",
+    publishedAt: "2020",
+    isPrimary: true,
+  },
+  {
+    id: "SEC-RPTD-05-2020",
+    title: "SEC RPTD 05 — Aislación",
+    source: "sec_rptd",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_CHILE/04_SEC_RPTD_PRODUCCION_TRANSPORTE_ALMACENAMIENTO/SEC_RPTD_05_Aislacion_2020.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/04_SEC_RPTD_PRODUCCION_TRANSPORTE_ALMACENAMIENTO/SEC_RPTD_05_Aislacion_2020.pdf",
+    publishedAt: "2020",
+    isPrimary: true,
+  },
+  {
+    id: "SEC-RPTD-11-2022",
+    title: "SEC RPTD 11 — Líneas de alta y extra alta tensión",
+    source: "sec_rptd",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_CHILE/04_SEC_RPTD_PRODUCCION_TRANSPORTE_ALMACENAMIENTO/SEC_RPTD_11_Lineas_Alta_Extra_Alta_Tension_2022.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/04_SEC_RPTD_PRODUCCION_TRANSPORTE_ALMACENAMIENTO/SEC_RPTD_11_Lineas_Alta_Extra_Alta_Tension_2022.pdf",
+    publishedAt: "2022",
+    isPrimary: true,
+  },
+  {
+    id: "SEC-RPTD-12-2020",
+    title:
+      "SEC RPTD 12 — Líneas de diferente tensión en estructura común",
+    source: "sec_rptd",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_CHILE/04_SEC_RPTD_PRODUCCION_TRANSPORTE_ALMACENAMIENTO/SEC_RPTD_12_Lineas_Diferente_Tension_Estructura_Comun_2020.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/04_SEC_RPTD_PRODUCCION_TRANSPORTE_ALMACENAMIENTO/SEC_RPTD_12_Lineas_Diferente_Tension_Estructura_Comun_2020.pdf",
+    publishedAt: "2020",
+    isPrimary: true,
+  },
+  {
+    id: "SEC-RPTD-14-2020",
+    title: "SEC RPTD 14 — Apoyo en postes de terceros",
+    source: "sec_rptd",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_CHILE/04_SEC_RPTD_PRODUCCION_TRANSPORTE_ALMACENAMIENTO/SEC_RPTD_14_Apoyo_Postes_Terceros_2020.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/04_SEC_RPTD_PRODUCCION_TRANSPORTE_ALMACENAMIENTO/SEC_RPTD_14_Apoyo_Postes_Terceros_2020.pdf",
+    publishedAt: "2020",
+    isPrimary: true,
+  },
+  {
+    id: "SEC-RPTD-15-2020",
+    title: "SEC RPTD 15 — Operación y mantenimiento",
+    source: "sec_rptd",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_CHILE/04_SEC_RPTD_PRODUCCION_TRANSPORTE_ALMACENAMIENTO/SEC_RPTD_15_Operacion_Mantenimiento_2020.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/04_SEC_RPTD_PRODUCCION_TRANSPORTE_ALMACENAMIENTO/SEC_RPTD_15_Operacion_Mantenimiento_2020.pdf",
+    publishedAt: "2020",
+    isPrimary: true,
+  },
+  {
+    id: "SEC-RPTD-16-2020",
+    title: "SEC RPTD 16 — Puesta en servicio",
+    source: "sec_rptd",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_CHILE/04_SEC_RPTD_PRODUCCION_TRANSPORTE_ALMACENAMIENTO/SEC_RPTD_16_Puesta_en_Servicio_2020.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/04_SEC_RPTD_PRODUCCION_TRANSPORTE_ALMACENAMIENTO/SEC_RPTD_16_Puesta_en_Servicio_2020.pdf",
+    publishedAt: "2020",
+    isPrimary: true,
+  },
+  {
+    id: "SEC-RPTD-17-2020",
+    title:
+      "SEC RPTD 17 — SGIIE (gestión integral de instalaciones eléctricas)",
+    source: "sec_rptd",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_CHILE/04_SEC_RPTD_PRODUCCION_TRANSPORTE_ALMACENAMIENTO/SEC_RPTD_17_SGIIE_2020.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/04_SEC_RPTD_PRODUCCION_TRANSPORTE_ALMACENAMIENTO/SEC_RPTD_17_SGIIE_2020.pdf",
+    publishedAt: "2020",
+    isPrimary: true,
+  },
+  {
+    id: "SEC-REX-33277-2020",
+    title:
+      "SEC Res. Ex. 33277/2020 — Dicta Pliegos Técnicos Normativos RPTD",
+    source: "sec_rptd",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_CHILE/04_SEC_RPTD_PRODUCCION_TRANSPORTE_ALMACENAMIENTO/SEC_REX_33277_2020_Dicta_Pliegos_RPTD.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/04_SEC_RPTD_PRODUCCION_TRANSPORTE_ALMACENAMIENTO/SEC_REX_33277_2020_Dicta_Pliegos_RPTD.pdf",
+    publishedAt: "2020",
+    isPrimary: true,
+  },
+  {
+    id: "SEC-REX-11682-2022",
+    title: "SEC Res. Ex. 11682/2022 — Modifica RPTD 07 y 11",
+    source: "sec_rptd",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_CHILE/04_SEC_RPTD_PRODUCCION_TRANSPORTE_ALMACENAMIENTO/SEC_REX_11682_2022_Modifica_RPTD_07_11.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/04_SEC_RPTD_PRODUCCION_TRANSPORTE_ALMACENAMIENTO/SEC_REX_11682_2022_Modifica_RPTD_07_11.pdf",
+    publishedAt: "2022",
+    isPrimary: true,
+  },
+  {
+    id: "SEC-REX-34069-2021",
+    title: "SEC Res. Ex. 34069/2021 — Modifica RPTD 01",
+    source: "sec_rptd",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_CHILE/04_SEC_RPTD_PRODUCCION_TRANSPORTE_ALMACENAMIENTO/SEC_REX_34069_2021_Modifica_RPTD_01.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/04_SEC_RPTD_PRODUCCION_TRANSPORTE_ALMACENAMIENTO/SEC_REX_34069_2021_Modifica_RPTD_01.pdf",
+    publishedAt: "2021",
+    isPrimary: true,
+  },
+  {
+    id: "SEC-REX-34770-2021",
+    title: "SEC Res. Ex. 34770/2021 — Modifica RPTD 06",
+    source: "sec_rptd",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_CHILE/04_SEC_RPTD_PRODUCCION_TRANSPORTE_ALMACENAMIENTO/SEC_REX_34770_2021_Modifica_RPTD_06.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/04_SEC_RPTD_PRODUCCION_TRANSPORTE_ALMACENAMIENTO/SEC_REX_34770_2021_Modifica_RPTD_06.pdf",
+    publishedAt: "2021",
+    isPrimary: true,
+  },
+  {
+    id: "SEC-REX-31876-2020",
+    title: "SEC Res. Ex. 31876/2020 — RPTD 17 SGIIE",
+    source: "sec_rptd",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_CHILE/04_SEC_RPTD_PRODUCCION_TRANSPORTE_ALMACENAMIENTO/SEC_REX_31876_2020_RPTD_17_SGIIE.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/04_SEC_RPTD_PRODUCCION_TRANSPORTE_ALMACENAMIENTO/SEC_REX_31876_2020_RPTD_17_SGIIE.pdf",
+    publishedAt: "2020",
+    isPrimary: true,
+  },
+  {
+    id: "SEC-REX-32516-2020",
+    title: "SEC Res. Ex. 32516/2020 — Diagnóstico y plan SGIIE",
+    source: "sec_rptd",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_CHILE/04_SEC_RPTD_PRODUCCION_TRANSPORTE_ALMACENAMIENTO/SEC_REX_32516_2020_Diagnostico_Plan_SGIIE.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/04_SEC_RPTD_PRODUCCION_TRANSPORTE_ALMACENAMIENTO/SEC_REX_32516_2020_Diagnostico_Plan_SGIIE.pdf",
+    publishedAt: "2020",
+    isPrimary: true,
+  },
+  {
+    id: "SEC-REX-33056-2020",
+    title: "SEC Res. Ex. 33056/2020 — Plazos SGIIE",
+    source: "sec_rptd",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_CHILE/04_SEC_RPTD_PRODUCCION_TRANSPORTE_ALMACENAMIENTO/SEC_REX_33056_2020_Plazos_SGIIE.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/04_SEC_RPTD_PRODUCCION_TRANSPORTE_ALMACENAMIENTO/SEC_REX_33056_2020_Plazos_SGIIE.pdf",
+    publishedAt: "2020",
+    isPrimary: true,
+  },
+  {
+    id: "SEC-SGIIE-FORMATO-DIAGNOSTICO-2020",
+    title: "SEC — Formato informe de diagnóstico SGIIE",
+    source: "sec_rptd",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_CHILE/04_SEC_RPTD_PRODUCCION_TRANSPORTE_ALMACENAMIENTO/SEC_Formato_Informe_Diagnostico_SGIIE_2020.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/04_SEC_RPTD_PRODUCCION_TRANSPORTE_ALMACENAMIENTO/SEC_Formato_Informe_Diagnostico_SGIIE_2020.pdf",
+    publishedAt: "2020",
+    isPrimary: true,
+  },
+  {
+    id: "SEC-SGIIE-FORMATO-PLAN-2020",
+    title: "SEC — Formato informe de plan de implementación SGIIE",
+    source: "sec_rptd",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_CHILE/04_SEC_RPTD_PRODUCCION_TRANSPORTE_ALMACENAMIENTO/SEC_Formato_Informe_Plan_Implementacion_SGIIE_2020.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/04_SEC_RPTD_PRODUCCION_TRANSPORTE_ALMACENAMIENTO/SEC_Formato_Informe_Plan_Implementacion_SGIIE_2020.pdf",
+    publishedAt: "2020",
+    isPrimary: true,
+  },
+  // B3 — CEN (interconexión/operación SEN)
+  {
+    id: "CEN-Guia-Clasificacion-2024",
+    title:
+      "CEN — Guía técnica de criterios de clasificación de proyectos de conexión",
+    source: "cen",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_CHILE/05_CEN_INTERCONEXION_OPERACION_SEN/CEN_Guia_Tecnica_Criterios_Clasificacion_Proyectos_Conexion_2024.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/05_CEN_INTERCONEXION_OPERACION_SEN/CEN_Guia_Tecnica_Criterios_Clasificacion_Proyectos_Conexion_2024.pdf",
+    publishedAt: "2024",
+    isPrimary: true,
+  },
+  {
+    id: "CEN-MA-MNR-2024",
+    title: "CEN — Material de ayuda: modificaciones no relevantes (MNR)",
+    source: "cen",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_CHILE/05_CEN_INTERCONEXION_OPERACION_SEN/CEN_Material_Ayuda_Modificaciones_No_Relevantes_MNR_2024.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/05_CEN_INTERCONEXION_OPERACION_SEN/CEN_Material_Ayuda_Modificaciones_No_Relevantes_MNR_2024.pdf",
+    publishedAt: "2024",
+    isPrimary: true,
+  },
+  {
+    id: "CEN-MA-MR-NI-2024",
+    title:
+      "CEN — Material de ayuda: modificaciones relevantes y nuevas instalaciones",
+    source: "cen",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_CHILE/05_CEN_INTERCONEXION_OPERACION_SEN/CEN_Material_Ayuda_Modificaciones_Relevantes_Nuevas_Instalaciones_2024.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/05_CEN_INTERCONEXION_OPERACION_SEN/CEN_Material_Ayuda_Modificaciones_Relevantes_Nuevas_Instalaciones_2024.pdf",
+    publishedAt: "2024",
+    isPrimary: true,
+  },
+  {
+    id: "CEN-MA-PMGD-2024",
+    title: "CEN — Material de ayuda: PMGD",
+    source: "cen",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_CHILE/05_CEN_INTERCONEXION_OPERACION_SEN/CEN_Material_Ayuda_PMGD_2024.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/05_CEN_INTERCONEXION_OPERACION_SEN/CEN_Material_Ayuda_PMGD_2024.pdf",
+    publishedAt: "2024",
+    isPrimary: true,
+  },
+  {
+    id: "CEN-MA-Procedimiento-2024",
+    title: "CEN — Material de ayuda: procedimiento de interconexión",
+    source: "cen",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_CHILE/05_CEN_INTERCONEXION_OPERACION_SEN/CEN_Material_Ayuda_Procedimiento_Interconexion_2024.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/05_CEN_INTERCONEXION_OPERACION_SEN/CEN_Material_Ayuda_Procedimiento_Interconexion_2024.pdf",
+    publishedAt: "2024",
+    isPrimary: true,
+  },
+  {
+    id: "CEN-Proceso-Interconexion-2022",
+    title: "CEN — Proceso de interconexión de proyectos al SEN",
+    source: "cen",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_CHILE/05_CEN_INTERCONEXION_OPERACION_SEN/CEN_Material_Proceso_Interconexion_Proyectos_SEN_2022.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/05_CEN_INTERCONEXION_OPERACION_SEN/CEN_Material_Proceso_Interconexion_Proyectos_SEN_2022.pdf",
+    publishedAt: "2022",
+    isPrimary: true,
+  },
+  {
+    id: "CEN-Procedimiento-Interno-2024",
+    title: "CEN — Procedimiento interno de interconexión de proyectos",
+    source: "cen",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_CHILE/05_CEN_INTERCONEXION_OPERACION_SEN/CEN_Procedimiento_Interno_Interconexion_Proyectos_2024.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/05_CEN_INTERCONEXION_OPERACION_SEN/CEN_Procedimiento_Interno_Interconexion_Proyectos_2024.pdf",
+    publishedAt: "2024",
+    isPrimary: true,
+  },
+  // B3 — CNE (anexos técnicos y normas técnicas)
+  {
+    id: "CNE-AT-EMDIT-2025",
+    title: "CNE — Anexo técnico EMDIT",
+    source: "cne",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_CHILE/06_CNE_NORMAS_TECNICAS_SEN/CNE_AT_EMDIT_2025.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/06_CNE_NORMAS_TECNICAS_SEN/CNE_AT_EMDIT_2025.pdf",
+    publishedAt: "2025",
+    isPrimary: true,
+  },
+  {
+    id: "CNE-AT-Robustez-RES45-2026",
+    title:
+      "CNE — Anexo técnico: estudio de análisis de robustez (RES 45/2026)",
+    source: "cne",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_CHILE/06_CNE_NORMAS_TECNICAS_SEN/CNE_AT_Estudio_Analisis_Robustez_RES45_2026.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/06_CNE_NORMAS_TECNICAS_SEN/CNE_AT_Estudio_Analisis_Robustez_RES45_2026.pdf",
+    publishedAt: "2026",
+    isPrimary: true,
+  },
+  {
+    id: "CNE-AT-InfoTecnica-2025",
+    title: "CNE — Anexo técnico de información técnica",
+    source: "cne",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_CHILE/06_CNE_NORMAS_TECNICAS_SEN/CNE_AT_Informacion_Tecnica_2025.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/06_CNE_NORMAS_TECNICAS_SEN/CNE_AT_Informacion_Tecnica_2025.pdf",
+    publishedAt: "2025",
+    isPrimary: true,
+  },
+  {
+    id: "CNE-AT-Sismicos-2025",
+    title: "CNE — Anexo técnico de requisitos sísmicos",
+    source: "cne",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_CHILE/06_CNE_NORMAS_TECNICAS_SEN/CNE_AT_Requisitos_Sismicos_2025.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/06_CNE_NORMAS_TECNICAS_SEN/CNE_AT_Requisitos_Sismicos_2025.pdf",
+    publishedAt: "2025",
+    isPrimary: true,
+  },
+  {
+    id: "CNE-AT-SITR-2025",
+    title: "CNE — Anexo técnico SITR (información en tiempo real)",
+    source: "cne",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_CHILE/06_CNE_NORMAS_TECNICAS_SEN/CNE_AT_SITR_2025.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/06_CNE_NORMAS_TECNICAS_SEN/CNE_AT_SITR_2025.pdf",
+    publishedAt: "2025",
+    isPrimary: true,
+  },
+  {
+    id: "CNE-NT-Indisponibilidad",
+    title:
+      "CNE — Norma técnica de indisponibilidad de suministro y compensaciones",
+    source: "cne",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_CHILE/06_CNE_NORMAS_TECNICAS_SEN/CNE_NT_Indisponibilidad_Suministro_Compensaciones.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/06_CNE_NORMAS_TECNICAS_SEN/CNE_NT_Indisponibilidad_Suministro_Compensaciones.pdf",
+    publishedAt: "2020",
+    isPrimary: true,
+  },
+  {
+    id: "CNE-REX-491-2020",
+    title:
+      "CNE Res. Ex. 491/2020 — Aprueba NT de indisponibilidad de suministro",
+    source: "cne",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_CHILE/06_CNE_NORMAS_TECNICAS_SEN/RE-4912020.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/06_CNE_NORMAS_TECNICAS_SEN/RE-4912020.pdf",
+    publishedAt: "2020",
+    isPrimary: true,
+  },
+  {
+    id: "CNE-REX-45-2026",
+    title:
+      "CNE Res. Ex. 45/2026 — Dicta NTSyCS y anexos técnicos (versión CNE)",
+    source: "cne",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_CHILE/06_CNE_NORMAS_TECNICAS_SEN/CNE_REX_45_2026_Version_CNE.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/06_CNE_NORMAS_TECNICAS_SEN/CNE_REX_45_2026_Version_CNE.pdf",
+    publishedAt: "2026",
+    isPrimary: true,
+  },
+  // B4 — Marco eléctrico general
+  {
+    id: "DS-37-2019",
+    title:
+      "DS 37/2019 — Reglamento de los Sistemas de Transmisión y de la Planificación de la Transmisión",
+    source: "decree",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_CHILE/01_MARCO_ELECTRICO_GENERAL_Y_ALMACENAMIENTO/DS_37_2019_Reglamento_Sistemas_Transmision_LeyChile.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/01_MARCO_ELECTRICO_GENERAL_Y_ALMACENAMIENTO/DS_37_2019_Reglamento_Sistemas_Transmision_LeyChile.pdf",
+    publishedAt: "2019",
+    isPrimary: true,
+  },
+  {
+    id: "DS-62-2006",
+    title:
+      "DS 62/2006 — Reglamento de Transferencias de Potencia entre empresas generadoras",
+    source: "decree",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_CHILE/01_MARCO_ELECTRICO_GENERAL_Y_ALMACENAMIENTO/DS_62_2006_Reglamento_Transferencias_Potencia_LeyChile.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/01_MARCO_ELECTRICO_GENERAL_Y_ALMACENAMIENTO/DS_62_2006_Reglamento_Transferencias_Potencia_LeyChile.pdf",
+    publishedAt: "2006",
+    isPrimary: true,
+  },
+  // B4 — Ambiental / territorial
+  {
+    id: "DFL-458-LGUC",
+    title: "DFL 458 — Ley General de Urbanismo y Construcciones (LGUC)",
+    source: "law",
+    level: "L3_standard_or_official",
+    path: "01_NORMATIVA_CHILE/07_AMBIENTAL_TERRITORIAL_PERMISOS/DFL_458_LGUC_Ley_General_Urbanismo_Construcciones_LeyChile.pdf",
+    pathActive:
+      "01_NORMATIVA_CHILE/07_AMBIENTAL_TERRITORIAL_PERMISOS/DFL_458_LGUC_Ley_General_Urbanismo_Construcciones_LeyChile.pdf",
+    isPrimary: true,
+  },
+  // B5 — Referencias internacionales (nivel honesto L5, no norma vinculante)
+  {
+    id: "INT-EPA-BESS-FactSheet-2025",
+    title: "EPA — BESS safe installation & incident response factsheet",
+    source: "third_party_reference",
+    level: "L5_whitepaper_brochure",
+    path: "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/01_SEGURIDAD_INCENDIO_Y_RESPUESTA_EMERGENCIA/EPA_BESS_Safe_Installation_Incident_Response_FactSheet_2025.pdf",
+    pathActive:
+      "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/01_SEGURIDAD_INCENDIO_Y_RESPUESTA_EMERGENCIA/EPA_BESS_Safe_Installation_Incident_Response_FactSheet_2025.pdf",
+    publishedAt: "2025",
+    isPrimary: true,
+  },
+  {
+    id: "INT-EPRI-Fire-Safety-Roadmap-2021",
+    title: "EPRI — Battery storage fire safety roadmap",
+    source: "third_party_reference",
+    level: "L5_whitepaper_brochure",
+    path: "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/01_SEGURIDAD_INCENDIO_Y_RESPUESTA_EMERGENCIA/EPRI_Battery_Storage_Fire_Safety_Roadmap_2021.pdf",
+    pathActive:
+      "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/01_SEGURIDAD_INCENDIO_Y_RESPUESTA_EMERGENCIA/EPRI_Battery_Storage_Fire_Safety_Roadmap_2021.pdf",
+    publishedAt: "2021",
+    isPrimary: true,
+  },
+  {
+    id: "INT-FM-Global-DS-5-33",
+    title:
+      "FM Global — Data Sheet 5-33: electrical energy storage systems",
+    source: "third_party_reference",
+    level: "L5_whitepaper_brochure",
+    path: "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/01_SEGURIDAD_INCENDIO_Y_RESPUESTA_EMERGENCIA/FM_Global_DS_5_33_Electrical_Energy_Storage_Systems.pdf",
+    pathActive:
+      "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/01_SEGURIDAD_INCENDIO_Y_RESPUESTA_EMERGENCIA/FM_Global_DS_5_33_Electrical_Energy_Storage_Systems.pdf",
+    isPrimary: true,
+  },
+  {
+    id: "INT-NY-DHSES-Fire-Service-2023",
+    title: "NY DHSES — BESS fire service response guide",
+    source: "third_party_reference",
+    level: "L5_whitepaper_brochure",
+    path: "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/01_SEGURIDAD_INCENDIO_Y_RESPUESTA_EMERGENCIA/NY_DHSES_BESS_Fire_Service_Response_Guide_2023.pdf",
+    pathActive:
+      "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/01_SEGURIDAD_INCENDIO_Y_RESPUESTA_EMERGENCIA/NY_DHSES_BESS_Fire_Service_Response_Guide_2023.pdf",
+    publishedAt: "2023",
+    isPrimary: true,
+  },
+  {
+    id: "INT-Sandia-Codes-Standards-2018",
+    title: "Sandia — Codes & standards development/adoption brief",
+    source: "third_party_reference",
+    level: "L5_whitepaper_brochure",
+    path: "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/01_SEGURIDAD_INCENDIO_Y_RESPUESTA_EMERGENCIA/Sandia_Codes_Standards_Development_Adoption_Brief_2018.pdf",
+    pathActive:
+      "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/01_SEGURIDAD_INCENDIO_Y_RESPUESTA_EMERGENCIA/Sandia_Codes_Standards_Development_Adoption_Brief_2018.pdf",
+    publishedAt: "2018",
+    isPrimary: true,
+  },
+  {
+    id: "INT-Sandia-Codes-Standards-2024",
+    title: "Sandia — Energy storage safety codes & standards",
+    source: "third_party_reference",
+    level: "L5_whitepaper_brochure",
+    path: "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/01_SEGURIDAD_INCENDIO_Y_RESPUESTA_EMERGENCIA/Sandia_Energy_Storage_Safety_Codes_Standards_2024.pdf",
+    pathActive:
+      "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/01_SEGURIDAD_INCENDIO_Y_RESPUESTA_EMERGENCIA/Sandia_Energy_Storage_Safety_Codes_Standards_2024.pdf",
+    publishedAt: "2024",
+    isPrimary: true,
+  },
+  {
+    id: "INT-Sandia-ESS-Safety-Roadmap-2018",
+    title: "Sandia — ESS safety roadmap",
+    source: "third_party_reference",
+    level: "L5_whitepaper_brochure",
+    path: "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/01_SEGURIDAD_INCENDIO_Y_RESPUESTA_EMERGENCIA/Sandia_ESS_Safety_Roadmap_2018.pdf",
+    pathActive:
+      "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/01_SEGURIDAD_INCENDIO_Y_RESPUESTA_EMERGENCIA/Sandia_ESS_Safety_Roadmap_2018.pdf",
+    publishedAt: "2018",
+    isPrimary: true,
+  },
+  {
+    id: "INT-Sandia-PredMaint-2020",
+    title: "Sandia — Predictive maintenance & operational safety",
+    source: "third_party_reference",
+    level: "L5_whitepaper_brochure",
+    path: "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/01_SEGURIDAD_INCENDIO_Y_RESPUESTA_EMERGENCIA/Sandia_Predictive_Maintenance_Operational_Safety_2020.pdf",
+    pathActive:
+      "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/01_SEGURIDAD_INCENDIO_Y_RESPUESTA_EMERGENCIA/Sandia_Predictive_Maintenance_Operational_Safety_2020.pdf",
+    publishedAt: "2020",
+    isPrimary: true,
+  },
+  {
+    id: "INT-UL-LargeScale-Fire-Testing-WP",
+    title: "UL — Large-scale fire testing whitepaper (reference copy)",
+    source: "third_party_reference",
+    level: "L5_whitepaper_brochure",
+    path: "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/01_SEGURIDAD_INCENDIO_Y_RESPUESTA_EMERGENCIA/UL_Large_Scale_Fire_Testing_Whitepaper_REFERENCE.pdf",
+    pathActive:
+      "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/01_SEGURIDAD_INCENDIO_Y_RESPUESTA_EMERGENCIA/UL_Large_Scale_Fire_Testing_Whitepaper_REFERENCE.pdf",
+    isPrimary: false,
+  },
+  {
+    id: "INT-UL-NFPA855-OnePage-2024",
+    title: "UL — NFPA 855 safety one-pager (reference copy)",
+    source: "third_party_reference",
+    level: "L5_whitepaper_brochure",
+    path: "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/01_SEGURIDAD_INCENDIO_Y_RESPUESTA_EMERGENCIA/UL_NFPA855_Safety_OnePage_2024_REFERENCE.pdf",
+    pathActive:
+      "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/01_SEGURIDAD_INCENDIO_Y_RESPUESTA_EMERGENCIA/UL_NFPA855_Safety_OnePage_2024_REFERENCE.pdf",
+    publishedAt: "2024",
+    isPrimary: false,
+  },
+  {
+    id: "INT-DNVGL-RP-0043-2015",
+    title:
+      "DNV GL RP-0043 GRIDSTOR (third-party copy — replace with official)",
+    source: "third_party_reference",
+    level: "L5_whitepaper_brochure",
+    path: "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/02_GUIAS_DIMENSIONAMIENTO_Y_BUENAS_PRACTICAS/DNVGL_RP_0043_GRIDSTOR_2015_THIRD_PARTY_COPY_REPLACE_WITH_OFFICIAL.pdf",
+    pathActive:
+      "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/02_GUIAS_DIMENSIONAMIENTO_Y_BUENAS_PRACTICAS/DNVGL_RP_0043_GRIDSTOR_2015_THIRD_PARTY_COPY_REPLACE_WITH_OFFICIAL.pdf",
+    publishedAt: "2015",
+    isPrimary: false,
+  },
+  {
+    id: "INT-EPRI-ESIC-Commissioning",
+    title: "EPRI ESIC — energy storage commissioning guide",
+    source: "third_party_reference",
+    level: "L5_whitepaper_brochure",
+    path: "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/02_GUIAS_DIMENSIONAMIENTO_Y_BUENAS_PRACTICAS/EPRI_ESIC_Energy_Storage_Commissioning_Guide.pdf",
+    pathActive:
+      "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/02_GUIAS_DIMENSIONAMIENTO_Y_BUENAS_PRACTICAS/EPRI_ESIC_Energy_Storage_Commissioning_Guide.pdf",
+    isPrimary: true,
+  },
+  {
+    id: "INT-IREC-Solar-Battery-Toolkit-2025",
+    title: "IREC — large-scale solar + battery storage toolkit",
+    source: "third_party_reference",
+    level: "L5_whitepaper_brochure",
+    path: "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/02_GUIAS_DIMENSIONAMIENTO_Y_BUENAS_PRACTICAS/IREC_LargeScale_Solar_Battery_Storage_Toolkit_2025.pdf",
+    pathActive:
+      "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/02_GUIAS_DIMENSIONAMIENTO_Y_BUENAS_PRACTICAS/IREC_LargeScale_Solar_Battery_Storage_Toolkit_2025.pdf",
+    publishedAt: "2025",
+    isPrimary: true,
+  },
+  {
+    id: "INT-NREL-FAQ-GridScale-2019",
+    title: "NREL — grid-scale battery storage FAQ",
+    source: "third_party_reference",
+    level: "L5_whitepaper_brochure",
+    path: "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/02_GUIAS_DIMENSIONAMIENTO_Y_BUENAS_PRACTICAS/NREL_FAQ_GridScale_Battery_Storage_2019_recuperado.pdf",
+    pathActive:
+      "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/02_GUIAS_DIMENSIONAMIENTO_Y_BUENAS_PRACTICAS/NREL_FAQ_GridScale_Battery_Storage_2019_recuperado.pdf",
+    publishedAt: "2019",
+    isPrimary: true,
+  },
+  {
+    id: "INT-PNNL-ESS-Fundamentals-2026",
+    title: "PNNL — energy storage fundamentals",
+    source: "third_party_reference",
+    level: "L5_whitepaper_brochure",
+    path: "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/02_GUIAS_DIMENSIONAMIENTO_Y_BUENAS_PRACTICAS/PNNL_Energy_Storage_Fundamentals_2026.pdf",
+    pathActive:
+      "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/02_GUIAS_DIMENSIONAMIENTO_Y_BUENAS_PRACTICAS/PNNL_Energy_Storage_Fundamentals_2026.pdf",
+    publishedAt: "2026",
+    isPrimary: true,
+  },
+  {
+    id: "INT-AEMO-Advanced-Inverters-2021",
+    title: "AEMO — advanced grid-scale inverters in the NEM",
+    source: "third_party_reference",
+    level: "L5_whitepaper_brochure",
+    path: "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/03_INTERCONEXION_GRID_FORMING_IBR/AEMO_Advanced_GridScale_Inverters_NEM_2021.pdf",
+    pathActive:
+      "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/03_INTERCONEXION_GRID_FORMING_IBR/AEMO_Advanced_GridScale_Inverters_NEM_2021.pdf",
+    publishedAt: "2021",
+    isPrimary: true,
+  },
+  {
+    id: "INT-AEMO-GFM-Core-Requirements-2024",
+    title: "AEMO — GFM core requirements & test framework",
+    source: "third_party_reference",
+    level: "L5_whitepaper_brochure",
+    path: "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/03_INTERCONEXION_GRID_FORMING_IBR/AEMO_GFM_Core_Requirements_Test_Framework_2024_recuperado.pdf",
+    pathActive:
+      "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/03_INTERCONEXION_GRID_FORMING_IBR/AEMO_GFM_Core_Requirements_Test_Framework_2024_recuperado.pdf",
+    publishedAt: "2024",
+    isPrimary: true,
+  },
+  {
+    id: "INT-AEMO-GFM-Voluntary-Spec-2023",
+    title: "AEMO — voluntary specification for grid-forming inverters",
+    source: "third_party_reference",
+    level: "L5_whitepaper_brochure",
+    path: "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/03_INTERCONEXION_GRID_FORMING_IBR/AEMO_Voluntary_Specification_Grid_Forming_Inverters_2023_recuperado.pdf",
+    pathActive:
+      "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/03_INTERCONEXION_GRID_FORMING_IBR/AEMO_Voluntary_Specification_Grid_Forming_Inverters_2023_recuperado.pdf",
+    publishedAt: "2023",
+    isPrimary: true,
+  },
+  {
+    id: "INT-ARENA-BrokenHill-GFM-2023",
+    title: "ARENA — Broken Hill GFM modelling report",
+    source: "third_party_reference",
+    level: "L5_whitepaper_brochure",
+    path: "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/03_INTERCONEXION_GRID_FORMING_IBR/ARENA_Broken_Hill_GFM_Modelling_Report_2023.pdf",
+    pathActive:
+      "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/03_INTERCONEXION_GRID_FORMING_IBR/ARENA_Broken_Hill_GFM_Modelling_Report_2023.pdf",
+    publishedAt: "2023",
+    isPrimary: true,
+  },
+  {
+    id: "INT-ARENA-GFM-Portfolio-2025",
+    title: "ARENA — grid-forming battery portfolio summary",
+    source: "third_party_reference",
+    level: "L5_whitepaper_brochure",
+    path: "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/03_INTERCONEXION_GRID_FORMING_IBR/ARENA_GridForming_Battery_Portfolio_Summary_2025.pdf",
+    pathActive:
+      "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/03_INTERCONEXION_GRID_FORMING_IBR/ARENA_GridForming_Battery_Portfolio_Summary_2025.pdf",
+    publishedAt: "2025",
+    isPrimary: true,
+  },
+  {
+    id: "INT-CAISO-ESS-Interconnection",
+    title: "CAISO — energy storage interconnection proposal",
+    source: "third_party_reference",
+    level: "L5_whitepaper_brochure",
+    path: "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/03_INTERCONEXION_GRID_FORMING_IBR/CAISO_Energy_Storage_Interconnection_Proposal.pdf",
+    pathActive:
+      "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/03_INTERCONEXION_GRID_FORMING_IBR/CAISO_Energy_Storage_Interconnection_Proposal.pdf",
+    isPrimary: true,
+  },
+  {
+    id: "INT-NERC-IBR-Performance-2018",
+    title: "NERC — IBR performance guideline",
+    source: "third_party_reference",
+    level: "L5_whitepaper_brochure",
+    path: "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/03_INTERCONEXION_GRID_FORMING_IBR/NERC_IBR_Performance_Guideline_2018.pdf",
+    pathActive:
+      "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/03_INTERCONEXION_GRID_FORMING_IBR/NERC_IBR_Performance_Guideline_2018.pdf",
+    publishedAt: "2018",
+    isPrimary: true,
+  },
+  {
+    id: "INT-NERC-IBR-Security-Draft-2026",
+    title: "NERC — IBR security guideline (draft)",
+    source: "third_party_reference",
+    level: "L5_whitepaper_brochure",
+    path: "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/03_INTERCONEXION_GRID_FORMING_IBR/NERC_IBR_Security_Guideline_Draft_2026.pdf",
+    pathActive:
+      "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/03_INTERCONEXION_GRID_FORMING_IBR/NERC_IBR_Security_Guideline_Draft_2026.pdf",
+    publishedAt: "2026",
+    isPrimary: true,
+  },
+  {
+    id: "INT-IEEE-2800-Webinar-Overview",
+    title:
+      "IEEE 2800-2022 — public webinar overview (not the full standard)",
+    source: "third_party_reference",
+    level: "L5_whitepaper_brochure",
+    path: "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/04_NORMAS_LICENCIADAS_Y_REFERENCIAS_PUBLICAS/IEEE_2800_2022_Public_Webinar_Overview_NO_NORMA_COMPLETA.pdf",
+    pathActive:
+      "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/04_NORMAS_LICENCIADAS_Y_REFERENCIAS_PUBLICAS/IEEE_2800_2022_Public_Webinar_Overview_NO_NORMA_COMPLETA.pdf",
+    publishedAt: "2022",
+    isPrimary: false,
+  },
+  {
+    id: "INT-IEEE-P2800-General-Info",
+    title:
+      "IEEE P2800 — public general information (not the full standard)",
+    source: "third_party_reference",
+    level: "L5_whitepaper_brochure",
+    path: "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/04_NORMAS_LICENCIADAS_Y_REFERENCIAS_PUBLICAS/IEEE_P2800_General_Information_Public.pdf",
+    pathActive:
+      "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/04_NORMAS_LICENCIADAS_Y_REFERENCIAS_PUBLICAS/IEEE_P2800_General_Information_Public.pdf",
+    isPrimary: false,
+  },
 ];
+
 
 /** Lookup helper. Throws if the id is not registered. */
 export function documentRef(id: string): DocumentRegistryEntry {
