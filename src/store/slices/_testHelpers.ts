@@ -46,6 +46,8 @@ export function resetProjectStore(): void {
     comparison: { A: null, B: null },
     smartSiteFit: emptySmartSiteFitPreviewState,
     smartSiteFitApplied: null,
+    sizingSnapshots: [],
+    sizingCompare: { A: null, B: null },
     cableRoutes: [],
     accessRoads: [],
     fireSafetyZones: [],

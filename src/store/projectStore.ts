@@ -9,6 +9,7 @@ import { createPolygonSlice } from "./slices/polygonSlice";
 import { createRepairZoneSlice } from "./slices/repairZoneSlice";
 import { createTerrainSlice } from "./slices/terrainSlice";
 import { createSmartSiteFitSlice } from "./slices/smartSiteFitSlice";
+import { createSizingSnapshotSlice } from "./slices/sizingSnapshotSlice";
 
 // Re-export the 7 public types so consumers continue to import them
 // from `@/store/projectStore` unchanged (Phase 12B guardrail D9).
@@ -31,4 +32,5 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   ...createComparisonSlice(set),
   ...createLifecycleSlice(set, get),
   ...createSmartSiteFitSlice(set, get),
+  ...createSizingSnapshotSlice(set),
 }));

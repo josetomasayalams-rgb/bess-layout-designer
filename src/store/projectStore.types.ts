@@ -84,6 +84,7 @@ import type {
   PPC,
 } from "@/types/electrical";
 import type { FireSafetyZone } from "@/types/safety";
+import type { SizingSnapshot } from "@/lib/sizing/sizingSnapshot";
 import type {
   DocumentInconsistency,
   ProjectAssumption,
@@ -197,6 +198,11 @@ export const emptySmartSiteFitPreviewState: SmartSiteFitPreviewState = {
   lastRunAt: null,
 };
 
+/** Two-slot selection (snapshot ids) for the sizing-snapshot comparator. */
+export type SizingCompareSlots = { A: string | null; B: string | null };
+
+export const emptySizingCompareSlots: SizingCompareSlots = { A: null, B: null };
+
 /**
  * Default map view center for projects that have not yet drawn a
  * polygon (Santiago, Chile). Used as the initial value of
@@ -240,6 +246,10 @@ export type ProjectState = {
   comparison: ComparisonState;
   smartSiteFit: SmartSiteFitPreviewState;
   smartSiteFitApplied: SmartSiteFitAppliedMetadata | null;
+  /** Saved sizing snapshots ("predimensionamientos"), session-only. */
+  sizingSnapshots: SizingSnapshot[];
+  /** Selected snapshot ids for side-by-side comparison. */
+  sizingCompare: SizingCompareSlots;
   past: ProjectSnapshot[];
   future: ProjectSnapshot[];
   /**
@@ -352,6 +362,12 @@ export type ProjectState = {
   recalculateSmartSiteFitPreview: () => void;
   applySmartSiteFitAlternative: () => SmartSiteFitApplyResult;
   discardSmartSiteFit: () => void;
+
+  saveSizingSnapshot: (name: string) => void;
+  removeSizingSnapshot: (id: string) => void;
+  renameSizingSnapshot: (id: string, name: string) => void;
+  clearSizingSnapshots: () => void;
+  setSizingCompareSlot: (slot: "A" | "B", id: string | null) => void;
 
   setMode: (mode: InteractionMode) => void;
   /** Sets the free-text project-name metadata field. */

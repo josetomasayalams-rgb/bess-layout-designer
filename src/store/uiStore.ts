@@ -162,9 +162,12 @@ type UiState = {
   rightSidebarCollapsed: boolean;
   viewMode: MapViewMode;
   layerVisibility: LayerVisibility;
+  /** When true, the full-screen side-by-side map comparison overlay is shown. */
+  mapComparisonOpen: boolean;
   hydrateLocale: () => void;
   hydrateTheme: () => void;
   hydrateLayerVisibility: () => void;
+  setMapComparisonOpen: (open: boolean) => void;
   setLocale: (locale: Locale) => void;
   setTheme: (theme: ThemeMode) => void;
   toggleTheme: () => void;
@@ -172,6 +175,7 @@ type UiState = {
   toggleLocale: () => void;
   toggleLeftSidebar: () => void;
   toggleRightSidebar: () => void;
+  setRightSidebarCollapsed: (collapsed: boolean) => void;
   setViewMode: (mode: MapViewMode) => void;
   toggleViewMode: () => void;
   toggleLayer: (layerId: LayerId) => void;
@@ -229,6 +233,8 @@ export const useUiStore = create<UiState>((set, get) => ({
   rightSidebarCollapsed: true,
   viewMode: "2d",
   layerVisibility: defaultLayerVisibility,
+  mapComparisonOpen: false,
+  setMapComparisonOpen: (open) => set({ mapComparisonOpen: open }),
   hydrateLocale: () => {
     const locale = storedLocale();
     if (locale) set({ locale });
@@ -268,6 +274,8 @@ export const useUiStore = create<UiState>((set, get) => ({
     set((state) => ({ leftSidebarCollapsed: !state.leftSidebarCollapsed })),
   toggleRightSidebar: () =>
     set((state) => ({ rightSidebarCollapsed: !state.rightSidebarCollapsed })),
+  setRightSidebarCollapsed: (collapsed) =>
+    set({ rightSidebarCollapsed: collapsed }),
   setViewMode: (mode) =>
     set((state) => {
       const layerVisibility =

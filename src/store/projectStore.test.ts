@@ -101,6 +101,18 @@ describe("projectStore undo/redo", () => {
 describe("projectStore layout editing", () => {
   beforeEach(resetStore);
 
+  it("stores Reparacion Inteligente diagnostics when repairing through the public action", () => {
+    place(2);
+
+    useProjectStore.getState().repairLayout({
+      bessToBess_m: 3,
+      bessToPropertyLine_m: 3,
+      electricalFrontWorkingClearance_m: 0.9,
+    });
+
+    expect(useProjectStore.getState().lastRepairResult?.diagnostics.smartRepair).toBeDefined();
+  });
+
   it("previews selected rotations and reverts without mutating the confirmed layout", () => {
     place(2);
     const firstId = useProjectStore.getState().placedEquipment[0].id;
