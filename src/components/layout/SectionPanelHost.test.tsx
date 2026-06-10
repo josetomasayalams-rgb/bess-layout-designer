@@ -58,6 +58,10 @@ vi.mock("@/components/sidebar/SmartSiteFitPanel", () => ({
   SmartSiteFitPanel: () => <section data-testid="smart-site-fit-panel" />,
 }));
 
+vi.mock("@/components/sidebar/SizingComparisonPanel", () => ({
+  SizingComparisonPanel: () => <section data-testid="sizing-comparison-panel" />,
+}));
+
 function resetStores() {
   useUiStore.setState({ locale: "en" });
   useProjectStore.setState({
@@ -85,7 +89,23 @@ describe("SectionPanelHost", () => {
   });
 
   it("renders each section shell without remapping ids", () => {
-    const sections = ["site", "equipment", "layout", "compliance", "report"] as const;
+    const sections = [
+      "site",
+      "equipment",
+      "layout",
+      "comparison",
+      "compliance",
+      "report",
+    ] as const;
+
+    const titles: Record<(typeof sections)[number], string> = {
+      site: "Site",
+      equipment: "Equipment",
+      layout: "Layout",
+      comparison: "Comparator",
+      compliance: "Compliance",
+      report: "Report",
+    };
 
     for (const section of sections) {
       const { unmount } = render(
@@ -94,7 +114,7 @@ describe("SectionPanelHost", () => {
 
       expect(
         screen.getByRole("complementary", {
-          name: new RegExp(`${section === "site" ? "Site" : section === "equipment" ? "Equipment" : section === "layout" ? "Layout" : section === "compliance" ? "Compliance" : "Report"} primary panel`),
+          name: new RegExp(`${titles[section]} primary panel`),
         })
       ).toBeDefined();
 
@@ -174,6 +194,15 @@ describe("SectionPanelHost", () => {
     expect(screen.getByTestId("smart-site-fit-panel")).toBeDefined();
     expect(screen.getByTestId("preliminary-design-panel")).toBeDefined();
     expect(screen.getByTestId("mv-architecture-panel")).toBeDefined();
+    // The comparison tools no longer live in the layout section.
+    expect(screen.queryByTestId("layout-comparison-panel")).toBeNull();
+    expect(screen.queryByTestId("sizing-comparison-panel")).toBeNull();
+  });
+
+  it("maps comparison panels to the comparison section", () => {
+    render(<SectionPanelHost activeSection="comparison" region="primary" />);
+
+    expect(screen.getByTestId("sizing-comparison-panel")).toBeDefined();
     expect(screen.getByTestId("layout-comparison-panel")).toBeDefined();
   });
 });

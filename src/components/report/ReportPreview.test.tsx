@@ -122,7 +122,7 @@ describe("ReportPreview Component", () => {
     );
 
     expect(
-      screen.getByText("Vista Previa de Reporte Técnico")
+      screen.getByText("Vista previa del reporte técnico")
     ).toBeDefined();
 
     await waitFor(() => {

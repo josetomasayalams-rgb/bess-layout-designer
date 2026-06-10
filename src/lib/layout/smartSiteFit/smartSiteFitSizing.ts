@@ -184,7 +184,7 @@ export function deriveEquipmentCountsFromPowerEnergy(
       id: "ssf-power-energy-ratio",
       severity: "warning",
       message:
-        "La energia solicitada requiere mas contenedores que la potencia indicada; se aumento el numero de PCS/MV para mantener la proporcion preliminar. Resultado aproximado.",
+        "La energía solicitada requiere más contenedores que la potencia indicada; se aumentó el número de PCS/MV para mantener la proporción preliminar. Resultado aproximado.",
     });
   }
 
@@ -202,7 +202,7 @@ export function deriveEquipmentCountsFromPowerEnergy(
         id: "ssf-duration-mismatch",
         severity: "info",
         message:
-          "La relacion energia/potencia no coincide con la duracion seleccionada; se ajusto a la configuracion tecnica preliminar mas cercana.",
+          "La relación energía/potencia no coincide con la duración seleccionada; se ajustó a la configuración técnica preliminar más cercana.",
       });
     }
   }
@@ -266,7 +266,7 @@ function deriveIntegratedUnitCounts(
         id: "ssf-duration-mismatch",
         severity: "info",
         message:
-          "La relacion energia/potencia no coincide con la duracion seleccionada; se ajusto a la configuracion tecnica preliminar mas cercana.",
+          "La relación energía/potencia no coincide con la duración seleccionada; se ajustó a la configuración técnica preliminar más cercana.",
       });
     }
   }

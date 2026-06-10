@@ -25,8 +25,8 @@ afterEach(() => {
 describe("TechnicalReportPanel", () => {
   it("renders without crashing for an empty project", () => {
     render(<TechnicalReportPanel />);
-    // The panel always renders the report-summary chip with a "vertices" word.
-    expect(screen.getByText(/vertices/i)).toBeDefined();
+    // The panel always renders the report-summary chip with the vertex count.
+    expect(screen.getByText(/vertices|vértices/i)).toBeDefined();
   });
 
   it("disables generation actions when there is no polygon", () => {
@@ -38,7 +38,7 @@ describe("TechnicalReportPanel", () => {
     expect(buttons.some((b) => b.disabled)).toBe(true);
   });
 
-  it("enables generation actions once polygon has ≥ 3 vertices", () => {
+  it("enables generation actions once polygon has ≥ 3 vértices", () => {
     useProjectStore.setState({
       anchor: { lng0: -70, lat0: -33 },
       polygon: [

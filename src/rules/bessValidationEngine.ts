@@ -15,7 +15,7 @@ import {
 import { generateConceptualPhysicalInfrastructure } from "@/lib/layout/physicalInfrastructure";
 import type { CableRoute } from "@/types/cable";
 import type { AccessRoad } from "@/types/road";
-import type { LngLat, LocalPoint, ProjectAnchor, RotatedRectLocal } from "@/types/geometry";
+import type { LngLat, ProjectAnchor, RotatedRectLocal } from "@/types/geometry";
 import type { PlacedEquipment } from "@/types/equipment";
 import type {
   RegulatoryDesignContext,
@@ -30,6 +30,8 @@ import {
   VEHICLE_ACCESS_MAX_DISTANCE_M,
   CABLE_TO_EQUIPMENT_CLEARANCE_M,
 } from "@/data/defaultConstraints";
+
+const BESS_TO_BESS_TOLERANCE_M = 0.05;
 
 function technicalTypeFor(specId: string): TechnicalObjectType {
   const spec = equipmentCatalog.find((item) => item.id === specId);
@@ -233,7 +235,7 @@ export function validateBessLayout(args: {
       const b = bessObjects[j];
       const measured = distanceBetweenRectangles(a.rect, b.rect);
       const required = profile.rules.bessToBess_m;
-      if (measured < required) {
+      if (measured + BESS_TO_BESS_TOLERANCE_M < required) {
         const severity: ValidationSeverity = technicalBasis ? "warning" : "critical";
         issues.push(
           issue({

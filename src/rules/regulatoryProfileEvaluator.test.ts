@@ -377,3 +377,97 @@ describe("runRegulatoryEvaluation — physical validations mapping", () => {
     expect(rule2!.violations[0].message).toBe("Footprint collision detected between bess-1 and bess-2.");
   });
 });
+
+describe("evaluateRegulatoryProfile — Phase P3 Dynamic Prioritization", () => {
+  it("escalates riskLevel from om_insurance to important when multiple equipment items are affected", () => {
+    const result = evaluateRegulatoryProfile({
+      profileId: "chile-utility-predesign",
+      blocks: [
+        { id: "bess-1", containerIds: ["c-1"], conversionStationId: "cs-1" },
+        { id: "bess-2", containerIds: ["c-2"], conversionStationId: "cs-1" },
+        { id: "bess-3", containerIds: ["c-3"], conversionStationId: "cs-1" },
+      ],
+      physicalIssues: [
+        {
+          id: "issue-1",
+          severity: "warning",
+          ruleId: "bess_to_bess_spacing",
+          ruleLabel: "BESS spacing",
+          objectAId: "bess-1",
+          objectBId: "bess-2",
+          measured_m: 1.0,
+          required_m: 1.5,
+          source: "Sungrow catalog",
+          message: "BESS-1 is 1.0m from BESS-2",
+          recommendation: "Increase spacing",
+          basis: "conservative_criterion",
+        },
+        {
+          id: "issue-2",
+          severity: "warning",
+          ruleId: "bess_to_bess_spacing",
+          ruleLabel: "BESS spacing",
+          objectAId: "bess-2",
+          objectBId: "bess-3",
+          measured_m: 1.0,
+          required_m: 1.5,
+          source: "Sungrow catalog",
+          message: "BESS-2 is 1.0m from BESS-3",
+          recommendation: "Increase spacing",
+          basis: "conservative_criterion",
+        },
+      ],
+    });
+
+    const rule3 = result.rules.find((r) => r.ruleId === "RULE-PHYS-003");
+    expect(rule3).toBeDefined();
+    expect(rule3!.outcome).toBe("violation");
+    expect(rule3!.riskLevel).toBe("important");
+    expect(rule3!.diagnostic?.es).toContain("[Escalación dinámica]");
+    expect(rule3!.diagnostic?.en).toContain("[Dynamic Escalation]");
+  });
+});
+
+describe("evaluateRegulatoryProfile — Phase P4 Sub-Profile Filters", () => {
+  it("filters rules when showSecOnly is active", () => {
+    const result = evaluateRegulatoryProfile({
+      profileId: "chile-utility-predesign",
+      showSecOnly: true,
+    });
+    // All rules that are NOT in regulatory_sec should be out_of_scope
+    const nonSecRules = result.rules.filter((r) => r.category !== "regulatory_sec");
+    expect(nonSecRules.length).toBeGreaterThan(0);
+    for (const r of nonSecRules) {
+      expect(r.outcome).toBe("out_of_scope");
+    }
+  });
+
+  it("filters rules when showFmGlobal is false", () => {
+    const result = evaluateRegulatoryProfile({
+      profileId: "chile-utility-predesign",
+      showFmGlobal: false,
+    });
+    // All regulatory_fire_safety rules should be out_of_scope
+    const fireSafetyRules = result.rules.filter((r) => r.category === "regulatory_fire_safety");
+    expect(fireSafetyRules.length).toBeGreaterThan(0);
+    for (const r of fireSafetyRules) {
+      expect(r.outcome).toBe("out_of_scope");
+    }
+  });
+
+  it("filters rules when showTerritorial is false", () => {
+    const result = evaluateRegulatoryProfile({
+      profileId: "chile-utility-predesign",
+      showTerritorial: false,
+    });
+    // All regulatory_territorial and regulatory_environmental rules should be out_of_scope
+    const territorialEnvironmentalRules = result.rules.filter(
+      (r) => r.category === "regulatory_territorial" || r.category === "regulatory_environmental"
+    );
+    expect(territorialEnvironmentalRules.length).toBeGreaterThan(0);
+    for (const r of territorialEnvironmentalRules) {
+      expect(r.outcome).toBe("out_of_scope");
+    }
+  });
+});
+

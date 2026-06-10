@@ -9,6 +9,7 @@ import { validateBessLayout } from "@/rules/bessValidationEngine";
 import { runRegulatoryEvaluation } from "@/rules/regulatoryProfileEvaluator";
 import { isPhase8ElectricalRuleId } from "@/rules/regulatoryRulesCatalog";
 import { validateElectricalTopology } from "@/lib/electrical/topologyValidation";
+import { feederLengthsFromLayout } from "@/lib/electrical/feederLengths";
 
 import {
   ComplianceSummary,
@@ -65,12 +66,20 @@ export function RegulatoryCompliancePanel() {
   const activeProfileId = useRegulatoryStore((s) => s.activeProfileId);
   const activeRuleProfileId = useRegulatoryStore((s) => s.activeRuleProfileId);
   const setActiveRuleProfileId = useRegulatoryStore((s) => s.setActiveRuleProfileId);
+  const showFmGlobal = useRegulatoryStore((s) => s.showFmGlobal);
+  const showSecOnly = useRegulatoryStore((s) => s.showSecOnly);
+  const showTerritorial = useRegulatoryStore((s) => s.showTerritorial);
   const context = useRegulatoryStore((s) => s.context);
   const locale = useUiStore((s) => s.locale);
   const isEs = locale === "es";
 
   const profile = getRegulatoryProfile(activeProfileId);
   const result = validateBessLayout({ placed, polygon, anchor, profile, context });
+
+  const feederLengthsM = useMemo(
+    () => feederLengthsFromLayout({ placed, anchor, polygon, hasPoi: !!poi, mvFeeders }),
+    [placed, anchor, polygon, poi, mvFeeders]
+  );
 
   const electricalValidation = useMemo(
     () =>
@@ -83,6 +92,7 @@ export function RegulatoryCompliancePanel() {
         auxiliaryServices,
         operationalLimits,
         ppc,
+        feederLengthsM,
       }),
     [
       blocks,
@@ -93,6 +103,7 @@ export function RegulatoryCompliancePanel() {
       auxiliaryServices,
       operationalLimits,
       ppc,
+      feederLengthsM,
     ]
   );
 
@@ -108,6 +119,9 @@ export function RegulatoryCompliancePanel() {
         mvBuses,
         poi,
         inconsistencies,
+        showFmGlobal,
+        showSecOnly,
+        showTerritorial,
       }),
     [
       activeRuleProfileId,
@@ -119,6 +133,9 @@ export function RegulatoryCompliancePanel() {
       mvBuses,
       poi,
       inconsistencies,
+      showFmGlobal,
+      showSecOnly,
+      showTerritorial,
     ]
   );
   const status = STATUS_COPY[result.projectStatus];

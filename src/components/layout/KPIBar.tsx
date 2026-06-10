@@ -7,7 +7,7 @@
  * expanded permanent strip of 10 chips grouped in 3 visual clusters:
  *
  *   Dimensioning  : Power · Energy · Duration
- *   Layout        : Area · Containers · PCS/MV
+ *   Layout        : Área · Containers · PCS/MV
  *   Status        : Compliance · Warnings · Exclusions · Report
  *
  * Constraints (Fase 11A.1):
@@ -37,6 +37,7 @@ import { formatRatioAsPercentage } from "@/lib/units/formatUnits";
 import { cn } from "@/lib/utils";
 import { validateBessLayout } from "@/rules/bessValidationEngine";
 import { validateElectricalTopology } from "@/lib/electrical/topologyValidation";
+import { feederLengthsFromLayout } from "@/lib/electrical/feederLengths";
 import { runRegulatoryEvaluation } from "@/rules/regulatoryProfileEvaluator";
 import { getRegulatoryProfile } from "@/rules/regulatoryProfileMetadata";
 import { exclusionRegistry } from "@/data/exclusionRegistry";
@@ -110,6 +111,9 @@ export function KPIBar({
 
   const activeProfileId = useRegulatoryStore((s) => s.activeProfileId);
   const activeRuleProfileId = useRegulatoryStore((s) => s.activeRuleProfileId);
+  const showFmGlobal = useRegulatoryStore((s) => s.showFmGlobal);
+  const showSecOnly = useRegulatoryStore((s) => s.showSecOnly);
+  const showTerritorial = useRegulatoryStore((s) => s.showTerritorial);
   const context = useRegulatoryStore((s) => s.context);
   const locale = useUiStore((s) => s.locale);
   const isEs = locale === "es";
@@ -132,6 +136,18 @@ export function KPIBar({
     [placed, polygon, anchor, activeProfileId, context]
   );
 
+  const feederLengthsM = useMemo(
+    () =>
+      feederLengthsFromLayout({
+        placed,
+        anchor,
+        polygon,
+        hasPoi: !!poi,
+        mvFeeders,
+      }),
+    [placed, anchor, polygon, poi, mvFeeders]
+  );
+
   const electricalValidation = useMemo(
     () =>
       validateElectricalTopology({
@@ -143,6 +159,7 @@ export function KPIBar({
         auxiliaryServices,
         operationalLimits,
         ppc,
+        feederLengthsM,
       }),
     [
       blocks,
@@ -153,6 +170,7 @@ export function KPIBar({
       auxiliaryServices,
       operationalLimits,
       ppc,
+      feederLengthsM,
     ]
   );
 
@@ -168,6 +186,9 @@ export function KPIBar({
         mvBuses,
         poi,
         inconsistencies,
+        showFmGlobal,
+        showSecOnly,
+        showTerritorial,
       }),
     [
       activeRuleProfileId,
@@ -179,6 +200,9 @@ export function KPIBar({
       mvBuses,
       poi,
       inconsistencies,
+      showFmGlobal,
+      showSecOnly,
+      showTerritorial,
     ]
   );
 

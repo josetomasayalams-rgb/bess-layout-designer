@@ -61,12 +61,12 @@ describe("SingleLineDiagram Component", () => {
     
     render(<SingleLineDiagram />);
     
-    expect(screen.getByText("Diagrama Unifilar Eléctrico")).toBeDefined();
+    expect(screen.getByText("Diagrama unifilar eléctrico")).toBeDefined();
     expect(
-      screen.getByText(/Carga el preset 'BESS del Desierto' o inserta equipos/i)
+      screen.getByText(/Carga la preconfiguración 'BESS del Desierto' o inserta equipos/i)
     ).toBeDefined();
     expect(
-      screen.getByRole("button", { name: /Cargar Preset BESS del Desierto/i })
+      screen.getByRole("button", { name: /Cargar preconfiguración BESS del Desierto/i })
     ).toBeDefined();
   });
 

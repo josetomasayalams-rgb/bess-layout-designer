@@ -206,10 +206,10 @@ describe("pdfTraceabilityScopeSections — section numbers and titles", () => {
     });
   });
 
-  it("EngineeringAnnexSection → A2. Anexo: checklist de ingeniería y referencias", () => {
+  it("EngineeringAnnexSection → A2. Anexo: lista de verificación de ingeniería y referencias", () => {
     expectSectionPage(callSection(EngineeringAnnexSection), {
       number: "A2",
-      title: "Anexo: checklist de ingeniería y referencias",
+      title: "Anexo: lista de verificación de ingeniería y referencias",
     });
   });
 });

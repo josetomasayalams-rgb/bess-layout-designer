@@ -203,6 +203,10 @@ export type RegulatoryEvaluationInput = {
   inconsistencies?: DocumentInconsistency[];
   /** Marca de tiempo (opcional, para tests deterministas). */
   evaluatedAt?: string;
+  // Sub-profile filters (Phase P4)
+  showFmGlobal?: boolean;
+  showSecOnly?: boolean;
+  showTerritorial?: boolean;
 };
 
 // ──────────────────────────────────────────────────────────────────
@@ -253,7 +257,7 @@ function architectureIsPopulated(input: RegulatoryEvaluationInput): boolean {
   );
 }
 
-function evaluateRule(
+function evaluateRuleInner(
   rule: RegulatoryRuleDefinition,
   input: RegulatoryEvaluationInput
 ): EvaluatedRuleEntry {
@@ -278,6 +282,20 @@ function evaluateRule(
     diagnosticAction: diag?.diagnosticAction,
     riskLevel: diag?.riskLevel ?? (effSeverity === "blocking" ? "critical" : effSeverity === "warning" ? "important" : "info"),
   };
+
+  // Sub-profile filters (Phase P4)
+  if (input.showSecOnly && rule.category !== "regulatory_sec") {
+    return { ...base, outcome: "out_of_scope" };
+  }
+  if (input.showFmGlobal === false && rule.category === "regulatory_fire_safety") {
+    return { ...base, outcome: "out_of_scope" };
+  }
+  if (
+    input.showTerritorial === false &&
+    (rule.category === "regulatory_territorial" || rule.category === "regulatory_environmental")
+  ) {
+    return { ...base, outcome: "out_of_scope" };
+  }
 
   // Reglas explícitamente fuera de alcance v1.
   if (rule.status === "out_of_scope") {
@@ -347,6 +365,52 @@ function evaluateRule(
     return { ...base, outcome: "manual_check" };
   }
   return { ...base, outcome: "pending_validation" };
+}
+
+function evaluateRule(
+  rule: RegulatoryRuleDefinition,
+  input: RegulatoryEvaluationInput
+): EvaluatedRuleEntry {
+  const entry = evaluateRuleInner(rule, input);
+
+  // Dynamic Prioritization (Phase P3)
+  if (entry.outcome === "violation") {
+    const affectedIds = new Set<string>();
+    entry.violations.forEach((v) => {
+      if (v.affectedIds) {
+        v.affectedIds.forEach((id) => affectedIds.add(id));
+      }
+    });
+
+    const affectedCount = affectedIds.size;
+    const totalEntities = (input.blocks?.length ?? 0) + (input.conversionStations?.length ?? 0);
+    const hasHighVolume = affectedCount >= 3 || (totalEntities > 0 && affectedCount >= totalEntities * 0.4);
+
+    if (hasHighVolume && entry.riskLevel) {
+      const originalRisk = entry.riskLevel;
+      if (entry.riskLevel === "om_insurance") {
+        entry.riskLevel = "important";
+      } else if (entry.riskLevel === "important") {
+        entry.riskLevel = "critical";
+      }
+
+      if (entry.riskLevel !== originalRisk) {
+        const esSuffix = `\n\n[Escalación dinámica]: Elevado a ${
+          entry.riskLevel === "critical" ? "Riesgo Crítico" : "Riesgo Importante"
+        } debido a que afecta de manera sistemática a ${affectedCount} equipos del layout.`;
+        const enSuffix = `\n\n[Dynamic Escalation]: Elevated to ${
+          entry.riskLevel === "critical" ? "Critical Risk" : "Important Risk"
+        } because it systematically affects ${affectedCount} equipment units in the layout.`;
+
+        entry.diagnostic = {
+          es: (entry.diagnostic?.es ?? entry.description) + esSuffix,
+          en: (entry.diagnostic?.en ?? entry.description) + enSuffix,
+        };
+      }
+    }
+  }
+
+  return entry;
 }
 
 function collectDocRefs(rules: EvaluatedRuleEntry[]): string[] {
@@ -473,6 +537,10 @@ export function runRegulatoryEvaluation(args: {
   poi?: POI | null;
   inconsistencies?: DocumentInconsistency[];
   evaluatedAt?: string;
+  // Sub-profile filters (Phase P4)
+  showFmGlobal?: boolean;
+  showSecOnly?: boolean;
+  showTerritorial?: boolean;
 }): RegulatoryEvaluationResult {
   return evaluateRegulatoryProfile({
     profileId: args.profileId,
@@ -485,5 +553,8 @@ export function runRegulatoryEvaluation(args: {
     poi: args.poi,
     inconsistencies: args.inconsistencies,
     evaluatedAt: args.evaluatedAt,
+    showFmGlobal: args.showFmGlobal,
+    showSecOnly: args.showSecOnly,
+    showTerritorial: args.showTerritorial,
   });
 }

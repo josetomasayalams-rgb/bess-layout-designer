@@ -62,7 +62,7 @@ export function GridShapePicker({
                     ? "Cuadrado"
                     : "Square"
                   : isEs
-                    ? "Rectangulo"
+                    ? "Rectángulo"
                     : "Rectangle"
               }
               className={`rounded-md border px-2 py-1 font-mono text-[10px] ${

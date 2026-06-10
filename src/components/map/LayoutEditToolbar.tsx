@@ -98,7 +98,7 @@ export function LayoutEditToolbar({
       <div className="flex flex-wrap items-center gap-2">
         <div className="mr-1 min-w-[150px]">
           <div className="text-[10px] font-semibold uppercase tracking-wide text-cyan-300">
-            {isEs ? "Edicion de layout" : "Layout edit"}
+            {isEs ? "Edición de la disposición" : "Layout edit"}
           </div>
           <div className="text-slate-300">
             {selectedCount > 0
@@ -201,10 +201,10 @@ export function LayoutEditToolbar({
           title={
             allLocked
               ? isEs
-                ? "Desbloquear la seleccion"
+                ? "Desbloquear la selección"
                 : "Unlock the selection"
               : isEs
-                ? "Bloquear la seleccion"
+                ? "Bloquear la selección"
                 : "Lock the selection"
           }
         >
@@ -222,9 +222,19 @@ export function LayoutEditToolbar({
               : "Lock"}
         </button>
 
-        <button className={toolButton} disabled={editDisabled} onClick={onRepair} type="button">
+        <button
+          className={toolButton}
+          disabled={editDisabled}
+          onClick={onRepair}
+          title={
+            isEs
+              ? "Ejecuta Reparación Inteligente sobre la selección respetando separaciones y bloqueos"
+              : "Runs smart repair on the selection while respecting spacing and locks"
+          }
+          type="button"
+        >
           <Wand2 className="h-3.5 w-3.5" aria-hidden="true" />
-          {isEs ? "Reespaciar" : "Respace"}
+          {isEs ? "Reparación inteligente" : "Smart repair"}
         </button>
         <button
           className={toolButton}
@@ -251,7 +261,7 @@ export function LayoutEditToolbar({
           type="button"
         >
           <Eraser className="h-3.5 w-3.5" aria-hidden="true" />
-          {isEs ? "Nueva area" : "New area"}
+          {isEs ? "Nueva área" : "New area"}
         </button>
 
         <div className={`ml-auto rounded-md border px-2.5 py-1.5 ${statusTone}`}>

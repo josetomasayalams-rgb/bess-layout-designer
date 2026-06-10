@@ -107,7 +107,7 @@ export function SizingContainerSection({
         </div>
         <p className="text-[10px] leading-snug text-slate-500">
           {isEs
-            ? "Define el numero de contenedores y elige una forma de grilla; los PCS se agregan automaticamente."
+            ? "Define el número de contenedores y elige una forma de grilla; los PCS se agregan automáticamente."
             : "Set the container count and pick a grid shape; PCS units are added automatically."}
         </p>
 
@@ -241,7 +241,7 @@ export function SizingContainerSection({
         {!hasTerrainPolygon ? (
           <p className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[10px] leading-snug text-amber-100">
             {isEs
-              ? "Regularizar requiere un poligono de terreno. Generar puede usarse sin terreno."
+              ? "Regularizar requiere un polígono de terreno. Generar puede usarse sin terreno."
               : "Regularization needs a site polygon. Generate can be used without one."}
           </p>
         ) : null}

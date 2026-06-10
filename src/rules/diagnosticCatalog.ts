@@ -306,7 +306,7 @@ export const diagnosticCatalog: Record<string, DiagnosticMetadata> = {
       en: "Exceeding grid-connection capacity voids connection agreements and triggers system rejection by the operator.",
     },
     diagnosticAction: {
-      es: "Limpiar la inyección mediante configuración del Power Plant Controller (PPC) o reducir la potencia instalada de inversores.",
+      es: "Limitar la inyección mediante configuración del Power Plant Controller (PPC) o reducir la potencia instalada de inversores.",
       en: "Limit output via Power Plant Controller (PPC) configuration or reduce total inverter nameplate capacity.",
     },
     riskLevel: "important",

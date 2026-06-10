@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Camera, GitCompare, RotateCcw, Trash2 } from "lucide-react";
+import { Camera, GitCompare, Maximize2, RotateCcw, Trash2 } from "lucide-react";
 import { useProjectStore } from "@/store/projectStore";
 import type { ComparisonSlot, LayoutAlternative } from "@/store/projectStore";
 import { useUiStore } from "@/store/uiStore";
@@ -32,8 +32,11 @@ export function LayoutComparisonPanel() {
   const captureAlternative = useProjectStore((s) => s.captureAlternative);
   const clearAlternative = useProjectStore((s) => s.clearAlternative);
   const restoreAlternative = useProjectStore((s) => s.restoreAlternative);
+  const setMapComparisonOpen = useUiStore((s) => s.setMapComparisonOpen);
   const locale = useUiStore((s) => s.locale);
   const isEs = locale === "es";
+
+  const capturedCount = (comparison.A ? 1 : 0) + (comparison.B ? 1 : 0);
 
   const metricsA = useMemo<AlternativeMetrics | null>(
     () =>
@@ -155,6 +158,43 @@ export function LayoutComparisonPanel() {
       }
     >
       <div className="space-y-2">
+        {/* Guided capture status + map comparison entry point */}
+        <div className="flex items-center justify-between gap-2 rounded-lg border border-slate-800 bg-slate-900/50 px-2 py-1.5">
+          <div className="flex items-center gap-2 text-[10px]">
+            {SLOTS.map((slot) => {
+              const done = comparison[slot] !== null;
+              return (
+                <span
+                  key={slot}
+                  className={`inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 font-medium ${
+                    done
+                      ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-200"
+                      : "border-slate-700 bg-slate-900 text-slate-500"
+                  }`}
+                >
+                  <span className="font-bold">{slot}</span>
+                  {done
+                    ? isEs
+                      ? "guardado"
+                      : "saved"
+                    : isEs
+                      ? "pendiente"
+                      : "pending"}
+                </span>
+              );
+            })}
+          </div>
+          <button
+            type="button"
+            onClick={() => setMapComparisonOpen(true)}
+            disabled={capturedCount === 0}
+            className="inline-flex items-center gap-1 rounded-md border border-cyan-400/40 bg-cyan-400/10 px-2 py-1 text-[10px] font-medium text-cyan-100 hover:border-cyan-300 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <Maximize2 className="h-3 w-3" aria-hidden="true" />
+            {isEs ? "Comparar en mapa" : "Compare on map"}
+          </button>
+        </div>
+
         {SLOTS.map((slot) => {
           const alternative = comparison[slot];
           return (

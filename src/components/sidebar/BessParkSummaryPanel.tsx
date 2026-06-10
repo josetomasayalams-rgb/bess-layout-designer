@@ -70,7 +70,7 @@ export function BessParkSummaryPanel() {
       formatAreaM2(park.regulatoryAreaM2, { digits: 1, locale }),
     ],
     [
-      isEs ? "Área con pasillos" : "Area with aisles",
+      isEs ? "Área con pasillos" : "Área with aisles",
       formatAreaM2(park.maintenanceAreaM2, { digits: 1, locale }),
     ],
     [

@@ -137,7 +137,7 @@ const EXCLUSION_CATEGORY_ORDER: ExclusionCategoryDef[] = [
   },
   {
     category: "Interconexión",
-    keywords: ["interconnect", "interconex", "grid-connection", "conexion", "conexion", "-hv", " hv", "transmis"],
+    keywords: ["interconnect", "interconex", "grid-connection", "conexión", "conexión", "-hv", " hv", "transmis"],
   },
   {
     category: "Operación y mantenimiento",

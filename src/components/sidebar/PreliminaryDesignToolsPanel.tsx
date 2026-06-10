@@ -133,11 +133,11 @@ export function PreliminaryDesignToolsPanel() {
       <CollapsibleSection
         icon={Wrench}
         iconColor="text-amber-300"
-        title={isEs ? "Reparar layout" : "Repair layout"}
+        title="Reparación Inteligente"
         description={
           isEs
-            ? "Reordena, centra y corrige el sistema dentro del terreno."
-            : "Reorders, centers and repairs the system inside the site."
+            ? "Reparación inteligente del layout BESS dentro del terreno."
+            : "Intelligent BESS layout repair inside the site."
         }
       >
         <LayoutRepairSection
@@ -151,6 +151,10 @@ export function PreliminaryDesignToolsPanel() {
           onFinishRepairZone={finishRepairZone}
           onClearRepairZone={clearRepairZone}
           onRepairLayout={() => repairLayout(repairRules)}
+          onRepairFullLayout={() => {
+            clearRepairZone();
+            repairLayout(repairRules);
+          }}
           onPreviewFit={() => previewFitLayoutToTerrain(repairRules)}
           onApplyFit={applyTerrainFitPreview}
           onRevertFit={revertTerrainFitPreview}
@@ -163,4 +167,3 @@ export function PreliminaryDesignToolsPanel() {
     </>
   );
 }
-

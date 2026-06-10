@@ -191,7 +191,7 @@ export function ParametricTerrainPanel() {
       setCoordFeedback({
         kind: "error",
         text: isEs
-          ? `Maximo ${MAX_COORDS} coordenadas (una por linea). Ingresaste ${coordLines.length}.`
+          ? `Máximo ${MAX_COORDS} coordenadas (una por línea). Ingresaste ${coordLines.length}.`
           : `Maximum ${MAX_COORDS} coordinates (one per line). You entered ${coordLines.length}.`,
       });
       return;
@@ -204,7 +204,7 @@ export function ParametricTerrainPanel() {
         setCoordFeedback({
           kind: "error",
           text: isEs
-            ? `Coordenada invalida: "${line}". Usa lat, lon (latitud -90 a 90, longitud -180 a 180).`
+            ? `Coordenada inválida: "${line}". Usa lat, lon (latitud -90 a 90, longitud -180 a 180).`
             : `Invalid coordinate: "${line}". Use lat, lng (latitude -90 to 90, longitude -180 to 180).`,
         });
         return;
@@ -216,7 +216,7 @@ export function ParametricTerrainPanel() {
       setCoordFeedback({
         kind: "error",
         text: isEs
-          ? "Ingresa al menos 3 coordenadas validas."
+          ? "Ingresa al menos 3 coordenadas válidas."
           : "Enter at least 3 valid coordinates.",
       });
       return;
@@ -226,7 +226,7 @@ export function ParametricTerrainPanel() {
     setCoordFeedback({
       kind: "success",
       text: isEs
-        ? `Poligono creado desde ${vertices.length} coordenadas.`
+        ? `Polígono creado desde ${vertices.length} coordenadas.`
         : `Polygon created from ${vertices.length} coordinates.`,
     });
   };
@@ -239,7 +239,7 @@ export function ParametricTerrainPanel() {
         </div>
         <p className="mt-1 text-[10px] leading-snug text-slate-500">
           {isEs
-            ? "Genera un terreno por parametros, arrastralo sobre el mapa y aplicalo como poligono de trabajo."
+            ? "Genera un terreno por parámetros, arrástralo sobre el mapa y aplícalo como polígono de trabajo."
             : "Generate terrain by parameters, drag it on the map and apply it as the working polygon."}
         </p>
       </div>
@@ -256,7 +256,7 @@ export function ParametricTerrainPanel() {
         />
         <span className="mt-1 block text-[10px] leading-snug text-slate-600">
           {isEs
-            ? "Se usa en el encabezado del reporte tecnico."
+            ? "Se usa en el encabezado del reporte técnico."
             : "Used in the technical report header."}
         </span>
       </label>
@@ -284,7 +284,7 @@ export function ParametricTerrainPanel() {
           }`}
         >
           <MousePointer2 className="h-3.5 w-3.5" aria-hidden="true" />
-          {isEs ? "Por parametros" : "By parameters"}
+          {isEs ? "Por parámetros" : "By parameters"}
         </button>
         <button
           type="button"
@@ -308,7 +308,7 @@ export function ParametricTerrainPanel() {
         >
           {isDrawing
             ? isEs
-              ? "Terminar poligono"
+              ? "Terminar polígono"
               : "Finish polygon"
             : isEs
               ? "Dibujar terreno"
@@ -318,12 +318,12 @@ export function ParametricTerrainPanel() {
         <div className="space-y-3">
           <p className="text-[10px] leading-snug text-slate-500">
             {isEs
-              ? "Pega o escribe una coordenada por linea (lat, lon), hasta 15. Puedes copiarlas desde otra fuente y pegarlas todas de una vez. El poligono se crea en el orden ingresado."
+              ? "Pega o escribe una coordenada por línea (lat, lon), hasta 15. Puedes copiarlas desde otra fuente y pegarlas todas de una vez. El polígono se crea en el orden ingresado."
               : "Paste or type one coordinate per line (lat, lng), up to 15. You can copy them from another source and paste them all at once. The polygon is built in the entered order."}
           </p>
 
           <label className="block text-[11px] text-slate-500">
-            {isEs ? "Coordenadas (una por linea)" : "Coordinates (one per line)"}
+            {isEs ? "Coordenadas (una por línea)" : "Coordinates (one per line)"}
             <textarea
               value={coordText}
               onChange={(event) => {
@@ -339,7 +339,7 @@ export function ParametricTerrainPanel() {
 
           <div className="text-[10px] text-slate-600">
             {isEs
-              ? `${validCoordCount}/${MAX_COORDS} coordenadas validas detectadas`
+              ? `${validCoordCount}/${MAX_COORDS} coordenadas válidas detectadas`
               : `${validCoordCount}/${MAX_COORDS} valid coordinates detected`}
           </div>
 
@@ -349,7 +349,7 @@ export function ParametricTerrainPanel() {
             className={`${buttonClass} w-full border-emerald-400/40 bg-emerald-400/10 text-emerald-100 hover:border-emerald-300`}
           >
             <ListPlus className="h-3.5 w-3.5" aria-hidden="true" />
-            {isEs ? "Crear poligono" : "Create polygon"}
+            {isEs ? "Crear polígono" : "Create polygon"}
           </button>
 
           {coordFeedback ? (
@@ -378,15 +378,15 @@ export function ParametricTerrainPanel() {
                 }}
                 className={inputClass}
               >
-                <option value="rectangle">{isEs ? "Rectangulo" : "Rectangle"}</option>
+                <option value="rectangle">{isEs ? "Rectángulo" : "Rectangle"}</option>
                 <option value="square">{isEs ? "Cuadrado" : "Square"}</option>
                 <option value="regular-polygon">
-                  {isEs ? "Poligono regular" : "Regular polygon"}
+                  {isEs ? "Polígono regular" : "Regular polygon"}
                 </option>
               </select>
             </label>
             <label className="text-[11px] text-slate-500">
-              {isEs ? "Metodo" : "Method"}
+              {isEs ? "Método" : "Method"}
               <select
                 value={sizingMode}
                 onChange={(event) => {
@@ -397,7 +397,7 @@ export function ParametricTerrainPanel() {
                 }}
                 className={inputClass}
               >
-                <option value="area-ratio">{isEs ? "Area + relacion" : "Area + ratio"}</option>
+                <option value="area-ratio">{isEs ? "Área + relación" : "Area + ratio"}</option>
                 <option value="dimensions">{isEs ? "Largo / ancho" : "Length / width"}</option>
               </select>
             </label>
@@ -405,7 +405,7 @@ export function ParametricTerrainPanel() {
 
           <div className="grid grid-cols-2 gap-2">
             <label className="text-[11px] text-slate-500">
-              {isEs ? "Area" : "Area"}
+              {isEs ? "Área" : "Area"}
               <NumberField
                 min={0.01}
                 step={0.1}
@@ -463,7 +463,7 @@ export function ParametricTerrainPanel() {
               <span className="mt-1 block text-[10px] text-slate-600">m</span>
             </label>
             <label className="text-[11px] text-slate-500">
-              {isEs ? "Vertices" : "Vertices"}
+              {isEs ? "Vértices" : "Vertices"}
               <NumberField
                 min={3}
                 max={24}
@@ -476,7 +476,7 @@ export function ParametricTerrainPanel() {
               />
             </label>
             <label className="text-[11px] text-slate-500">
-              {isEs ? "Rotacion" : "Rotation"}
+              {isEs ? "Rotación" : "Rotation"}
               <NumberField
                 step={1}
                 value={displayedRotationDeg}

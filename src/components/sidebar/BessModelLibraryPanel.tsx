@@ -86,7 +86,7 @@ export function BessModelLibraryPanel() {
       title={isEs ? "Biblioteca BESS" : "BESS library"}
       description={
         isEs
-          ? "Modelos reales con dimensiones, energia, potencia, peso y densidades."
+          ? "Modelos reales con dimensiones, energía, potencia, peso y densidades."
           : "Real models with dimensions, energy, power, weight and densities."
       }
     >
@@ -118,7 +118,7 @@ export function BessModelLibraryPanel() {
             onChange={(event) => setChemistry(event.target.value)}
             className="min-w-0 rounded-md border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs text-slate-100"
           >
-            <option value="all">{isEs ? "Quimica" : "Chemistry"}</option>
+            <option value="all">{isEs ? "Química" : "Chemistry"}</option>
             <option value="lfp">LFP</option>
             <option value="nmc">NMC</option>
             <option value="lithium-ion">Lithium-ion</option>

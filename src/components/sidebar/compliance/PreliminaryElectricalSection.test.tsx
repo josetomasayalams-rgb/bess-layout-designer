@@ -31,7 +31,7 @@ describe("PreliminaryElectricalSection", () => {
     expect(screen.getByText("Validaciones eléctricas preliminares")).toBeDefined();
     expect(screen.getByText(/Estimaciones preliminares de referencia/)).toBeDefined();
     expect(
-      screen.getByText("Cargar la arquitectura v1.2 (preset BESS del Desierto o equivalente) para evaluar los 8 checks.")
+      screen.getByText("Cargar la arquitectura v1.2 (preconfiguración BESS del Desierto o equivalente) para evaluar las 8 verificaciones.")
     ).toBeDefined();
   });
 

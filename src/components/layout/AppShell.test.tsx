@@ -116,12 +116,12 @@ describe("AppShell section shell surfaces", () => {
     expect(screen.getByTestId("bess-map")).toBeDefined();
 
     // Navigate to Compliance
-    fireEvent.click(screen.getByRole("button", { name: "4. Compliance" }));
+    fireEvent.click(screen.getByRole("button", { name: "5. Compliance" }));
     expect(screen.getByTestId("compliance-panel")).toBeDefined();
     expect(screen.getByTestId("bess-map")).toBeDefined();
 
     // Navigate to Report
-    fireEvent.click(screen.getByRole("button", { name: "5. Report" }));
+    fireEvent.click(screen.getByRole("button", { name: "6. Report" }));
     expect(screen.getByTestId("report-panel")).toBeDefined();
     expect(screen.getByTestId("bess-map")).toBeDefined();
   });

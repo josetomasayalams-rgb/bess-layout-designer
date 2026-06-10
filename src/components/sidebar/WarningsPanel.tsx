@@ -36,11 +36,11 @@ const CATEGORY_LABELS: Record<
   WarningCategory,
   { es: string; en: string }
 > = {
-  setup: { es: "Configuracion", en: "Setup" },
-  geometry: { es: "Geometria", en: "Geometry" },
+  setup: { es: "Configuración", en: "Setup" },
+  geometry: { es: "Geometría", en: "Geometry" },
   collision: { es: "Colisiones", en: "Collisions" },
   assumption: { es: "Supuestos", en: "Assumptions" },
-  physical: { es: "Validacion fisica", en: "Physical validation" },
+  physical: { es: "Validación física", en: "Physical validation" },
 };
 
 export function WarningsPanel() {

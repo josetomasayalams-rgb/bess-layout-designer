@@ -15,6 +15,7 @@ import { reverseGeocode } from "@/lib/report/reverseGeocode";
 import { getRegulatoryProfile } from "@/rules/regulatoryProfileMetadata";
 import { validateBessLayout } from "@/rules/bessValidationEngine";
 import { validateElectricalTopology } from "@/lib/electrical/topologyValidation";
+import { feederLengthsFromLayout } from "@/lib/electrical/feederLengths";
 import { runRegulatoryEvaluation } from "@/rules/regulatoryProfileEvaluator";
 import { downloadTechnicalReportPdf } from "@/lib/report/downloadTechnicalReport";
 import { getProjectCaseStudy } from "@/data/projectCaseStudies";
@@ -51,6 +52,10 @@ export function ReportPreview({
 }: ReportPreviewProps) {
   const locale = useUiStore((s) => s.locale);
   const isEs = locale === "es";
+
+  const showFmGlobal = useRegulatoryStore((s) => s.showFmGlobal);
+  const showSecOnly = useRegulatoryStore((s) => s.showSecOnly);
+  const showTerritorial = useRegulatoryStore((s) => s.showTerritorial);
 
   const [reportData, setReportData] = useState<TechnicalReportData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -104,6 +109,16 @@ export function ReportPreview({
           mvFeeders: project.mvFeeders,
           mvBuses: project.mvBuses,
           poi: project.poi,
+          auxiliaryServices: project.auxiliaryServices,
+          operationalLimits: project.operationalLimits,
+          ppc: project.ppc,
+          feederLengthsM: feederLengthsFromLayout({
+            placed: project.placedEquipment,
+            anchor: project.anchor,
+            polygon: project.polygon,
+            hasPoi: !!project.poi,
+            mvFeeders: project.mvFeeders,
+          }),
         });
 
         const regulatoryEvaluation = runRegulatoryEvaluation({
@@ -116,6 +131,9 @@ export function ReportPreview({
           mvBuses: project.mvBuses,
           poi: project.poi,
           inconsistencies: project.inconsistencies,
+          showFmGlobal,
+          showSecOnly,
+          showTerritorial,
         });
 
         const caseStudy = project.selectedCaseStudyId
@@ -165,7 +183,7 @@ export function ReportPreview({
     return () => {
       cancelled = true;
     };
-  }, [isOpen, includeGeocoding]);
+  }, [isOpen, includeGeocoding, showFmGlobal, showSecOnly, showTerritorial]);
 
   // Close on Escape.
   useEffect(() => {
@@ -198,7 +216,7 @@ export function ReportPreview({
     >
       <header className="flex items-center justify-between border-b border-slate-800 bg-slate-900 px-4 py-3">
         <h2 className="text-sm font-semibold tracking-wide text-slate-100">
-          {isEs ? "Vista Previa de Reporte Técnico" : "Technical Report Preview"}
+          {isEs ? "Vista previa del reporte técnico" : "Technical Report Preview"}
         </h2>
         <div className="flex items-center gap-2">
           <button

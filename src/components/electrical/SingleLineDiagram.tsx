@@ -453,7 +453,7 @@ export function SingleLineDiagram() {
     <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-3 backdrop-blur-sm">
       <div className="mb-2.5 flex items-center justify-between">
         <h3 className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">
-          {isEs ? "Diagrama Unifilar Eléctrico" : "Electrical Single-Line Diagram"}
+          {isEs ? "Diagrama unifilar eléctrico" : "Electrical Single-Line Diagram"}
         </h3>
         <span className="text-[9px] text-slate-500 font-mono">
           {isPresetLoaded
@@ -654,14 +654,14 @@ export function SingleLineDiagram() {
             <Activity className="mb-2 h-8 w-8 text-slate-500 animate-pulse" />
             <p className="text-[11px] leading-snug text-slate-400 font-medium">
               {isEs 
-                ? "Carga el preset 'BESS del Desierto' o inserta equipos en el mapa para activar el unifilar."
+                ? "Carga la preconfiguración 'BESS del Desierto' o inserta equipos en el mapa para activar el unifilar."
                 : "Load the 'BESS del Desierto' preset or insert equipment on the map to activate the diagram."}
             </p>
             <button
               onClick={loadPreset}
               className="mt-3.5 rounded-md border border-violet-500 bg-violet-600/90 hover:bg-violet-600 px-3 py-1.5 text-[10px] font-medium tracking-wide text-white shadow-md active:scale-95 transition-all"
             >
-              {isEs ? "Cargar Preset BESS del Desierto" : "Load BESS del Desierto Preset"}
+              {isEs ? "Cargar preconfiguración BESS del Desierto" : "Load BESS del Desierto Preset"}
             </button>
           </div>
         )}

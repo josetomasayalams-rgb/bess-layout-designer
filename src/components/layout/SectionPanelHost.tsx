@@ -11,6 +11,7 @@ import { ParametricTerrainPanel } from "@/components/sidebar/ParametricTerrainPa
 import { PreliminaryDesignToolsPanel } from "@/components/sidebar/PreliminaryDesignToolsPanel";
 import { RegulatoryCompliancePanel } from "@/components/sidebar/RegulatoryCompliancePanel";
 import { RegulatoryConfigPanel } from "@/components/sidebar/RegulatoryConfigPanel";
+import { SizingComparisonPanel } from "@/components/sidebar/SizingComparisonPanel";
 import { SmartSiteFitPanel } from "@/components/sidebar/SmartSiteFitPanel";
 import { TechnicalReportPanel } from "@/components/sidebar/TechnicalReportPanel";
 import { WarningsPanel } from "@/components/sidebar/WarningsPanel";
@@ -35,7 +36,7 @@ const SECTION_COPY: Record<
   site: {
     es: {
       title: "Sitio",
-      description: "Terreno, poligono, area y presets del proyecto.",
+      description: "Terreno, polígono, área y preconfiguraciones del proyecto.",
     },
     en: {
       title: "Site",
@@ -45,7 +46,7 @@ const SECTION_COPY: Record<
   equipment: {
     es: {
       title: "Equipos",
-      description: "Catalogos, modelos y biblioteca de equipos.",
+      description: "Catálogos, modelos y biblioteca de equipos.",
     },
     en: {
       title: "Equipment",
@@ -55,11 +56,21 @@ const SECTION_COPY: Record<
   layout: {
     es: {
       title: "Layout",
-      description: "Herramientas de disposicion, MT y alternativas.",
+      description: "Herramientas de disposición física y arquitectura MT.",
     },
     en: {
       title: "Layout",
-      description: "Placement tools, MV architecture and alternatives.",
+      description: "Physical placement tools and MV architecture.",
+    },
+  },
+  comparison: {
+    es: {
+      title: "Comparador",
+      description: "Predimensionamientos y alternativas A/B (tabla y mapa).",
+    },
+    en: {
+      title: "Comparator",
+      description: "Sizings and A/B alternatives (table and map).",
     },
   },
   compliance: {
@@ -75,7 +86,7 @@ const SECTION_COPY: Record<
   report: {
     es: {
       title: "Reporte",
-      description: "Resumen tecnico y emision del reporte preliminar.",
+      description: "Resumen técnico y emisión del reporte preliminar.",
     },
     en: {
       title: "Report",
@@ -133,7 +144,7 @@ function useSectionCue(
     return {
       label: isEs ? "Estado inicial" : "Initial state",
       text: isEs
-        ? "Dibuja o carga un poligono para habilitar area, coordenadas y layout."
+        ? "Dibuja o carga un polígono para habilitar el área, las coordenadas y la disposición."
         : "Draw or load a polygon to enable area, coordinates and layout.",
     };
   }
@@ -142,7 +153,7 @@ function useSectionCue(
     return {
       label: isEs ? "Sin equipos colocados" : "No placed equipment",
       text: isEs
-        ? "Selecciona o revisa modelos del catalogo; el dimensionamiento vive ahora en la seccion Layout."
+        ? "Selecciona o revisa modelos del catálogo; el dimensionamiento vive ahora en la sección Layout."
         : "Select or review catalog models; sizing tools now live in the Layout section.",
     };
   }
@@ -151,16 +162,16 @@ function useSectionCue(
     return {
       label: isEs ? "Layout pendiente" : "Layout pending",
       text: isEs
-        ? "Genera o coloca equipos para revisar disposicion fisica y arquitectura MT."
+        ? "Genera o coloca equipos para revisar la disposición física y la arquitectura MT."
         : "Generate or place equipment to review physical layout and MV architecture.",
     };
   }
 
   if (activeSection === "compliance" && region === "primary" && !hasLayout) {
     return {
-      label: isEs ? "Revision preliminar" : "Preliminary review",
+      label: isEs ? "Revisión preliminar" : "Preliminary review",
       text: isEs
-        ? "Los avisos se muestran sin bloquear navegacion; no hay layout evaluable todavia."
+        ? "Los avisos se muestran sin bloquear la navegación; todavía no hay una disposición evaluable."
         : "Warnings remain visible without blocking navigation; no evaluable layout exists yet.",
     };
   }
@@ -169,7 +180,7 @@ function useSectionCue(
     return {
       label: isEs ? "Reporte pendiente" : "Report pending",
       text: isEs
-        ? "El reporte preliminar puede abrirse, pero la salida tecnica requiere datos de sitio y layout."
+        ? "El reporte preliminar puede abrirse, pero la salida técnica requiere datos de sitio y layout."
         : "The preliminary report can be opened, but the technical output needs site and layout data.",
     };
   }
@@ -211,9 +222,16 @@ function renderSectionPanels(
         <PreliminaryDesignToolsPanel />
         <MVArchitecturePanel />
       </>
-    ) : (
-      <LayoutComparisonPanel />
-    );
+    ) : null;
+  }
+
+  if (activeSection === "comparison") {
+    return region === "primary" ? (
+      <>
+        <SizingComparisonPanel />
+        <LayoutComparisonPanel />
+      </>
+    ) : null;
   }
 
   if (activeSection === "compliance") {
@@ -310,7 +328,7 @@ function SpacingRulesPanel() {
         label={isEs ? "Vista informativa" : "Informational view"}
         text={
           isEs
-            ? "Supuestos preliminares existentes desde defaultConstraints. No son una validacion normativa independiente ni reemplazan fabricante, AHJ o ingenieria de detalle."
+            ? "Supuestos preliminares existentes desde defaultConstraints. No son una validación normativa independiente ni reemplazan fabricante, AHJ o ingeniería de detalle."
             : "Existing preliminary assumptions from defaultConstraints. This is not an independent code validation and does not replace manufacturer, AHJ or detail engineering criteria."
         }
       />
@@ -356,10 +374,10 @@ function AdvancedChecksPanel() {
       description={t.advanced.description}
     >
       <ScopeNote
-        label={isEs ? "Checklist orientativo" : "Guidance checklist"}
+        label={isEs ? "Lista de verificación orientativa" : "Guidance checklist"}
         text={
           isEs
-            ? "No ejecuta estudios electricos, civiles ni de seguridad. No cambia severidades, reglas ni exclusiones."
+            ? "No ejecuta estudios eléctricos, civiles ni de seguridad. No cambia severidades, reglas ni exclusiones."
             : "Does not run electrical, civil or safety studies. It does not change severities, rules or exclusions."
         }
       />

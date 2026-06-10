@@ -33,8 +33,8 @@ const SWITCHES: Array<{ id: LayerId; es: string; en: string }> = [
 const PRESETS: Array<{ id: LayerPresetId; es: string; en: string }> = [
   { id: "fullView", es: "Vista completa", en: "Full view" },
   { id: "cleanView", es: "Vista limpia", en: "Clean view" },
-  { id: "technicalView", es: "Vista tecnica", en: "Technical view" },
-  { id: "presentation3DView", es: "Vista 3D presentacion", en: "3D presentation" },
+  { id: "technicalView", es: "Vista técnica", en: "Technical view" },
+  { id: "presentation3DView", es: "Vista 3D presentación", en: "3D presentation" },
   { id: "equipmentOnlyView", es: "Solo equipos", en: "Equipment only" },
   { id: "terrainOnlyView", es: "Solo terreno", en: "Terrain only" },
 ];
@@ -81,7 +81,7 @@ export function LayerManagerPanel({
               </div>
               <p className="mt-1 text-[10px] leading-snug text-slate-500">
                 {isEs
-                  ? "Controla solo visibilidad visual; no borra datos ni modifica calculos."
+                  ? "Controla solo la visibilidad visual; no borra datos ni modifica cálculos."
                   : "Controls visual visibility only; data and calculations are unchanged."}
               </p>
             </div>
@@ -133,7 +133,7 @@ export function LayerManagerPanel({
             className={`${buttonBase} mt-3 w-full border-slate-700 bg-slate-900 text-slate-300 hover:border-cyan-500/70 hover:text-cyan-100`}
           >
             <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
-            {isEs ? "Restablecer visualizacion" : "Reset visibility"}
+            {isEs ? "Restablecer visualización" : "Reset visibility"}
           </button>
         </div>
       ) : null}

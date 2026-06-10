@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { equipmentCatalog } from "@/data/equipmentCatalog";
 import type { PlacedEquipment } from "@/types/equipment";
 import type { ProjectAnchor } from "@/types/geometry";
 import {
@@ -10,6 +11,8 @@ import { toLngLat } from "@/lib/geometry/projection";
 
 const anchor: ProjectAnchor = { lng0: -70, lat0: -33 };
 const profile = getRegulatoryProfile("ifc-2024-nfpa-855-conservative");
+const batterySpec = equipmentCatalog.find((item) => item.id === "sungrow-st2752ux-us");
+if (!batterySpec) throw new Error("Missing Sungrow battery spec for tests");
 
 function battery(id: string, x_m: number, y_m: number): PlacedEquipment {
   return {
@@ -65,6 +68,22 @@ describe("validateBessLayout", () => {
 
     expect(result.criticalCount).toBeGreaterThan(0);
     expect(result.projectStatus).toBe("non_compliant");
+  });
+
+  it("does not flag BESS spacing that is only below the criterion within tolerance", () => {
+    const required = profile.rules.bessToBess_m;
+    const centerDistance = batterySpec.footprint.length_m + required - 0.02;
+    const result = validateBessLayout({
+      placed: [battery("b1", 0, 0), battery("b2", centerDistance, 0)],
+      polygon,
+      anchor,
+      profile,
+      context: { ...DEFAULT_REGULATORY_CONTEXT, hasManufacturerManual: true },
+    });
+
+    expect(
+      result.issues.some((item) => item.ruleId === "bess_to_bess_spacing")
+    ).toBe(false);
   });
 
   it("downgrades reduced BESS spacing to warning with declared validation basis", () => {

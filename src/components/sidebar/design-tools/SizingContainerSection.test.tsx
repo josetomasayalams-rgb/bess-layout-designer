@@ -78,7 +78,7 @@ describe("SizingContainerSection", () => {
   it("shows terrain warning if hasTerrainPolygon is false", () => {
     render(<SizingContainerSection {...defaultProps} hasTerrainPolygon={false} />);
     expect(
-      screen.getByText(/Regularizar requiere un poligono de terreno/i)
+      screen.getByText(/Regularizar requiere un polígono de terreno/i)
     ).toBeDefined();
   });
 });

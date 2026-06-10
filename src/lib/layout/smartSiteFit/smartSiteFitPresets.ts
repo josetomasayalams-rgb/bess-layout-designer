@@ -9,7 +9,7 @@ export const SUNGROW_ST2752UX_SC5000UD_PRESET: SmartSiteFitPreset = {
   bessPerPcs4h: 8,
   defaultDurationHours: 4,
   dataClassification: "preliminary_assumption",
-  notes: "Preset predefinido para contenedores Sungrow ST2752UX y PCS SC5000UD-MV. Nota: SC5000UD-MV integra transformador BT/MT y no se debe crear transformador separado.",
+  notes: "Preconfiguración predefinida para contenedores Sungrow ST2752UX y PCS SC5000UD-MV. Nota: SC5000UD-MV integra transformador BT/MT y no se debe crear transformador separado.",
   supportedDurations: [2, 4, 8, 16],
   architecture: "bess_plus_pcs",
   ratioByDuration: {
@@ -47,7 +47,7 @@ export const TESLA_MEGAPACK_2XL_PRESET: SmartSiteFitPreset = {
   defaultDurationHours: 4,
   dataClassification: "preliminary_assumption",
   notes:
-    "Preset preliminar Tesla Megapack 2 XL: bloque AC integrado (batería + inversor bidireccional + gestión térmica). No usa PCS/MV separado ni transformador separado. La conexión a media tensión requiere un transformador elevador externo no incluido (requiere revisión técnica).",
+    "Preconfiguración preliminar Tesla Megapack 2 XL: bloque AC integrado (batería + inversor bidireccional + gestión térmica). No usa PCS/MV separado ni transformador separado. La conexión a media tensión requiere un transformador elevador externo no incluido (requiere revisión técnica).",
   supportedDurations: [2, 4],
   architecture: "integrated",
   integratedUnitSpecByDuration: {

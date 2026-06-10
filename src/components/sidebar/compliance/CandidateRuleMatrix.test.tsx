@@ -117,7 +117,7 @@ describe("CandidateRuleMatrix", () => {
       />
     );
 
-    expect(screen.getByText("Diagnóstico Normativo Inteligente")).toBeDefined();
+    expect(screen.getByText("Diagnóstico normativo inteligente")).toBeDefined();
     expect(screen.getByText("2 reglas")).toBeDefined();
     expect(screen.getAllByText("Sin inconf.").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Inconformid.").length).toBeGreaterThanOrEqual(1);

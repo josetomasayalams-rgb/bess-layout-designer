@@ -2,6 +2,7 @@
 
 import {
   FileText,
+  GitCompare,
   LayoutGrid,
   type LucideIcon,
   MapPinned,
@@ -15,6 +16,7 @@ export type AppSectionId =
   | "site"
   | "equipment"
   | "layout"
+  | "comparison"
   | "compliance"
   | "report";
 
@@ -51,8 +53,16 @@ const SECTIONS: readonly SectionDef[] = [
     icon: LayoutGrid,
     labelEs: "Layout",
     labelEn: "Layout",
-    hintEs: "Genera el layout físico y la arquitectura MT preliminar.",
+    hintEs: "Genera la disposición física y la arquitectura MT preliminar.",
     hintEn: "Generate the physical layout and preliminary MV architecture.",
+  },
+  {
+    id: "comparison",
+    icon: GitCompare,
+    labelEs: "Comparar",
+    labelEn: "Compare",
+    hintEs: "Compara predimensionamientos y alternativas A/B (tabla y mapa).",
+    hintEn: "Compare sizings and A/B alternatives (table and map).",
   },
   {
     id: "compliance",

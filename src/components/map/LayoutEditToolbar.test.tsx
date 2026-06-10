@@ -50,6 +50,7 @@ describe("LayoutEditToolbar", () => {
   it("renders without crashing in empty-selection state", () => {
     render(<LayoutEditToolbar {...makeProps()} />);
     expect(screen.getByText(/Layout edit/i)).toBeDefined();
+    expect(screen.getByText("Smart repair")).toBeDefined();
   });
 
   it("shows the click-to-select hint when nothing is selected", () => {
@@ -84,8 +85,8 @@ describe("LayoutEditToolbar", () => {
     expect(onRotateCw).toHaveBeenCalledTimes(1);
   });
 
-  it("renders the Spanish 'Edicion de layout' header when locale is 'es'", () => {
+  it("renders the Spanish edit header when locale is 'es'", () => {
     render(<LayoutEditToolbar {...makeProps({ locale: "es" })} />);
-    expect(screen.getByText(/Edicion de layout/i)).toBeDefined();
+    expect(screen.getByText(/Edición de la disposición/i)).toBeDefined();
   });
 });

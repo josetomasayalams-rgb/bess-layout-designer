@@ -101,16 +101,16 @@ export function MicroAdjustPanel({
     });
   };
 
-  // Dimensionamiento inteligente: la energia se deriva de potencia x duracion.
-  // Al cambiar la potencia (o la duracion) la energia objetivo se recalcula
-  // automaticamente para mantener la relacion preliminar E = P x h.
+  // Dimensionamiento inteligente: la energía se deriva de potencia x duración.
+  // Al cambiar la potencia (o la duración) la energía objetivo se recalcula
+  // automáticamente para mantener la relación preliminar E = P x h.
   const handlePowerChange = (value: number) => {
     const autoEnergy = value > 0 ? round2(value * durationHours) : 0;
     applyTargets(value, autoEnergy, durationHours);
   };
   const handleEnergyChange = (value: number) => {
-    // Edicion manual de energia: deriva la potencia equivalente (E / h) para
-    // mantener la coherencia con la duracion seleccionada.
+    // Edición manual de energía: deriva la potencia equivalente (E / h) para
+    // mantener la coherencia con la duración seleccionada.
     const autoPower =
       value > 0 && durationHours > 0 ? round2(value / durationHours) : targetPowerMW;
     applyTargets(autoPower, value, durationHours);
@@ -225,7 +225,7 @@ export function MicroAdjustPanel({
         <div className="space-y-3">
           <div className="border-t border-slate-800 pt-3 space-y-3">
             <h5 className="text-[11px] font-bold text-cyan-400 uppercase tracking-wider">
-              {isEs ? "Parámetros del Layout Manual" : "Manual Layout Parameters"}
+              {isEs ? "Parámetros de la disposición manual" : "Manual Layout Parameters"}
             </h5>
             
             <div className="grid grid-cols-2 gap-3">

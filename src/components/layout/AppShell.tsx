@@ -10,6 +10,7 @@ import {
   PanelTopOpen,
 } from "lucide-react";
 import { BessMap } from "@/components/map/BessMap";
+import { MapComparisonOverlay } from "@/components/map/MapComparisonOverlay";
 import { Toolbar } from "./Toolbar";
 import { MetricBar } from "./MetricBar";
 import { FlowStepper } from "./FlowStepper";
@@ -107,6 +108,7 @@ export function AppShell() {
           <SectionPanelHost activeSection={activeSection} region="primary" />
           <main className="relative h-[560px] min-h-[460px] min-w-0 border-y border-slate-800 lg:h-auto lg:min-h-0 lg:border-y-0">
             <BessMap />
+            <MapComparisonOverlay />
             <button
               type="button"
               onClick={() => setTopCollapsed(!topCollapsed)}

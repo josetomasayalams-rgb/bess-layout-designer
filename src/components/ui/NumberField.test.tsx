@@ -72,10 +72,10 @@ describe("NumberField", () => {
         onChange={vi.fn()}
         onCommit={onCommit}
         integer
-        aria-label="vertices"
+        aria-label="vértices"
       />
     );
-    const input = screen.getByLabelText("vertices");
+    const input = screen.getByLabelText("vértices");
     fireEvent.change(input, { target: { value: "5.7" } });
     fireEvent.blur(input);
     expect(onCommit).toHaveBeenLastCalledWith(6);

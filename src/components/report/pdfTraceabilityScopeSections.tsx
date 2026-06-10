@@ -130,7 +130,7 @@ export function ScopeSection({ data }: ReportSectionProps) {
       <Text style={s.paragraph}>
         Este predimensionamiento no incluye los estudios de detalle listados a
         continuación, agrupados por disciplina. El listado completo, ítem por
-        ítem, se conserva en el anexo de checklist y referencias.
+        ítem, se conserva en el anexo de lista de verificación y referencias.
       </Text>
 
       {exclusionGroups.map((group) => (
@@ -226,7 +226,7 @@ export function ScopeSection({ data }: ReportSectionProps) {
       ))}
 
       <Text style={s.note}>
-        El checklist completo de ingeniería de detalle y las referencias
+        La lista de verificación completa de ingeniería de detalle y las referencias
         documentales citadas se encuentran en el anexo correspondiente.
       </Text>
 
@@ -237,8 +237,8 @@ export function ScopeSection({ data }: ReportSectionProps) {
 
 export function EngineeringAnnexSection({ data, embedded }: ReportSectionProps) {
   return (
-    <SectionPage data={data} number="A2" title="Anexo: checklist de ingeniería y referencias" embedded={embedded}>
-      <Text style={s.subTitle}>Checklist de ingeniería de detalle</Text>
+    <SectionPage data={data} number="A2" title="Anexo: lista de verificación de ingeniería y referencias" embedded={embedded}>
+      <Text style={s.subTitle}>Lista de verificación de ingeniería de detalle</Text>
       <Table
         cols={[
           { header: "Tópico", width: "38%" },

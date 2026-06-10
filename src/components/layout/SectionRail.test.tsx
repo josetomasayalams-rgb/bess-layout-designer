@@ -8,7 +8,7 @@ describe("SectionRail", () => {
     useUiStore.setState({ locale: "es" });
   });
 
-  it("renders the five Phase 11A.1 sections with stable ids", () => {
+  it("renders the six workflow sections with stable ids", () => {
     render(
       <SectionRail activeSection="site" onSectionChange={vi.fn()} />
     );
@@ -17,16 +17,18 @@ describe("SectionRail", () => {
       "site",
       "equipment",
       "layout",
+      "comparison",
       "compliance",
       "report",
     ]);
     expect(screen.getByRole("button", { name: "1. Sitio" })).toBeDefined();
     expect(screen.getByRole("button", { name: "2. Equipos" })).toBeDefined();
     expect(screen.getByRole("button", { name: "3. Layout" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "4. Comparar" })).toBeDefined();
     expect(
-      screen.getByRole("button", { name: "4. Reglas" })
+      screen.getByRole("button", { name: "5. Reglas" })
     ).toBeDefined();
-    expect(screen.getByRole("button", { name: "5. Reporte" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "6. Reporte" })).toBeDefined();
   });
 
   it("calls onSectionChange when a section is clicked", () => {
@@ -39,7 +41,7 @@ describe("SectionRail", () => {
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "5. Reporte" }));
+    fireEvent.click(screen.getByRole("button", { name: "6. Reporte" }));
 
     expect(onSectionChange).toHaveBeenCalledWith("report");
   });

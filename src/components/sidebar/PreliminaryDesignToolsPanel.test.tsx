@@ -8,11 +8,11 @@ vi.mock("./design-tools", () => ({
 }));
 
 describe("PreliminaryDesignToolsPanel", () => {
-  it("renders both sizing and repair panels after expanding headers", () => {
+  it("renders both sizing and Reparación Inteligente panels after expanding headers", () => {
     render(<PreliminaryDesignToolsPanel />);
 
     fireEvent.click(screen.getByText("Sizing by containers"));
-    fireEvent.click(screen.getByText("Repair layout"));
+    fireEvent.click(screen.getByText("Reparación Inteligente"));
 
     expect(screen.getByTestId("sizing-container-section")).toBeDefined();
     expect(screen.getByTestId("layout-repair-section")).toBeDefined();

@@ -770,7 +770,7 @@ export function TargetSizingTab({
                         </span>
                       </div>
                       <div className="flex justify-between bg-slate-900/40 p-1.5 rounded">
-                        <span className="text-slate-500">{isEs ? "Área estimada:" : "Est. Area:"}</span>
+                        <span className="text-slate-500">{isEs ? "Área estimada:" : "Est. Área:"}</span>
                         <span className="font-semibold font-mono text-slate-200">
                           {(livePreview.layoutWidthM * livePreview.layoutHeightM).toLocaleString(undefined, { maximumFractionDigits: 0 })} m²
                         </span>
@@ -824,7 +824,7 @@ export function TargetSizingTab({
             <>
               <div className="flex items-center justify-between border-b border-slate-850 pb-2">
                 <h5 className="text-xs font-bold text-slate-200">
-                  {isEs ? "Vista Previa de Layout Manual" : "Manual Layout Preview"}
+                  {isEs ? "Vista previa de la disposición manual" : "Manual Layout Preview"}
                 </h5>
                 <button
                   onClick={onDiscard}
@@ -1046,7 +1046,7 @@ export function TargetSizingTab({
                           </span>
                         </div>
                         <div className="flex justify-between bg-slate-900/40 p-1.5 rounded">
-                          <span className="text-slate-500">{isEs ? "Área estimada:" : "Est. Area:"}</span>
+                          <span className="text-slate-500">{isEs ? "Área estimada:" : "Est. Área:"}</span>
                           <span className="font-semibold font-mono text-slate-200">
                             {(selectedDimensions.widthM * selectedDimensions.heightM).toLocaleString(undefined, { maximumFractionDigits: 0 })} m²
                           </span>

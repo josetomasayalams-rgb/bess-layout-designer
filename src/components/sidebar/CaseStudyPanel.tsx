@@ -49,7 +49,7 @@ export function CaseStudyPanel() {
       title={isEs ? "Caso BESS del Desierto" : "BESS del Desierto case"}
       description={
         isEs
-          ? "Validacion conceptual con datos reportados del proyecto."
+          ? "Validación conceptual con datos reportados del proyecto."
           : "Conceptual validation using reported project data."
       }
     >
@@ -64,7 +64,7 @@ export function CaseStudyPanel() {
             </div>
           </div>
           <Badge variant={isActive ? "compliant" : "neutral"}>
-            {isActive ? (isEs ? "activo" : "active") : (isEs ? "preset" : "preset")}
+            {isActive ? (isEs ? "activo" : "active") : (isEs ? "preconfiguración" : "preset")}
           </Badge>
         </div>
 
@@ -155,7 +155,7 @@ export function CaseStudyPanel() {
         {!hasPlacementAnchor ? (
           <p className="mt-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[10px] leading-snug text-amber-100">
             {isEs
-              ? "Sin terreno dibujado, se insertara en una referencia temporal. Luego puedes limpiar y repetirlo dentro de un poligono."
+              ? "Sin terreno dibujado, se insertara en una referencia temporal. Luego puedes limpiar y repetirlo dentro de un polígono."
               : "Without a drawn site, it will be inserted at a temporary reference point. You can clear and repeat it inside a polygon later."}
           </p>
         ) : null}

@@ -22,7 +22,7 @@ export const SEVERITY_LABEL_ES: Record<string, string> = {
   blocking: "Bloqueante",
   warning: "Aviso",
   info: "Informativa",
-  checklist: "Checklist",
+  checklist: "Lista de verificación",
   out_of_scope: "Fuera",
 };
 

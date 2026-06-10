@@ -9,6 +9,7 @@ import { getRegulatoryProfile } from "@/rules/regulatoryProfileMetadata";
 import { validateBessLayout } from "@/rules/bessValidationEngine";
 import { runRegulatoryEvaluation } from "@/rules/regulatoryProfileEvaluator";
 import { validateElectricalTopology } from "@/lib/electrical/topologyValidation";
+import { feederLengthsFromLayout } from "@/lib/electrical/feederLengths";
 import { buildReportData } from "@/lib/report/buildReportData";
 import { captureMapImage } from "@/lib/report/captureMap";
 import { reverseGeocode } from "@/lib/report/reverseGeocode";
@@ -87,6 +88,16 @@ export async function downloadTechnicalReportPdf({
     mvFeeders: project.mvFeeders,
     mvBuses: project.mvBuses,
     poi: project.poi,
+    auxiliaryServices: project.auxiliaryServices,
+    operationalLimits: project.operationalLimits,
+    ppc: project.ppc,
+    feederLengthsM: feederLengthsFromLayout({
+      placed: project.placedEquipment,
+      anchor: project.anchor,
+      polygon: project.polygon,
+      hasPoi: !!project.poi,
+      mvFeeders: project.mvFeeders,
+    }),
   });
   const regulatoryEvaluation = runRegulatoryEvaluation({
     profileId: regulatory.activeRuleProfileId,
@@ -98,6 +109,9 @@ export async function downloadTechnicalReportPdf({
     mvBuses: project.mvBuses,
     poi: project.poi,
     inconsistencies: project.inconsistencies,
+    showFmGlobal: regulatory.showFmGlobal,
+    showSecOnly: regulatory.showSecOnly,
+    showTerritorial: regulatory.showTerritorial,
   });
 
   const caseStudy = project.selectedCaseStudyId

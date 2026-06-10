@@ -2,7 +2,7 @@
  * Phase 14.5 — ProjectSummaryPanel render smoke.
  *
  * Pins KPI surface: the panel renders without crashing and exposes
- * the four canonical labels (area, apparent power, energy, constraint
+ * the four canonical labels (área, apparent power, energy, constraint
  * state).
  */
 
@@ -31,7 +31,7 @@ describe("ProjectSummaryPanel", () => {
     render(<ProjectSummaryPanel />);
     expect(screen.getByText(/MVA/)).toBeDefined();
     expect(screen.getByText(/MWh/)).toBeDefined();
-    // Area unit
+    // Área unit
     expect(screen.getByText(/ha/)).toBeDefined();
   });
 });

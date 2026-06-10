@@ -623,7 +623,7 @@ export function BessMap() {
           {selectedVisualProfile && is3DCapable(selectedSpec) ? (
             <p className="mt-2 rounded-md border border-cyan-500/25 bg-cyan-500/10 px-2 py-1.5 text-[10px] leading-snug text-cyan-100">
               {locale === "es"
-                ? "Contenedor BESS renderizado a escala real segun datasheet."
+                ? "Contenedor BESS renderizado a escala real según datasheet."
                 : "BESS container rendered at real scale from datasheet data."}
             </p>
           ) : null}

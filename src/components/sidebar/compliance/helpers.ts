@@ -50,7 +50,7 @@ export const EFFECTIVE_SEVERITY_LABEL: Record<string, { es: string; en: string }
   blocking: { es: "Bloqueante", en: "Blocking" },
   warning: { es: "Advertencia", en: "Warning" },
   info: { es: "Informativo", en: "Info" },
-  checklist: { es: "Checklist", en: "Checklist" },
+  checklist: { es: "Lista de verificación", en: "Checklist" },
   out_of_scope: { es: "Fuera alcance", en: "Out of scope" },
 };
 

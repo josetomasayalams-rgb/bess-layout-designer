@@ -608,7 +608,7 @@ function deriveKpisFromLayout(args: {
         ? "El proyecto no tenía potencia POI persistida, pero el layout contiene unidades integradas (PCS/inversor integrado en la unidad). El reporte usa potencia instalada aproximada para evitar un KPI falso en cero."
         : "El proyecto no tenía potencia POI persistida, pero el layout contiene estaciones PCS/MV. El reporte usa potencia instalada aproximada para evitar un KPI falso en cero.",
       recommendation:
-        "Cargar o sincronizar la arquitectura v1.2 / preset técnico antes de emitir un informe formal.",
+        "Cargar o sincronizar la arquitectura v1.2 / preconfiguración técnica antes de emitir un informe formal.",
     });
   }
 
@@ -657,7 +657,7 @@ function deriveKpisFromLayout(args: {
       message:
         "El layout físico contiene contenedores, pero el slice de bloques BESS está vacío. El reporte deriva bloques desde estaciones PCS/MV.",
       recommendation:
-        "Ejecutar carga de preset v1.2 o sincronización de arquitectura antes de cerrar trazabilidad eléctrica.",
+        "Ejecutar carga de preconfiguración v1.2 o sincronización de arquitectura antes de cerrar trazabilidad eléctrica.",
     });
   }
 

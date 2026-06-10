@@ -12,6 +12,7 @@ import {
 import { regulatoryRuleProfiles } from "@/rules/profiles/regulatoryRuleProfiles";
 import type { RegulatoryRuleProfileId } from "@/rules/types";
 import type { RegulatoryEvaluationResult, EvaluatedRuleEntry } from "@/rules/regulatoryProfileEvaluator";
+import { useRegulatoryStore } from "@/store/regulatoryStore";
 import { citeLabel, EFFECTIVE_SEVERITY_LABEL } from "./helpers";
 
 export interface CandidateRuleMatrixProps {
@@ -30,6 +31,14 @@ export function CandidateRuleMatrix({
   const [showPassed, setShowPassed] = useState(false);
   const [showChecklists, setShowChecklists] = useState(false);
   const [showExclusions, setShowExclusions] = useState(false);
+
+  // Sub-profile filters (Phase P4)
+  const showFmGlobal = useRegulatoryStore((s) => s.showFmGlobal);
+  const showSecOnly = useRegulatoryStore((s) => s.showSecOnly);
+  const showTerritorial = useRegulatoryStore((s) => s.showTerritorial);
+  const setShowFmGlobal = useRegulatoryStore((s) => s.setShowFmGlobal);
+  const setShowSecOnly = useRegulatoryStore((s) => s.setShowSecOnly);
+  const setShowTerritorial = useRegulatoryStore((s) => s.setShowTerritorial);
 
   // Group rules by outcome/type
   const failures = ruleEvaluation.rules.filter((r) => r.outcome === "violation");
@@ -82,7 +91,7 @@ export function CandidateRuleMatrix({
       <div className="mb-2 flex items-center justify-between gap-3">
         <h3 className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-200">
           <BookOpen className="h-3.5 w-3.5 text-violet-300" aria-hidden="true" />
-          {isEs ? "Diagnóstico Normativo Inteligente" : "Smart Regulatory Diagnosis"}
+          {isEs ? "Diagnóstico normativo inteligente" : "Smart Regulatory Diagnosis"}
         </h3>
         <span className="rounded-full border border-slate-700 bg-slate-900 px-2 py-0.5 text-[10px] text-slate-300">
           {ruleEvaluation.rules.length} {isEs ? "reglas" : "rules"}
@@ -94,7 +103,7 @@ export function CandidateRuleMatrix({
         <SummaryIcon className="h-4.5 w-4.5 shrink-0 mt-0.5" aria-hidden="true" />
         <div>
           <span className="font-semibold block mb-0.5">
-            {isEs ? "Estado General" : "Overall Status"}
+            {isEs ? "Estado general" : "Overall Status"}
           </span>
           <p className="opacity-90">{summaryText}</p>
         </div>
@@ -118,6 +127,46 @@ export function CandidateRuleMatrix({
           ))}
         </select>
       </label>
+
+      {/* Sub-profile checkboxes */}
+      <div className="mt-3.5 space-y-1.5 border-t border-slate-800/60 pt-3">
+        <span className="block text-[9px] uppercase tracking-wider font-semibold text-slate-500 mb-1">
+          {isEs ? "Filtros de subperfiles" : "Sub-profile Filters"}
+        </span>
+        <label className="flex items-center gap-2 text-[10.5px] text-slate-300 hover:text-slate-100 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={showSecOnly}
+            onChange={(e) => setShowSecOnly(e.target.checked)}
+            className="rounded border-slate-700 bg-slate-950 text-violet-500 focus:ring-violet-500 h-3.5 w-3.5"
+          />
+          <span>{isEs ? "Exclusivo SEC (solo Chile)" : "SEC Only (Chile Only)"}</span>
+        </label>
+        <label className="flex items-center gap-2 text-[10.5px] text-slate-300 hover:text-slate-100 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={showFmGlobal}
+            disabled={showSecOnly}
+            onChange={(e) => setShowFmGlobal(e.target.checked)}
+            className="rounded border-slate-700 bg-slate-950 text-violet-500 focus:ring-violet-500 h-3.5 w-3.5 disabled:opacity-40"
+          />
+          <span className={showSecOnly ? "opacity-40" : ""}>
+            {isEs ? "Seguridad contra incendios (FM Global)" : "Fire Safety / FM Global"}
+          </span>
+        </label>
+        <label className="flex items-center gap-2 text-[10.5px] text-slate-300 hover:text-slate-100 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={showTerritorial}
+            disabled={showSecOnly}
+            onChange={(e) => setShowTerritorial(e.target.checked)}
+            className="rounded border-slate-700 bg-slate-950 text-violet-500 focus:ring-violet-500 h-3.5 w-3.5 disabled:opacity-40"
+          />
+          <span className={showSecOnly ? "opacity-40" : ""}>
+            {isEs ? "Fajas Territoriales y Exclusiones" : "Territorial Strips & Exclusions"}
+          </span>
+        </label>
+      </div>
 
       {/* Grid de conteo */}
       <div className="mt-3 grid grid-cols-2 gap-1.5">
@@ -182,7 +231,7 @@ export function CandidateRuleMatrix({
         )}
       </div>
 
-      {/* Acordeón: Checklist de validación manual */}
+      {/* Acordeón: lista de verificación de validación manual */}
       {checklists.length > 0 && (
         <div className="mt-4 border-t border-slate-800 pt-3">
           <button
@@ -191,7 +240,7 @@ export function CandidateRuleMatrix({
             className="flex w-full items-center justify-between text-left text-[11px] font-semibold text-slate-300 hover:text-slate-100"
           >
             <span>
-              {isEs ? "Checklist de validación manual" : "Manual validation checklist"} ({checklists.length})
+              {isEs ? "Lista de verificación de validación manual" : "Manual validation checklist"} ({checklists.length})
             </span>
             {showChecklists ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
           </button>
@@ -278,7 +327,7 @@ export function CandidateRuleMatrix({
 
       <p className="mt-4 text-[10px] leading-snug text-slate-500 border-t border-slate-900 pt-3">
         {isEs
-          ? "Reglas candidatas: la mayoría requiere lectura humana del PDF primario antes de promoverse a regla certificada. Algunas reglas pueden aparecer como advertencias o checklist debido al alcance preliminar del diseño o a la falta de evidencia certificada. Su severidad final debe confirmarse durante la ingeniería de detalle."
+          ? "Reglas candidatas: la mayoría requiere lectura humana del PDF primario antes de promoverse a regla certificada. Algunas reglas pueden aparecer como advertencias o listas de verificación debido al alcance preliminar del diseño o a la falta de evidencia certificada. Su severidad final debe confirmarse durante la ingeniería de detalle."
           : "Candidate rules. Most require human reading of the primary PDF before promotion. Some rules may appear as warnings or checklist items due to the preliminary design scope or missing certified evidence. Their final severity must be confirmed during detailed engineering."}
       </p>
     </div>
