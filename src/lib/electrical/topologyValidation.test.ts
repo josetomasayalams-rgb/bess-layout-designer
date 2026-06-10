@@ -148,6 +148,25 @@ describe("validateElectricalTopology", () => {
     expect(hasIssue(result, "rule-elec-006-feeder-power-overload")).toBe(true);
   });
 
+  it("RULE-ELEC-009 adds MV collector cable losses when feeder lengths are provided", () => {
+    const base = presetInput();
+    // Sanity: feeders carry power and voltage so a current can be computed.
+    base.mvFeeders = base.mvFeeders.map((f) => ({
+      ...f,
+      ratedPowerMVA: f.ratedPowerMVA && f.ratedPowerMVA > 0 ? f.ratedPowerMVA : 20,
+      nominalVoltageKv: f.nominalVoltageKv && f.nominalVoltageKv > 0 ? f.nominalVoltageKv : 34.5,
+    }));
+
+    const feederLengthsM = Object.fromEntries(base.mvFeeders.map((f) => [f.id, 80000]));
+    const withLengths = validateElectricalTopology({ ...base, feederLengthsM });
+    const lossIssue = withLengths.issues.find((i) => i.id === "rule-elec-009-loss-budget");
+
+    // Very long feeders push conceptual losses over budget and the message
+    // attributes part of it to the MV collector cable.
+    expect(lossIssue).toBeDefined();
+    expect(lossIssue?.message).toContain("cable colector MT");
+  });
+
   it("does not flag PCS LV voltage when it matches transformer LV", () => {
     const input = presetInput();
     input.conversionStations[0].pcsModules[0] = {

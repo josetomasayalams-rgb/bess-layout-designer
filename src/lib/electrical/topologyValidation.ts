@@ -19,6 +19,11 @@ import {
   PPC_REQUIRED_CONTROL_MODES,
   SSAA_BUDGET_PCT,
 } from "@/data/defaultConstraints";
+import {
+  feederCurrentA,
+  feederI2rLossMW,
+  NEXANS_NA2XS2Y_630_TREFOIL,
+} from "@/lib/electrical/cableVoltageDrop";
 
 export type ElectricalTopologyLimits = {
   maxContainersPerStation?: number;
@@ -41,6 +46,12 @@ export type ElectricalTopologyInput = {
   operationalLimits?: OperationalLimits | null;
   /** Fase 8: cuando está presente activa RULE-ELEC-015 / RULE-ELEC-016. */
   ppc?: PPC | null;
+  /**
+   * ÉPICA 2: longitud (m) por id de alimentador MT, derivada de las rutas de
+   * cable. Cuando está presente, RULE-ELEC-009 suma las pérdidas I²R del cable
+   * colector MT al presupuesto de pérdidas. Ausente = comportamiento previo.
+   */
+  feederLengthsM?: Record<string, number>;
 };
 
 export type ElectricalTopologyValidationResult = {
@@ -100,7 +111,7 @@ export function validateElectricalTopology(
       issue({
         id: "rule-elec-bess-del-desierto-preset-in-use",
         severity: "warning",
-        message: "El preset BESS del Desierto está activo. Los límites de la arquitectura (8:1 y 4:1) y las distancias son supuestos referenciales y no reglas de diseño universales.",
+        message: "La preconfiguración BESS del Desierto está activa. Los límites de la arquitectura (8:1 y 4:1) y las distancias son supuestos referenciales y no reglas de diseño universales.",
         recommendation: "Validar y ajustar los parámetros según las especificaciones del fabricante, del EPC y del terreno.",
         basis: "reference_only",
         affectedIds: ["project"],
@@ -157,8 +168,8 @@ export function validateElectricalTopology(
         issue({
           id: `rule-elec-block-ratio-preset-mismatch-${block.id}`,
           severity: "warning",
-          message: `La proporción BESS-PCS del bloque ${block.id} (${block.containerIds.length}:1) difiere de la proporción fija del preset BESS del Desierto (8:1).`,
-          recommendation: "Ajustar el número de contenedores por bloque para alinearse con el preset o justificar la diferencia técnica.",
+          message: `La proporción BESS-PCS del bloque ${block.id} (${block.containerIds.length}:1) difiere de la proporción fija de la preconfiguración BESS del Desierto (8:1).`,
+          recommendation: "Ajustar el número de contenedores por bloque para alinearse con la preconfiguración o justificar la diferencia técnica.",
           basis: "reference_only",
           affectedIds: [block.id],
         })
@@ -609,15 +620,38 @@ export function validateElectricalTopology(
         trafoNoLoadLossMW += (trafo.noLoadLossKw?.value ?? 0) / 1000;
       }
     }
-    const totalLossMW = pcsLossesMW + trafoLoadLossMW + trafoNoLoadLossMW;
+    // MV collector cable I²R losses. Added when the caller supplies feeder
+    // lengths (derived from the cable routes). Screening with the documented
+    // reference-cable resistance (NEXANS NA2XS2Y 630 mm² trefoil, IEC 60364);
+    // not a per-feeder detailed loss study.
+    let mvCableLossMW = 0;
+    if (input.feederLengthsM) {
+      for (const feeder of input.mvFeeders) {
+        const lengthM = input.feederLengthsM[feeder.id];
+        if (!lengthM || lengthM <= 0) continue;
+        const voltageKv = feeder.nominalVoltageKv || input.poi.voltageKv;
+        const ratedMva = feeder.ratedPowerMVA ?? 0;
+        if (voltageKv <= 0 || ratedMva <= 0) continue;
+        mvCableLossMW += feederI2rLossMW({
+          currentA: feederCurrentA(ratedMva, voltageKv),
+          lengthM,
+          resistanceOhmPerKm: NEXANS_NA2XS2Y_630_TREFOIL.resistanceOhmPerKm,
+        });
+      }
+    }
+    const totalLossMW = pcsLossesMW + trafoLoadLossMW + trafoNoLoadLossMW + mvCableLossMW;
     if (plantMva > 0) {
       const lossPct = totalLossMW / plantMva;
+      const cableNote =
+        mvCableLossMW > 0
+          ? ` Incluye ${mvCableLossMW.toFixed(2)} MW de pérdidas del cable colector MT (IEC 60364, cable de referencia).`
+          : "";
       if (lossPct > LOSS_BUDGET_PCT) {
         issues.push(
           issue({
             id: "rule-elec-009-loss-budget",
             severity: "warning",
-            message: `Las pérdidas conceptuales estimadas son ${totalLossMW.toFixed(2)} MW (${(lossPct * 100).toFixed(1)}% de la planta), por encima del budget editable ${(LOSS_BUDGET_PCT * 100).toFixed(1)}%.`,
+            message: `Las pérdidas conceptuales estimadas son ${totalLossMW.toFixed(2)} MW (${(lossPct * 100).toFixed(1)}% de la planta), por encima del budget editable ${(LOSS_BUDGET_PCT * 100).toFixed(1)}%.${cableNote}`,
             recommendation: "Refinar eficiencias PCS, pérdidas del transformador y longitud del corredor MT; no reemplaza un estudio de pérdidas detallado.",
             basis: "calculated",
             affectedIds: input.conversionStations.map((s) => s.id),

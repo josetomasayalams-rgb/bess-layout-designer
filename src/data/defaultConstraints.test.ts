@@ -164,7 +164,7 @@ describe("Phase 3 - Warnings, Exclusions, and Spacing Constants", () => {
       expect(loadFlowEs).toBeDefined();
       expect(loadFlowEs!.scope).toBe("Flujo de carga");
       expect(loadFlowEs!.reason).toContain("No calculado por la app");
-      expect(loadFlowEs!.reason).toContain("Estudio electrico con modelo red");
+      expect(loadFlowEs!.reason).toContain("Estudio eléctrico con modelo de red");
 
       const loadFlowEn = dataEn.exclusions.find((e) => e.id === "EXC-LOAD-FLOW");
       expect(loadFlowEn).toBeDefined();
@@ -174,4 +174,3 @@ describe("Phase 3 - Warnings, Exclusions, and Spacing Constants", () => {
     });
   });
 });
-

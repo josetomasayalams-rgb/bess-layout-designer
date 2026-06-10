@@ -112,13 +112,15 @@ export const BUSBAR_UTILIZATION_THRESHOLD_PCT = 0.8;
 export const CABLE_AMPACITY_UTILIZATION_THRESHOLD_PCT = 0.9;
 
 /**
- * Reference ampacity used for the RULE-ELEC-008 screening when the
- * project has not chosen a specific cable. Conservative value typical
- * for Al XLPE 240 mm² 33 kV in air at 30 °C. NOT a design value; the
- * final ampacity depends on installation, grouping, soil thermal
- * resistivity and ambient temperature.
+ * Reference ampacity used for the RULE-ELEC-008 screening when the project
+ * has not chosen a specific cable. No longer a bare assumption: it is now a
+ * value **derived** (IEC 60287) from a documented datasheet base. The single
+ * source of truth lives in `@/lib/electrical/cableAmpacity`; re-exported here
+ * for back-compat with existing consumers. NOT a design value — the final
+ * ampacity depends on the chosen cable, installation method, grouping, soil
+ * thermal resistivity and ambient temperature.
  */
-export const MV_REFERENCE_CABLE_AMPACITY_A = 460;
+export { MV_REFERENCE_CABLE_AMPACITY_A } from "@/lib/electrical/cableAmpacity";
 
 /**
  * Minimum mandatory PPC control modes per CEN NTSyCS for utility-scale
