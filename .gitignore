@@ -52,3 +52,8 @@ ruvector.db
 agentdb.rvf
 agentdb.rvf.lock
 
+# local logs and vendored agent tooling (decision 2026-06-09)
+dev.log
+.agents/
+.claude/skills/
+
