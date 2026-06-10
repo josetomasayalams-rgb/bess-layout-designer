@@ -46,6 +46,31 @@ export type LayoutCompactionOptions = {
   iterations: number;
 };
 
+export type SmartRepairUnresolvedItem = {
+  ruleId:
+    | "vehicle_access_distance"
+    | "manual_validation"
+    | "detailed_cable_road_design";
+  label: string;
+  reason: string;
+};
+
+export type SmartRepairDiagnostics = {
+  geometricInitialConflicts: number;
+  geometricRemainingConflicts: number;
+  geometricResolvedConflicts: number;
+  cableEquipmentBefore: number;
+  cableEquipmentAfter: number;
+  cableEquipmentResolved: number;
+  cableRoadBefore: number;
+  cableRoadAfter: number;
+  cableRoadResolved: number;
+  autoRepairableBefore: number;
+  autoRepairableAfter: number;
+  autoRepairableResolved: number;
+  notAutoRepairable: SmartRepairUnresolvedItem[];
+};
+
 export type LayoutRepairRequest = {
   placed: PlacedEquipment[];
   anchor: ProjectAnchor | null;
@@ -92,6 +117,8 @@ export type LayoutRepairResult = {
     strategy: RepairStrategy;
     /** Score geometrico/visual del candidato elegido (preliminar). */
     score: RepairCandidateScore | null;
+    /** Diagnostico extendido cuando se ejecuta el flujo Reparacion Inteligente completo. */
+    smartRepair?: SmartRepairDiagnostics;
   };
 };
 

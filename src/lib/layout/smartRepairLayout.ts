@@ -2,15 +2,14 @@ import { CABLE_TO_EQUIPMENT_CLEARANCE_M } from "@/data/defaultConstraints";
 import { toLocal, toLngLat } from "@/lib/geometry/projection";
 import { generateConceptualPhysicalInfrastructure } from "@/lib/layout/physicalInfrastructure";
 import { placedToTechnicalObjects } from "@/rules/bessValidationEngine";
-import { allCornersInsidePolygon, rectanglesIntersect } from "@/lib/geometry/collision";
+import { allCornersInsidePolygon, pointInPolygon, rectanglesIntersect } from "@/lib/geometry/collision";
 import {
   distanceBetweenRectangles,
   distanceRectToPolygonBoundary,
-  distancePointToPolyline,
   distancePolylineToPolyline,
   distanceRectToPolyline,
 } from "@/lib/geometry/distance";
-import type { LngLat, LocalPoint, ProjectAnchor, RotatedRectLocal } from "@/types/geometry";
+import type { LngLat, ProjectAnchor, RotatedRectLocal } from "@/types/geometry";
 import type { PlacedEquipment } from "@/types/equipment";
 import type { CableRoute } from "@/types/cable";
 import type { AccessRoad } from "@/types/road";
@@ -25,6 +24,11 @@ export interface InterferenceMetrics {
   };
 }
 
+interface MeasureInterferenceOptions {
+  detailLimit?: number;
+  stopAfter?: number;
+}
+
 export interface SmartRepairRules {
   bessToBess_m?: number;
   bessToPropertyLine_m?: number;
@@ -37,6 +41,7 @@ export interface SmartRepairRequest {
   polygon: LngLat[];
   rules?: SmartRepairRules;
   lockedIds?: string[];
+  repairZone?: LngLat[];
 }
 
 export interface SmartRepairPlan {
@@ -52,6 +57,26 @@ export interface SmartRepairPlan {
     cableRoadAfter: number;
     movedCount: number;
     message: string;
+  };
+}
+
+const DEFAULT_INTERFERENCE_DETAIL_LIMIT = 250;
+const MAX_SMART_REPAIR_CANDIDATE_CLUSTERS = 16;
+const SMART_REPAIR_SHIFT_STEPS_M = [-1, 1, -2, 2, -3, 3, -5, 5, -8, 8];
+
+function equipmentClusterKey(item: PlacedEquipment): string {
+  return item.groupId ?? item.blockId ?? item.id;
+}
+
+function emptyInterferenceMetrics(): InterferenceMetrics {
+  return {
+    cableEquipmentCount: 0,
+    cableRoadCount: 0,
+    totalInterferences: 0,
+    details: {
+      cableEquipment: [],
+      cableRoad: [],
+    },
   };
 }
 
@@ -78,27 +103,34 @@ function cableRoadClearance(route: CableRoute, road: AccessRoad): number {
 export function measureInterferences(
   placed: PlacedEquipment[],
   anchor: ProjectAnchor | null,
-  polygon: LngLat[]
+  polygon: LngLat[],
+  options: MeasureInterferenceOptions = {}
 ): InterferenceMetrics {
-  const emptyMetrics: InterferenceMetrics = {
-    cableEquipmentCount: 0,
-    cableRoadCount: 0,
-    totalInterferences: 0,
-    details: {
-      cableEquipment: [],
-      cableRoad: [],
-    },
-  };
+  const emptyMetrics = emptyInterferenceMetrics();
 
   if (!anchor || placed.length === 0) return emptyMetrics;
 
   const infra = generateConceptualPhysicalInfrastructure({ placed, anchor, polygon });
   const objects = placedToTechnicalObjects(placed, anchor);
+  const detailLimit = options.detailLimit ?? DEFAULT_INTERFERENCE_DETAIL_LIMIT;
+  const stopAfter = options.stopAfter;
 
   const details: InterferenceMetrics["details"] = {
     cableEquipment: [],
     cableRoad: [],
   };
+  let cableEquipmentCount = 0;
+  let cableRoadCount = 0;
+
+  const metrics = (): InterferenceMetrics => ({
+    cableEquipmentCount,
+    cableRoadCount,
+    totalInterferences: cableEquipmentCount + cableRoadCount,
+    details,
+  });
+
+  const shouldStop = () =>
+    stopAfter !== undefined && cableEquipmentCount + cableRoadCount > stopAfter;
 
   for (const route of infra.cableRoutes) {
     for (const object of objects) {
@@ -107,11 +139,15 @@ export function measureInterferences(
       }
       const clearance = cableClearanceToObject(route, object.rect);
       if (clearance < CABLE_TO_EQUIPMENT_CLEARANCE_M) {
-        details.cableEquipment.push({
-          routeId: route.id,
-          equipmentId: object.id,
-          clearance,
-        });
+        cableEquipmentCount += 1;
+        if (details.cableEquipment.length < detailLimit) {
+          details.cableEquipment.push({
+            routeId: route.id,
+            equipmentId: object.id,
+            clearance,
+          });
+        }
+        if (shouldStop()) return metrics();
       }
     }
 
@@ -126,24 +162,20 @@ export function measureInterferences(
 
       const clearance = cableRoadClearance(route, road);
       if (clearance <= 0) {
-        details.cableRoad.push({
-          routeId: route.id,
-          roadId: road.id,
-          clearance,
-        });
+        cableRoadCount += 1;
+        if (details.cableRoad.length < detailLimit) {
+          details.cableRoad.push({
+            routeId: route.id,
+            roadId: road.id,
+            clearance,
+          });
+        }
+        if (shouldStop()) return metrics();
       }
     }
   }
 
-  const cableEquipmentCount = details.cableEquipment.length;
-  const cableRoadCount = details.cableRoad.length;
-
-  return {
-    cableEquipmentCount,
-    cableRoadCount,
-    totalInterferences: cableEquipmentCount + cableRoadCount,
-    details,
-  };
+  return metrics();
 }
 
 // ──────────────────────────────────────────────────────────────────
@@ -234,7 +266,7 @@ function shiftCluster(
   dy: number
 ): PlacedEquipment[] {
   return placed.map((item) => {
-    const itemKey = item.groupId ?? item.blockId ?? item.id;
+    const itemKey = equipmentClusterKey(item);
     if (itemKey !== clusterKey || item.locked) {
       return item;
     }
@@ -248,12 +280,87 @@ function shiftCluster(
   });
 }
 
+function affectedClusterConflicts(
+  placed: PlacedEquipment[],
+  anchor: ProjectAnchor,
+  polygon: LngLat[],
+  rules: {
+    bessToBess_m: number;
+    bessToPropertyLine_m: number;
+    electricalFrontWorkingClearance_m: number;
+  },
+  clusterKey: string
+): {
+  collisions: number;
+  outside: number;
+  spacing: number;
+  boundary: number;
+} {
+  const objects = placedToTechnicalObjects(placed, anchor);
+  const keyById = new Map(placed.map((item) => [item.id, equipmentClusterKey(item)]));
+  const siteLocalPolygon = polygon.map((vertex) => toLocal(vertex, anchor));
+  const hasSitePolygon = siteLocalPolygon.length >= 3;
+  const movedObjects = objects.filter((object) => keyById.get(object.id) === clusterKey);
+  const otherObjects = objects.filter((object) => keyById.get(object.id) !== clusterKey);
+  let collisions = 0;
+  let spacing = 0;
+  let outside = 0;
+  let boundary = 0;
+
+  for (const a of movedObjects) {
+    for (const b of otherObjects) {
+      const aKind = a.type === "pcs" ? "pcs" : "battery";
+      const bKind = b.type === "pcs" ? "pcs" : "battery";
+      const required =
+        aKind === "pcs" || bKind === "pcs"
+          ? rules.electricalFrontWorkingClearance_m
+          : rules.bessToBess_m;
+
+      if (rectanglesIntersect(a.rect, b.rect)) {
+        collisions += 1;
+        continue;
+      }
+
+      const gap = distanceBetweenRectangles(a.rect, b.rect);
+      if (gap < required - 0.05) {
+        spacing += 1;
+      }
+    }
+
+    if (hasSitePolygon) {
+      if (!allCornersInsidePolygon(a.rect, siteLocalPolygon)) {
+        outside += 1;
+        continue;
+      }
+
+      const distToBoundary = distanceRectToPolygonBoundary(a.rect, siteLocalPolygon);
+      if (distToBoundary < rules.bessToPropertyLine_m - 0.05) {
+        boundary += 1;
+      }
+    }
+  }
+
+  return { collisions, outside, spacing, boundary };
+}
+
+function isAffectedSafetyNonWorse(
+  before: ReturnType<typeof affectedClusterConflicts>,
+  after: ReturnType<typeof affectedClusterConflicts>
+): boolean {
+  return (
+    after.collisions <= before.collisions &&
+    after.outside <= before.outside &&
+    after.spacing <= before.spacing &&
+    after.boundary <= before.boundary
+  );
+}
+
 // ──────────────────────────────────────────────────────────────────
 // Phase F1: Smart Layout Repair Optimization (Greedy Search)
 // ──────────────────────────────────────────────────────────────────
 
 export function planSmartLayoutRepair(request: SmartRepairRequest): SmartRepairPlan {
-  const { placed, anchor, polygon, lockedIds = [] } = request;
+  const { placed, anchor, polygon, lockedIds = [], repairZone = [] } = request;
 
   const baseline = measureInterferences(placed, anchor, polygon);
 
@@ -273,7 +380,7 @@ export function planSmartLayoutRepair(request: SmartRepairRequest): SmartRepairP
     },
   };
 
-  if (!anchor || placed.length === 0) {
+  if (!anchor || placed.length === 0 || baseline.totalInterferences === 0) {
     return emptyPlan;
   }
 
@@ -282,19 +389,46 @@ export function planSmartLayoutRepair(request: SmartRepairRequest): SmartRepairP
   const electricalFrontWorkingClearance_m = request.rules?.electricalFrontWorkingClearance_m ?? 0.9;
   const rules = { bessToBess_m, bessToPropertyLine_m, electricalFrontWorkingClearance_m };
 
-  const initialConflicts = countLayoutConflicts(placed, anchor, polygon, rules);
   const lockedSet = new Set(lockedIds);
+  const zoneLocalPolygon =
+    repairZone.length >= 3 && anchor
+      ? repairZone.map((point) => toLocal(point, anchor))
+      : [];
+  const zoneApplied = zoneLocalPolygon.length >= 3;
 
   // Group unique cluster keys
-  const clusterKeys = Array.from(new Set(placed.map((item) => item.groupId ?? item.blockId ?? item.id)));
+  const clusterItems = new Map<string, PlacedEquipment[]>();
+  const clusterByEquipmentId = new Map<string, string>();
+  for (const item of placed) {
+    const key = equipmentClusterKey(item);
+    clusterByEquipmentId.set(item.id, key);
+    const items = clusterItems.get(key) ?? [];
+    items.push(item);
+    clusterItems.set(key, items);
+  }
+  const clusterKeys = Array.from(clusterItems.keys());
+  const interferedClusterKeys = new Set<string>();
+  for (const detail of baseline.details.cableEquipment) {
+    const key = clusterByEquipmentId.get(detail.equipmentId);
+    if (key) interferedClusterKeys.add(key);
+  }
+  const prioritizedClusterKeys =
+    interferedClusterKeys.size > 0
+      ? clusterKeys.filter((key) => interferedClusterKeys.has(key))
+      : clusterKeys;
   const movableClusterKeys = clusterKeys.filter((key) => {
-    const items = placed.filter((item) => (item.groupId ?? item.blockId ?? item.id) === key);
-    return items.every((item) => !item.locked && !lockedSet.has(item.id));
+    const items = clusterItems.get(key) ?? [];
+    const inRepairScope =
+      !zoneApplied ||
+      items.some((item) => pointInPolygon(toLocal(item.anchor, anchor), zoneLocalPolygon));
+    return inRepairScope && items.every((item) => !item.locked && !lockedSet.has(item.id));
   });
+  const repairCandidateClusterKeys = prioritizedClusterKeys
+    .filter((key) => movableClusterKeys.includes(key))
+    .slice(0, MAX_SMART_REPAIR_CANDIDATE_CLUSTERS);
 
   let currentPlaced = [...placed];
   let currentInterferences = { ...baseline };
-  let currentConflicts = { ...initialConflicts };
   let improved = false;
   const movedEquipmentIds = new Set<string>();
 
@@ -304,33 +438,43 @@ export function planSmartLayoutRepair(request: SmartRepairRequest): SmartRepairP
   for (let pass = 0; pass < maxPasses; pass++) {
     let bestPassPlaced = currentPlaced;
     let bestPassInterferences = currentInterferences;
-    let bestPassConflicts = currentConflicts;
     let bestPassShift: { key: string; dx: number; dy: number } | null = null;
     let bestPassDisplacement = Infinity;
 
-    for (const key of movableClusterKeys) {
+    for (const key of repairCandidateClusterKeys) {
+      const currentAffectedConflicts = affectedClusterConflicts(
+        currentPlaced,
+        anchor,
+        polygon,
+        rules,
+        key
+      );
       // 1. Try vertical nudges (y axis is most effective to clear horizontal cable corridors)
-      for (const dy of [-1, 1, -2, 2, -3, 3, -4, 4, -5, 5, -6, 6, -7, 7, -8, 8]) {
+      for (const dy of SMART_REPAIR_SHIFT_STEPS_M) {
         const candidatePlaced = shiftCluster(currentPlaced, anchor, key, 0, dy);
-        const candidateConflicts = countLayoutConflicts(candidatePlaced, anchor, polygon, rules);
-
-        // Safety Gate: Candidate layout must not introduce any new layout or spacing conflicts
-        const isValid =
-          candidateConflicts.collisions <= currentConflicts.collisions &&
-          candidateConflicts.outside <= currentConflicts.outside &&
-          candidateConflicts.spacing <= currentConflicts.spacing &&
-          candidateConflicts.boundary <= currentConflicts.boundary;
+        const candidateAffectedConflicts = affectedClusterConflicts(
+          candidatePlaced,
+          anchor,
+          polygon,
+          rules,
+          key
+        );
+        const isValid = isAffectedSafetyNonWorse(
+          currentAffectedConflicts,
+          candidateAffectedConflicts
+        );
 
         if (!isValid) continue;
 
-        const candidateInterferences = measureInterferences(candidatePlaced, anchor, polygon);
+        const candidateInterferences = measureInterferences(candidatePlaced, anchor, polygon, {
+          stopAfter: bestPassInterferences.totalInterferences,
+        });
         const scoreMetric = candidateInterferences.totalInterferences;
         const bestMetric = bestPassInterferences.totalInterferences;
 
         if (scoreMetric < bestMetric) {
           bestPassPlaced = candidatePlaced;
           bestPassInterferences = candidateInterferences;
-          bestPassConflicts = candidateConflicts;
           bestPassShift = { key, dx: 0, dy };
           bestPassDisplacement = Math.abs(dy);
         } else if (scoreMetric === bestMetric && bestPassShift !== null) {
@@ -338,7 +482,6 @@ export function planSmartLayoutRepair(request: SmartRepairRequest): SmartRepairP
           if (disp < bestPassDisplacement) {
             bestPassPlaced = candidatePlaced;
             bestPassInterferences = candidateInterferences;
-            bestPassConflicts = candidateConflicts;
             bestPassShift = { key, dx: 0, dy };
             bestPassDisplacement = disp;
           }
@@ -346,27 +489,31 @@ export function planSmartLayoutRepair(request: SmartRepairRequest): SmartRepairP
       }
 
       // 2. Try horizontal nudges
-      for (const dx of [-1, 1, -2, 2, -3, 3, -4, 4, -5, 5, -6, 6, -7, 7, -8, 8]) {
+      for (const dx of SMART_REPAIR_SHIFT_STEPS_M) {
         const candidatePlaced = shiftCluster(currentPlaced, anchor, key, dx, 0);
-        const candidateConflicts = countLayoutConflicts(candidatePlaced, anchor, polygon, rules);
-
-        // Safety Gate: Candidate layout must not introduce any new layout or spacing conflicts
-        const isValid =
-          candidateConflicts.collisions <= currentConflicts.collisions &&
-          candidateConflicts.outside <= currentConflicts.outside &&
-          candidateConflicts.spacing <= currentConflicts.spacing &&
-          candidateConflicts.boundary <= currentConflicts.boundary;
+        const candidateAffectedConflicts = affectedClusterConflicts(
+          candidatePlaced,
+          anchor,
+          polygon,
+          rules,
+          key
+        );
+        const isValid = isAffectedSafetyNonWorse(
+          currentAffectedConflicts,
+          candidateAffectedConflicts
+        );
 
         if (!isValid) continue;
 
-        const candidateInterferences = measureInterferences(candidatePlaced, anchor, polygon);
+        const candidateInterferences = measureInterferences(candidatePlaced, anchor, polygon, {
+          stopAfter: bestPassInterferences.totalInterferences,
+        });
         const scoreMetric = candidateInterferences.totalInterferences;
         const bestMetric = bestPassInterferences.totalInterferences;
 
         if (scoreMetric < bestMetric) {
           bestPassPlaced = candidatePlaced;
           bestPassInterferences = candidateInterferences;
-          bestPassConflicts = candidateConflicts;
           bestPassShift = { key, dx, dy: 0 };
           bestPassDisplacement = Math.abs(dx);
         } else if (scoreMetric === bestMetric && bestPassShift !== null) {
@@ -374,7 +521,6 @@ export function planSmartLayoutRepair(request: SmartRepairRequest): SmartRepairP
           if (disp < bestPassDisplacement) {
             bestPassPlaced = candidatePlaced;
             bestPassInterferences = candidateInterferences;
-            bestPassConflicts = candidateConflicts;
             bestPassShift = { key, dx, dy: 0 };
             bestPassDisplacement = disp;
           }
@@ -385,12 +531,11 @@ export function planSmartLayoutRepair(request: SmartRepairRequest): SmartRepairP
     if (bestPassShift !== null && bestPassInterferences.totalInterferences < currentInterferences.totalInterferences) {
       currentPlaced = bestPassPlaced;
       currentInterferences = bestPassInterferences;
-      currentConflicts = bestPassConflicts;
       improved = true;
 
       // Track which equipment IDs were shifted
       const shiftedItems = placed.filter(
-        (item) => (item.groupId ?? item.blockId ?? item.id) === bestPassShift!.key
+        (item) => equipmentClusterKey(item) === bestPassShift!.key
       );
       for (const item of shiftedItems) {
         movedEquipmentIds.add(item.id);

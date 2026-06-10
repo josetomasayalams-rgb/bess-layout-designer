@@ -11,6 +11,8 @@
 
 import type { StoreApi } from "zustand";
 import { repairLayout as runLayoutRepair } from "@/lib/layout/layoutRepair";
+import { generateConceptualPhysicalInfrastructure } from "@/lib/layout/physicalInfrastructure";
+import { runSmartRepair } from "@/lib/layout/smartRepairIntegration";
 import {
   moveSelectedEquipment,
   orientSelectedEquipment,
@@ -172,7 +174,7 @@ export function createLayoutEditSlice(
                   .map((item) => item.id)),
           ])
         );
-        const result = runLayoutRepair({
+        const result = runSmartRepair({
           placed: source,
           anchor: state.anchor,
           polygon: state.polygon,
@@ -256,11 +258,16 @@ export function createLayoutEditSlice(
     applyLayoutEdit: () =>
       set((state) => {
         if (!state.layoutEdit.draftPlacedEquipment) return {};
+        const infrastructure = generateConceptualPhysicalInfrastructure({
+          placed: state.layoutEdit.draftPlacedEquipment,
+          anchor: state.anchor,
+          polygon: state.polygon,
+        });
         return {
           ...recordHistory(state),
           placedEquipment: state.layoutEdit.draftPlacedEquipment,
-          cableRoutes: [],
-          accessRoads: [],
+          cableRoutes: infrastructure.cableRoutes,
+          accessRoads: infrastructure.accessRoads,
           selectedEquipmentId:
             state.layoutEdit.selectedIds.length === 1
               ? state.layoutEdit.selectedIds[0]

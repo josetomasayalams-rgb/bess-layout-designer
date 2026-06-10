@@ -17,6 +17,7 @@ describe("LayoutRepairSection", () => {
     onFinishRepairZone: vi.fn(),
     onClearRepairZone: vi.fn(),
     onRepairLayout: vi.fn(),
+    onRepairFullLayout: vi.fn(),
     onPreviewFit: vi.fn(),
     onApplyFit: vi.fn(),
     onRevertFit: vi.fn(),
@@ -29,36 +30,81 @@ describe("LayoutRepairSection", () => {
   it("renders main controls when placedCount > 0", () => {
     render(<LayoutRepairSection {...defaultProps} />);
 
-    expect(screen.getByText("Reparar layout")).toBeDefined();
-    const repairBtn = screen.getByRole("button", { name: /Reparar todo/i });
+    expect(screen.getByText("Reparación Inteligente")).toBeDefined();
+    const repairBtn = screen.getByRole("button", {
+      name: /Ejecutar Reparación Inteligente/i,
+    });
     expect(repairBtn).toBeDefined();
     expect(repairBtn.getAttribute("disabled")).toBeNull();
 
-    const drawBtn = screen.getByRole("button", { name: /Dibujar zona/i });
+    const fullRepairBtn = screen.getByRole("button", {
+      name: /Aplicar a todo el dimensionamiento/i,
+    });
+    expect(fullRepairBtn).toBeDefined();
+    expect(fullRepairBtn.getAttribute("disabled")).toBeNull();
+
+    const drawBtn = screen.getByRole("button", {
+      name: /Dibujar zona Reparación Inteligente/i,
+    });
     expect(drawBtn).toBeDefined();
   });
 
   it("disables repair button if placedCount is 0", () => {
     render(<LayoutRepairSection {...defaultProps} placedCount={0} />);
 
-    const repairBtn = screen.getByRole("button", { name: /Reparar todo/i });
+    const repairBtn = screen.getByRole("button", {
+      name: /Ejecutar Reparación Inteligente/i,
+    });
     expect(repairBtn.getAttribute("disabled")).toBe("");
+
+    const fullRepairBtn = screen.getByRole("button", {
+      name: /Aplicar a todo el dimensionamiento/i,
+    });
+    expect(fullRepairBtn.getAttribute("disabled")).toBe("");
   });
 
   it("triggers callback when repair button is clicked", () => {
     const onRepairLayout = vi.fn();
     render(<LayoutRepairSection {...defaultProps} onRepairLayout={onRepairLayout} />);
 
-    const repairBtn = screen.getByRole("button", { name: /Reparar todo/i });
+    const repairBtn = screen.getByRole("button", {
+      name: /Ejecutar Reparación Inteligente/i,
+    });
     fireEvent.click(repairBtn);
     expect(onRepairLayout).toHaveBeenCalled();
+  });
+
+  it("triggers global Reparación Inteligente callback even when a zone exists", () => {
+    const onRepairLayout = vi.fn();
+    const onRepairFullLayout = vi.fn();
+    render(
+      <LayoutRepairSection
+        {...defaultProps}
+        repairZone={[{ lng: 1, lat: 2 }, { lng: 2, lat: 3 }, { lng: 3, lat: 4 }]}
+        onRepairLayout={onRepairLayout}
+        onRepairFullLayout={onRepairFullLayout}
+      />
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /Reparación Inteligente en zona/i })
+    );
+    expect(onRepairLayout).toHaveBeenCalledTimes(1);
+    expect(onRepairFullLayout).not.toHaveBeenCalled();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /Aplicar a todo el dimensionamiento/i })
+    );
+    expect(onRepairFullLayout).toHaveBeenCalledTimes(1);
   });
 
   it("triggers draw zone callback when button is clicked", () => {
     const onStartDrawing = vi.fn();
     render(<LayoutRepairSection {...defaultProps} onStartDrawingRepairZone={onStartDrawing} />);
 
-    const drawBtn = screen.getByRole("button", { name: /Dibujar zona/i });
+    const drawBtn = screen.getByRole("button", {
+      name: /Dibujar zona Reparación Inteligente/i,
+    });
     fireEvent.click(drawBtn);
     expect(onStartDrawing).toHaveBeenCalled();
   });
@@ -76,7 +122,7 @@ describe("LayoutRepairSection", () => {
       />
     );
 
-    expect(screen.getByText(/Haz clic en cualquier parte del mapa/i)).toBeDefined();
+    expect(screen.getByText(/zona de Reparación Inteligente/i)).toBeDefined();
 
     const finishBtn = screen.getByRole("button", { name: /Terminar zona/i });
     expect(finishBtn.getAttribute("disabled")).toBeNull();
@@ -195,7 +241,7 @@ describe("LayoutRepairSection", () => {
   it("shows the preliminary geometric scope disclaimer", () => {
     render(<LayoutRepairSection {...defaultProps} />);
     expect(
-      screen.getByText(/Ajuste geometrico preliminar/i)
+      screen.getByText(/La aplicación global ignora la zona activa/i)
     ).toBeDefined();
   });
 
@@ -251,6 +297,55 @@ describe("LayoutRepairSection", () => {
     // No absolute-compliance language.
     expect(screen.queryByText(/garantizad/i)).toBeNull();
     expect(screen.queryByText(/óptimo/i)).toBeNull();
+  });
+
+  it("renders Reparación Inteligente repaired, remaining and manual counters", () => {
+    render(
+      <LayoutRepairSection
+        {...defaultProps}
+        lastRepairResult={{
+          status: "partial",
+          message: "Reparación Inteligente resolved automatic issues.",
+          diagnostics: {
+            equipmentCount: 8,
+            zoneApplied: false,
+            movableCount: 8,
+            remainingConflicts: 1,
+            initialConflicts: 2,
+            movedCount: 3,
+            maxDisplacementM: 4,
+            clusterCount: 1,
+            strategy: "cluster-rigid",
+            smartRepair: {
+              geometricInitialConflicts: 2,
+              geometricRemainingConflicts: 1,
+              geometricResolvedConflicts: 1,
+              cableEquipmentBefore: 4,
+              cableEquipmentAfter: 1,
+              cableEquipmentResolved: 3,
+              cableRoadBefore: 2,
+              cableRoadAfter: 2,
+              cableRoadResolved: 0,
+              autoRepairableBefore: 8,
+              autoRepairableAfter: 4,
+              autoRepairableResolved: 4,
+              notAutoRepairable: [
+                {
+                  ruleId: "vehicle_access_distance",
+                  label: "Vehicle access to equipment",
+                  reason: "Requires civil access-road layout changes.",
+                },
+              ],
+            },
+          },
+        }}
+      />
+    );
+
+    expect(screen.getByText("reparadas")).toBeDefined();
+    expect(screen.getByText("restantes")).toBeDefined();
+    expect(screen.getByText("manuales")).toBeDefined();
+    expect(screen.getByText(/Cable\/equipo 4 -> 1/i)).toBeDefined();
   });
 
   it("renders directional shift buttons and center button", () => {

@@ -3,7 +3,7 @@
 import { AlertTriangle, CheckCircle2, Compass, Move, SquarePen, Wrench } from "lucide-react";
 import { formatLength, formatNumber } from "@/lib/units/formatUnits";
 import type { Locale } from "@/lib/i18n";
-import type { RepairStrategy } from "@/lib/layout/layoutRepair";
+import type { RepairStrategy, SmartRepairDiagnostics } from "@/lib/layout/layoutRepair";
 import type { TerrainFitResult } from "@/lib/layout/repairLayoutToSite";
 import type { PlacedEquipment } from "@/types/equipment";
 import type { LngLat } from "@/types/geometry";
@@ -26,6 +26,7 @@ export interface LayoutRepairSectionProps {
       maxDisplacementM: number;
       clusterCount: number;
       strategy: RepairStrategy;
+      smartRepair?: SmartRepairDiagnostics;
     };
   } | null;
   terrainFitPreview: {
@@ -36,6 +37,7 @@ export interface LayoutRepairSectionProps {
   onFinishRepairZone: () => void;
   onClearRepairZone: () => void;
   onRepairLayout: () => void;
+  onRepairFullLayout: () => void;
   onPreviewFit: () => void;
   onApplyFit: () => void;
   onRevertFit: () => void;
@@ -53,7 +55,7 @@ function repairStatusClass(status: "success" | "partial" | "error") {
   return "border-rose-500/40 bg-rose-500/10 text-rose-100";
 }
 
-/** Etiqueta preliminar de la estrategia geometrica aplicada por la reparacion. */
+/** Etiqueta preliminar de la estrategia geometrica aplicada por la reparación. */
 function repairStrategyLabel(strategy: RepairStrategy, isEs: boolean): string | null {
   switch (strategy) {
     case "cluster-rigid":
@@ -76,13 +78,13 @@ function repairStrategyLabel(strategy: RepairStrategy, isEs: boolean): string | 
 function terrainFitWarningText(warning: string, isEs: boolean) {
   if (!isEs) return warning;
   if (warning.includes("Locked equipment")) {
-    return "Existen equipos bloqueados que pueden limitar la reparacion completa.";
+    return "Existen equipos bloqueados que pueden limitar la reparación completa.";
   }
   if (warning.includes("No POI")) {
     return "No hay POI modelado en el estado actual del proyecto.";
   }
   if (warning.includes("PCC")) {
-    return "PCC aun no existe como entidad separada; se conserva POI como frontera de conexion.";
+    return "PCC aún no existe como entidad separada; se conserva POI como frontera de conexión.";
   }
   return warning;
 }
@@ -98,6 +100,7 @@ export function LayoutRepairSection({
   onFinishRepairZone,
   onClearRepairZone,
   onRepairLayout,
+  onRepairFullLayout,
   onPreviewFit,
   onApplyFit,
   onRevertFit,
@@ -120,21 +123,24 @@ export function LayoutRepairSection({
             return "No hay equipos colocados para reparar. Coloca o genera equipos primero.";
           }
           if (d.zoneApplied && d.movableCount === 0) {
-            return "La zona seleccionada no contiene ningun equipo. Dibuja la zona sobre los equipos a reordenar.";
+            return "La zona seleccionada no contiene ningún equipo. Dibuja la zona sobre los equipos a reordenar.";
           }
-          return "No fue posible reordenar los equipos dentro del espacio disponible. Reduce la cantidad de equipos o amplia el terreno.";
+          return "No fue posible reordenar los equipos dentro del espacio disponible. Reduce la cantidad de equipos o amplía el terreno.";
         }
         if (!isEs) return lastRepairResult.message;
         const scope = d.zoneApplied ? " en la zona" : "";
+        if (d.smartRepair && d.smartRepair.autoRepairableResolved > 0) {
+          return `Reparación Inteligente resolvió ${d.smartRepair.autoRepairableResolved} falta(s) automática(s)${scope}; quedan ${d.smartRepair.autoRepairableAfter} por revisar automáticamente.`;
+        }
         if (d.initialConflicts === 0) {
           return d.zoneApplied
-            ? "Los equipos de la zona ya cumplen separaciones y limites. No se aplicaron cambios."
-            : "El layout ya cumple separaciones y limites. No se aplicaron cambios.";
+            ? "Los equipos de la zona ya cumplen separaciones y límites. No se aplicaron cambios."
+            : "El layout ya cumple separaciones y límites. No se aplicaron cambios.";
         }
         if (lastRepairResult.status === "partial") {
-          return `Se redujeron los conflictos${scope} de ${d.initialConflicts} a ${d.remainingConflicts}. Los restantes no caben: reduce equipos o amplia el terreno.`;
+          return `Se redujeron los conflictos${scope} de ${d.initialConflicts} a ${d.remainingConflicts}. Los restantes no caben: reduce equipos o amplía el terreno.`;
         }
-        return `Se resolvieron ${d.initialConflicts} conflicto(s)${scope}: se reubicaron ${d.movedCount} de ${d.movableCount} equipo(s) respetando separaciones y limites.`;
+        return `Se resolvieron ${d.initialConflicts} conflicto(s)${scope}: se reubicaron ${d.movedCount} de ${d.movableCount} equipo(s) respetando separaciones y límites.`;
       })()
     : null;
 
@@ -145,7 +151,7 @@ export function LayoutRepairSection({
           <div className="flex items-center gap-1.5">
             <Wrench className="h-3.5 w-3.5 text-amber-300" aria-hidden="true" />
             <span className="text-[11px] font-semibold uppercase tracking-wide text-amber-200">
-              {isEs ? "Reparar layout" : "Repair layout"}
+              Reparación Inteligente
             </span>
           </div>
           {hasZone && !isDrawingZone ? (
@@ -159,8 +165,8 @@ export function LayoutRepairSection({
           <>
             <p className="text-[10px] leading-snug text-amber-100/90">
               {isEs
-                ? `Haz clic en cualquier parte del mapa para marcar la zona. No se recorta al terreno. Vertices: ${repairZone.length} (minimo 3).`
-                : `Click anywhere on the map to outline the zone. It is not clipped to the site. Vertices: ${repairZone.length} (minimum 3).`}
+                ? `Haz clic en cualquier parte del mapa para marcar la zona de Reparación Inteligente. No se recorta al terreno. Vértices: ${repairZone.length} (mínimo 3).`
+                : `Click anywhere on the map to outline the zone. It is not clipped to the site. Vértices: ${repairZone.length} (minimum 3).`}
             </p>
             <div className="grid grid-cols-2 gap-2">
               <button
@@ -185,11 +191,11 @@ export function LayoutRepairSection({
             <p className="text-[10px] leading-snug text-slate-500">
               {hasZone
                 ? isEs
-                  ? "Solo se reordenan los equipos con su centro dentro de la zona; el resto queda fijo como obstaculo."
-                  : "Only equipment whose center is inside the zone is reordered; the rest stays fixed as obstacles."
+                  ? "Reparación Inteligente reordena solo los equipos con su centro dentro de la zona; el resto queda fijo como obstáculo."
+                  : "Smart repair reorders only equipment whose center is inside the zone; the rest stays fixed as obstacles."
                 : isEs
-                ? "Opcional: dibuja una zona de cualquier tamano para reordenar solo esa parte. Sin zona se repara todo el layout."
-                : "Optional: draw a zone of any size to repair only that part. Without a zone the whole layout is repaired."}
+                ? "Opcional: dibuja una zona de cualquier tamaño para aplicar Reparación Inteligente solo en esa parte. Sin zona se procesa todo el layout."
+                : "Optional: draw a zone of any size to apply smart repair only there. Without a zone the whole layout is processed."}
             </p>
             <div className="grid grid-cols-2 gap-2">
               <button
@@ -200,11 +206,11 @@ export function LayoutRepairSection({
                 <SquarePen className="h-3.5 w-3.5" aria-hidden="true" />
                 {isEs
                   ? hasZone
-                    ? "Redibujar zona"
-                    : "Dibujar zona"
+                    ? "Redibujar zona Reparación Inteligente"
+                    : "Dibujar zona Reparación Inteligente"
                   : hasZone
-                  ? "Redraw zone"
-                  : "Draw zone"}
+                  ? "Redraw smart repair zone"
+                  : "Draw smart repair zone"}
               </button>
               <button
                 type="button"
@@ -224,16 +230,25 @@ export function LayoutRepairSection({
               <Wrench className="h-4 w-4" aria-hidden="true" />
               {isEs
                 ? hasZone
-                  ? "Reparar zona"
-                  : "Reparar todo"
+                  ? "Reparación Inteligente en zona"
+                  : "Ejecutar Reparación Inteligente"
                 : hasZone
-                ? "Repair zone"
-                : "Repair all"}
+                ? "Smart repair zone"
+                : "Run smart repair"}
+            </button>
+            <button
+              type="button"
+              onClick={onRepairFullLayout}
+              disabled={placedCount === 0}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-emerald-400/40 bg-emerald-400/10 px-3 py-2 text-xs font-medium text-emerald-100 hover:border-emerald-300 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+              {isEs ? "Aplicar a todo el dimensionamiento" : "Apply to full layout"}
             </button>
             <p className="text-[10px] leading-snug text-slate-600">
               {isEs
-                ? "Ajuste geometrico preliminar: corrige equipos fuera del terreno, colisiones, separaciones y margen al deslinde. No corrige estudios electricos ni reemplaza ingenieria de detalle."
-                : "Preliminary geometric adjustment: corrects equipment outside the site, collisions, spacing and setback. It does not resolve electrical studies nor replace detailed engineering."}
+                ? "La aplicación global ignora la zona activa, conserva bloques y orientación cuando es viable, y cambia solo lo necesario para mejorar separaciones, límites e interferencias conceptuales. El acceso vehicular y validaciones de ingeniería quedan como revisión manual."
+                : "The global action ignores the active zone, preserves blocks and orientation where viable, and changes only what is needed to improve clearances, boundaries and conceptual interferences. Vehicle access and engineering validation remain manual review items."}
             </p>
 
             <div className="rounded-md border border-cyan-500/20 bg-cyan-500/5 p-2">
@@ -245,7 +260,7 @@ export function LayoutRepairSection({
               </div>
               <p className="mt-1 text-[10px] leading-snug text-slate-500">
                 {isEs
-                  ? "Reordena el layout completo en bloques, lo centra segun el terreno y recalcula rutas conceptuales de cableado, POI y accesos."
+                  ? "Reordena el layout completo en bloques, lo centra según el terreno y recalcula rutas conceptuales de cableado, POI y accesos."
                   : "Reorders the full layout in blocks, centers it to the site and recalculates conceptual cable routes, POI and access roads."}
               </p>
               <div className="mt-2 grid grid-cols-1 gap-2">
@@ -350,7 +365,7 @@ export function LayoutRepairSection({
               {polygonLength < 3 ? (
                 <p className="mt-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[10px] leading-snug text-amber-100">
                   {isEs
-                    ? "Dibuja un poligono de terreno antes de ajustar el layout."
+                    ? "Dibuja un polígono de terreno antes de ajustar el layout."
                     : "Draw a site polygon before fitting the layout."}
                 </p>
               ) : null}
@@ -370,9 +385,88 @@ export function LayoutRepairSection({
               ) : (
                 <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
               )}
-              {isEs ? "Reparacion" : "Repair"} · {lastRepairResult.status}
+              {isEs ? "Reparación" : "Repair"} · {lastRepairResult.status}
             </div>
             <div>{repairText}</div>
+            {lastRepairResult.diagnostics.smartRepair ? (
+              <div className="mt-2 grid grid-cols-3 gap-1.5">
+                <div className="rounded border border-current/20 bg-black/10 px-1.5 py-1">
+                  <div className="font-mono text-[12px]">
+                    {formatNumber(
+                      lastRepairResult.diagnostics.smartRepair.autoRepairableResolved,
+                      0,
+                      locale
+                    )}
+                  </div>
+                  <div className="text-[9px] uppercase tracking-wide opacity-80">
+                    {isEs ? "reparadas" : "repaired"}
+                  </div>
+                </div>
+                <div className="rounded border border-current/20 bg-black/10 px-1.5 py-1">
+                  <div className="font-mono text-[12px]">
+                    {formatNumber(
+                      lastRepairResult.diagnostics.smartRepair.autoRepairableAfter,
+                      0,
+                      locale
+                    )}
+                  </div>
+                  <div className="text-[9px] uppercase tracking-wide opacity-80">
+                    {isEs ? "restantes" : "remaining"}
+                  </div>
+                </div>
+                <div className="rounded border border-current/20 bg-black/10 px-1.5 py-1">
+                  <div className="font-mono text-[12px]">
+                    {formatNumber(
+                      lastRepairResult.diagnostics.smartRepair.notAutoRepairable.length,
+                      0,
+                      locale
+                    )}
+                  </div>
+                  <div className="text-[9px] uppercase tracking-wide opacity-80">
+                    {isEs ? "manuales" : "manual"}
+                  </div>
+                </div>
+              </div>
+            ) : null}
+            {lastRepairResult.diagnostics.smartRepair ? (
+              <div className="mt-1 text-[10px] opacity-90">
+                {isEs
+                  ? `Cable/equipo ${formatNumber(
+                      lastRepairResult.diagnostics.smartRepair.cableEquipmentBefore,
+                      0,
+                      locale
+                    )} -> ${formatNumber(
+                      lastRepairResult.diagnostics.smartRepair.cableEquipmentAfter,
+                      0,
+                      locale
+                    )}; cable/camino ${formatNumber(
+                      lastRepairResult.diagnostics.smartRepair.cableRoadBefore,
+                      0,
+                      locale
+                    )} -> ${formatNumber(
+                      lastRepairResult.diagnostics.smartRepair.cableRoadAfter,
+                      0,
+                      locale
+                    )}. No automático: acceso vehicular y validaciones manuales.`
+                  : `Cable/equipment ${formatNumber(
+                      lastRepairResult.diagnostics.smartRepair.cableEquipmentBefore,
+                      0,
+                      locale
+                    )} -> ${formatNumber(
+                      lastRepairResult.diagnostics.smartRepair.cableEquipmentAfter,
+                      0,
+                      locale
+                    )}; cable/road ${formatNumber(
+                      lastRepairResult.diagnostics.smartRepair.cableRoadBefore,
+                      0,
+                      locale
+                    )} -> ${formatNumber(
+                      lastRepairResult.diagnostics.smartRepair.cableRoadAfter,
+                      0,
+                      locale
+                    )}. Not automatic: vehicle access and manual validations.`}
+              </div>
+            ) : null}
             {lastRepairResult.status !== "error"
               ? (() => {
                   const label = repairStrategyLabel(

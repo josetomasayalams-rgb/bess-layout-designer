@@ -48,7 +48,7 @@ function pcs(
   };
 }
 
-describe("Smart Repair Layout - Phase F0: measureInterferences", () => {
+describe("Reparacion Inteligente Layout - Phase F0: measureInterferences", () => {
   it("returns zero interferences for empty layout or missing anchor", () => {
     const metricsNullAnchor = measureInterferences([], null, []);
     expect(metricsNullAnchor.totalInterferences).toBe(0);
@@ -89,9 +89,24 @@ describe("Smart Repair Layout - Phase F0: measureInterferences", () => {
     // if placed directly on the cable path.
     expect(metrics.cableEquipmentCount).toBe(1);
   });
+
+  it("keeps exact counts while capping stored interference details", () => {
+    const placed: PlacedEquipment[] = [pcs("b1-pcs", 10, 10, "block-1")];
+    for (let i = 0; i < 6; i++) {
+      placed.push(battery(`b${i}-bess`, 25 + i * 10, 10, `block-${i + 2}`));
+    }
+
+    const metrics = measureInterferences(placed, anchor, [], { detailLimit: 2 });
+
+    expect(metrics.cableEquipmentCount).toBeGreaterThan(2);
+    expect(metrics.details.cableEquipment).toHaveLength(2);
+    expect(metrics.totalInterferences).toBe(
+      metrics.cableEquipmentCount + metrics.cableRoadCount
+    );
+  });
 });
 
-describe("Smart Repair Layout - Phase F1: planSmartLayoutRepair", () => {
+describe("Reparacion Inteligente Layout - Phase F1: planSmartLayoutRepair", () => {
   it("nudges a block vertically to resolve a cable-equipment interference", () => {
     // Setup interference case with PCS in Block 2. We lock Block 1 to force Block 2 to move.
     const b1_pcs = { ...pcs("b1-pcs", 10, 10, "block-1"), locked: true };

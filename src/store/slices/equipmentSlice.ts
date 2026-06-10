@@ -26,7 +26,8 @@ import {
   generatePreliminaryLayout,
   PRELIMINARY_TOOL_GROUP_PREFIX,
 } from "@/lib/layout/preliminaryLayoutGenerator";
-import { repairLayout as runLayoutRepair } from "@/lib/layout/layoutRepair";
+import { generateConceptualPhysicalInfrastructure } from "@/lib/layout/physicalInfrastructure";
+import { runSmartRepair } from "@/lib/layout/smartRepairIntegration";
 import { toLocal, toLngLat } from "@/lib/geometry/projection";
 import type { LngLat, LocalPoint } from "@/types/geometry";
 import type { PlacedEquipment } from "@/types/equipment";
@@ -372,7 +373,7 @@ export function createEquipmentSlice(
 
     repairLayout: (rules) => {
       const { anchor, polygon, placedEquipment, repairZone } = get();
-      const result = runLayoutRepair({
+      const result = runSmartRepair({
         placed: placedEquipment,
         anchor,
         polygon,
@@ -385,11 +386,17 @@ export function createEquipmentSlice(
         return;
       }
 
+      const infrastructure = generateConceptualPhysicalInfrastructure({
+        placed: result.placed,
+        anchor,
+        polygon,
+      });
+
       set((state) => ({
         ...recordHistory(state),
         placedEquipment: result.placed,
-        cableRoutes: [],
-        accessRoads: [],
+        cableRoutes: infrastructure.cableRoutes,
+        accessRoads: infrastructure.accessRoads,
         interactionMode: "select",
         pendingPlacementSpecId: null,
         selectedEquipmentId: null,
