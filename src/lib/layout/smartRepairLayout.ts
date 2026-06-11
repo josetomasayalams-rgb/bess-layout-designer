@@ -1,4 +1,7 @@
-import { CABLE_TO_EQUIPMENT_CLEARANCE_M } from "@/data/defaultConstraints";
+import {
+  CABLE_TO_EQUIPMENT_CLEARANCE_M,
+  ELECTRICAL_FRONT_WORKING_CLEARANCE_M,
+} from "@/data/defaultConstraints";
 import { toLocal, toLngLat } from "@/lib/geometry/projection";
 import { generateConceptualPhysicalInfrastructure } from "@/lib/layout/physicalInfrastructure";
 import { placedToTechnicalObjects } from "@/rules/bessValidationEngine";
@@ -386,7 +389,8 @@ export function planSmartLayoutRepair(request: SmartRepairRequest): SmartRepairP
 
   const bessToBess_m = request.rules?.bessToBess_m ?? 3;
   const bessToPropertyLine_m = request.rules?.bessToPropertyLine_m ?? 3;
-  const electricalFrontWorkingClearance_m = request.rules?.electricalFrontWorkingClearance_m ?? 0.9;
+  const electricalFrontWorkingClearance_m =
+    request.rules?.electricalFrontWorkingClearance_m ?? ELECTRICAL_FRONT_WORKING_CLEARANCE_M;
   const rules = { bessToBess_m, bessToPropertyLine_m, electricalFrontWorkingClearance_m };
 
   const lockedSet = new Set(lockedIds);

@@ -1,4 +1,5 @@
 import type { SourceReliability } from "./equipmentCatalog";
+import { asDocumented, type EvidencedValue } from "@/types/evidence";
 
 export type LayoutConstraint = {
   id: string;
@@ -91,7 +92,37 @@ export const BESS_TO_COMBUSTIBLE_MATERIAL_M = 3;
 export const BESS_TO_ESCAPE_ROUTE_M = 3;
 export const COMBUSTIBLE_VEGETATION_CLEARANCE_M = 3;
 export const MAINTENANCE_AISLE_M = 1;
-export const ELECTRICAL_FRONT_WORKING_CLEARANCE_M = 0.9;
+/**
+ * Front working clearance — PRIMERA certificación normativa real del proyecto
+ * (E3-S02, decisión D-a autorizada por el usuario 2026-06-10). Reemplaza el
+ * 0,9 m que RIC 02/13 contradecían (ver `LECTURA_CLAUSULAS_CUBO_A_2026-06-10.md`).
+ *
+ * 1,20 m está **documentado** por RIC 02 Tabla N°2.1, fila Condición 2 (espacio
+ * libre de trabajo frente a tablero 0–1000 V con muro/parte puesta a tierra al
+ * lado opuesto — la configuración típica contenedor↔muro en Chile). NO contradice
+ * RIC 02 §5.4.3 (que exige 1,50 m solo con partes energizadas descubiertas al
+ * frente: caso paramétrico futuro), y RIC 13 §6.4.8 (1.000/1.200 mm) lo refuerza.
+ *
+ * La evidencia vive en el `EvidencedValue` `electricalFrontWorkingClearance`; el
+ * valor crudo (consumido por el motor regulatorio y el repair) se deriva de él
+ * para que exista una sola fuente de verdad.
+ */
+export const electricalFrontWorkingClearance: {
+  electricalFrontWorkingClearanceM: EvidencedValue<number>;
+} = {
+  electricalFrontWorkingClearanceM: asDocumented(
+    1.2,
+    {
+      documentId: "SEC-RIC-02-2021-06",
+      section: "Tabla N°2.1 (0–1000 V), fila Condición 2",
+      note: "Espacio libre de trabajo mínimo 1,20 m frente a tablero con muro o parte puesta a tierra al lado opuesto (Condición 2). Reforzado por RIC 13 §6.4.8 (1.000/1.200 mm).",
+    },
+    "m"
+  ),
+};
+
+export const ELECTRICAL_FRONT_WORKING_CLEARANCE_M =
+  electricalFrontWorkingClearance.electricalFrontWorkingClearanceM.value;
 export const INTERNAL_BATTERY_GROUP_SEPARATION_M = 0.9;
 export const MAX_ENERGY_PER_GROUP_KWH = 50;
 export const FIRE_AREA_REFERENCE_LIMIT_KWH = 600;
