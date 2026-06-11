@@ -2,7 +2,10 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    # Run the full suite (lint, typecheck, test, build) on every pushed branch
+    # so a regression is caught before it ever reaches a PR. The "**" glob
+    # matches branch names containing slashes (e.g. feat/report-redesign).
+    branches: ["**"]
   pull_request:
     branches: [main]
 
