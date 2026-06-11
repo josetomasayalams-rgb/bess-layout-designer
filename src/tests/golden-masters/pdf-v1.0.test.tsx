@@ -45,7 +45,7 @@ describe("PDF v1.0 golden master — TechnicalReportData signature", () => {
     expect(data.metadata.disclaimer.length).toBeGreaterThan(0);
   });
 
-  it("emits the 9 canonical disclaimers, in order", () => {
+  it("emits the 17 canonical disclaimers, in order", () => {
     const data = buildReportData(GOLDEN_MASTER_INPUT);
     expect(data.disclaimers.map((d) => d.id)).toEqual(
       [...GOLDEN_MASTER_DISCLAIMER_IDS]

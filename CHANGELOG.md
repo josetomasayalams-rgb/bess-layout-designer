@@ -20,6 +20,45 @@ detailed electrical, civil, fire-protection or permitting engineering
 
 ---
 
+## [v1.1 — Basic engineering close-out] — 2026-06-10
+
+Deliberate contract change to the PDF report surface area (golden master updated):
+9 → 17 disclaimers. Requires acknowledgment per `pdf-v1.0.test.tsx` design.
+
+### Added
+
+- **8 basic-engineering disclaimers** in the PDF (`ScopeSection`), wired via
+  `buildReportData → copyFor(locale).reportIb.disclaimers`:
+  `DISC-IB-SCOPE`, `DISC-IB-NODETAIL`, `DISC-IB-NOAPPROVAL`, `DISC-IB-NFPAUL`,
+  `DISC-IB-OEM`, `DISC-IB-FIRE`, `DISC-IB-SEP` (FM Global Plan B footnote),
+  `DISC-IB-MATURITY` (dual evidence index 18% / 23%).
+  Both `en` and `es` locales. Source: `Reporte ing basica.md §8` + E4-S04.
+- **HMA warning** (`hma_required_nfpa855`) in `bessValidationEngine`: emits a
+  WARNING (not blocking) when placed BESS energy exceeds 600 kWh, per NFPA 855.
+  ES localization wired in `compliance/helpers.ts`.
+- **RULE-ELEC-018** in `regulatoryRulesCatalog`: documents that PCS 60 Hz
+  variants are incompatible with the Chilean 50 Hz grid (RPTD 01 §4).
+- **9 CEN/CNE/MINVU rules** updated: 8 `documented` + 1 `inferred` (E4-S03).
+- **T6 target_norm fix**: `TRANSFORMER_TO_BESS_*_M` corrected from `"RIC 13"` to
+  `"fabricante (OEM-DATASHEET) — sin norma directa"` in `maturity_inventory.json`.
+
+### Changed
+
+- Golden master `GOLDEN_MASTER_DISCLAIMER_IDS`: 9 → 17 entries.
+- `defaultConstraints.test.ts`: disclaimer length assertions 9 → 17.
+- 7 stale `"0,9 m"` strings updated to `"1,2 m"` across engine/catalog/helpers.
+
+### Known pending (not in this release)
+
+- T5: cable reactance `0.1215 Ω/km` is from a 60 Hz NEXANS datasheet; correct
+  value for 50 Hz Chilean grid is ≈ `0.1013 Ω/km`. Fix requires coordinated
+  change to `cableVoltageDrop.ts`, its test, `maturity_inventory.json` and
+  re-baseline. Deferred.
+- RULE-SEA/MMA/MIN environmental rules: still `missing`; candidate for a future
+  environmental-rules session (same pattern as E4-S03).
+
+---
+
 ## [1.0.0-rc.1] — 2026-05-27
 
 First release candidate for `v1.0.0`. No new product features.

@@ -65,6 +65,7 @@ import {
   type DocumentRegistryEntry,
 } from "@/data/documentRegistry";
 import { disclaimerTexts } from "@/data/disclaimerTexts";
+import { copyFor } from "@/lib/i18n";
 import { exclusionRegistry } from "@/data/exclusionRegistry";
 
 export type ReportEquipmentRow = {
@@ -1151,7 +1152,7 @@ export function buildReportData(args: BuildReportDataArgs): TechnicalReportData 
     inconsistencies: args.inconsistencies,
     pendingData: args.pendingData,
     exclusions,
-    disclaimers,
+    disclaimers: [...disclaimers, ...copyFor(args.locale).reportIb.disclaimers],
     engineeringChecklist: REPORT_DEFAULT_CHECKLIST,
     infrastructure,
 

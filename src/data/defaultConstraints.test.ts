@@ -133,7 +133,7 @@ describe("Phase 3 - Warnings, Exclusions, and Spacing Constants", () => {
 
     it("should correctly populate and translate disclaimers in Spanish", () => {
       const data = buildReportData(minimalArgs("es"));
-      expect(data.disclaimers.length).toBe(9);
+      expect(data.disclaimers.length).toBe(17);
       expect(data.metadata.disclaimer).toBe(disclaimerTexts.generalMvp);
 
       const generalDisc = data.disclaimers.find((d) => d.id === "DISC-GEN");
@@ -144,7 +144,7 @@ describe("Phase 3 - Warnings, Exclusions, and Spacing Constants", () => {
 
     it("should correctly populate and translate disclaimers in English", () => {
       const data = buildReportData(minimalArgs("en"));
-      expect(data.disclaimers.length).toBe(9);
+      expect(data.disclaimers.length).toBe(17);
       
       const generalDisc = data.disclaimers.find((d) => d.id === "DISC-GEN");
       expect(generalDisc).toBeDefined();

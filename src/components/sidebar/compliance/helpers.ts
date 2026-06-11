@@ -1,4 +1,5 @@
 import { formatLength } from "@/lib/units/formatUnits";
+import { copyFor } from "@/lib/i18n";
 import { DEFAULT_UNIT_SYSTEM } from "@/data/unitSystem";
 import { findDocument } from "@/data/documentRegistry";
 import { validateBessLayout } from "@/rules/bessValidationEngine";
@@ -145,6 +146,14 @@ export function localizedIssue(issue: ValidationIssue, isEs: boolean) {
         recommendation:
           "Adjuntar requisitos de instalación del fabricante y compararlos contra el perfil normativo conservador.",
       };
+    case "hma_required_nfpa855": {
+      const hma = copyFor("es").validation.hmaRequired;
+      return {
+        ruleLabel: hma.ruleLabel,
+        message: hma.message,
+        recommendation: hma.recommendation,
+      };
+    }
     case "bess_to_bess_submetric_warning":
       return {
         ruleLabel: "Advertencia de espaciamiento submétrico de fabricante",

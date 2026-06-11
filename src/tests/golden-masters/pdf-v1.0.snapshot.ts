@@ -90,6 +90,15 @@ export const GOLDEN_MASTER_DISCLAIMER_IDS = Object.freeze([
   "DISC-LAYOUT",
   "DISC-INFRA",
   "DISC-INT",
+  // Basic-engineering disclaimers added in v1.1 (E4-S04 + troncal wiring)
+  "DISC-IB-SCOPE",
+  "DISC-IB-NODETAIL",
+  "DISC-IB-NOAPPROVAL",
+  "DISC-IB-NFPAUL",
+  "DISC-IB-OEM",
+  "DISC-IB-FIRE",
+  "DISC-IB-SEP",
+  "DISC-IB-MATURITY",
 ] as const);
 
 /**
