@@ -378,6 +378,37 @@ export function validateBessLayout(args: {
     );
   }
 
+  // NFPA 855 — a Hazard Mitigation Analysis (HMA) becomes mandatory above
+  // 600 kWh of stored energy (NFPA 855 / IFC 1206; EXTRACCION NFPA/UL §2.3.3).
+  // WARNING-level (not blocking): the HMA is a required external study, not a
+  // layout-geometry failure. Total energy = sum of placed BESS container DC BOL
+  // energy. The English string mirrors i18n.es/en validation.hmaRequired; the
+  // Spanish panel rendering is wired in compliance/helpers.ts (localizedIssue,
+  // case "hma_required_nfpa855").
+  const totalEnergyKwh = placed.reduce((sum, item) => {
+    const spec = equipmentCatalog.find((entry) => entry.id === item.equipmentSpecId);
+    return spec?.type === "battery_container"
+      ? sum + (spec.electrical?.energy_mwh_dc_bol ?? 0) * 1000
+      : sum;
+  }, 0);
+  if (totalEnergyKwh > 600) {
+    issues.push(
+      issue({
+        id: "reg-hma-required-nfpa855",
+        severity: "warning",
+        ruleId: "hma_required_nfpa855",
+        ruleLabel: "Hazard Mitigation Analysis (NFPA 855)",
+        objectAId: "project",
+        source: "NFPA 855 / IFC 1206 — Hazard Mitigation Analysis required above 600 kWh",
+        basis: "requires_validation",
+        message:
+          "Project exceeds 600 kWh — a Hazard Mitigation Analysis (HMA) is mandatory per NFPA 855 before detailed engineering.",
+        recommendation:
+          "Plan a mandatory Hazard Mitigation Analysis (HMA) with a fire engineer — modeling fire, detection/suppression failure and ventilation — for AHJ review before detailed engineering.",
+      })
+    );
+  }
+
   for (const object of objects) {
     checkedRules += 1;
     const measured = accessDistanceToObject(

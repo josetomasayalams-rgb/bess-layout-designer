@@ -747,7 +747,15 @@ export const regulatoryRulesCatalog = [
     description: "System security and quality service requirements should be reviewed for SEN-connected BESS.",
     appParameter: "compliance.ntsycs",
     priority: "P2",
-    evidence: [ev("CNE-NTSyCS-RES45-2026", "missing", "Requires human reading before rule extraction.")],
+    evidence: [
+      ev(
+        "CNE-NTSyCS-RES45-2026",
+        "documented",
+        "NTSyCS rige la seguridad y calidad de servicio del SEN (E4-S03): TÍTULO 1-1 «el objetivo general de la presente Norma Técnica es establecer las» «exigencias de Seguridad y Calidad de Servicio de los sistemas interconectados.»; su lista de agentes obligados incluye «Almacenamiento de Energía; instalaciones que provean servicios complementarios» — un BESS interconectado al SEN queda regido. Regla-puntero: aplicabilidad, no umbral numérico.",
+        undefined,
+        "TÍTULO 1-1 Objetivo y Alcance"
+      ),
+    ],
   }),
   rule({
     id: "RULE-CNE-002",
@@ -757,7 +765,15 @@ export const regulatoryRulesCatalog = [
     description: "BESS complementary service capabilities should be tracked as a preliminary compliance checklist.",
     appParameter: "ppc.sscc",
     priority: "P3",
-    evidence: [ev("CNE-NTSSCC-RES45-2026", "missing", "Requires human reading before rule extraction.")],
+    evidence: [
+      ev(
+        "CNE-NTSSCC-RES45-2026",
+        "documented",
+        "NTSSCC rige los Servicios Complementarios (E4-S03): §1-1 Objetivo «la prestación de Servicios Complementarios»; §1-2 Alcance «Los requerimientos establecidos en la presente Norma Técnica aplican a toda instalación» interconectada con recursos/infraestructura para prestar SSCC (un BESS puede prestarlos). Regla-puntero: aplicabilidad, no umbral.",
+        undefined,
+        "Artículo 1-1 Objetivo / 1-2 Alcance"
+      ),
+    ],
   }),
   rule({
     id: "RULE-CNE-003",
@@ -767,7 +783,15 @@ export const regulatoryRulesCatalog = [
     description: "Inverter-based resource requirements should be tracked for PCS/PPC scope.",
     appParameter: "ppc.ibr",
     priority: "P2",
-    evidence: [ev("CNE-IBR-RES45-2026", "missing", "Requires human reading before rule extraction.")],
+    evidence: [
+      ev(
+        "CNE-IBR-RES45-2026",
+        "documented",
+        "El Anexo Técnico IBR rige las Instalaciones Basadas en Convertidores (E4-S03): Objetivo «exigencias técnicas mínimas complementarias a las» de la NTSyCS para IBR; Alcance «serán aplicables a las Instalaciones Basadas» en Convertidores interconectadas o a interconectar al Sistema de Transmisión — el PCS de un BESS es una IBR. Regla-puntero: aplicabilidad, no umbral.",
+        undefined,
+        "Artículo 1-1 Objetivo / 1-2 Alcance"
+      ),
+    ],
   }),
   rule({
     id: "RULE-CNE-004",
@@ -778,7 +802,15 @@ export const regulatoryRulesCatalog = [
     appParameter: "compliance.seismic",
     automation: "no",
     status: "manual_check",
-    evidence: [ev("CNE-Sismico-REX41-2025", "missing", "Requires human reading; foundations remain outside this MVP.")],
+    evidence: [
+      ev(
+        "CNE-Sismico-REX41-2025",
+        "documented",
+        "El Anexo de Requisitos Sísmicos rige el diseño sísmico de instalaciones del SEN (E4-S03): Art. 1 Objetivo General «exigencias mínimas de diseño sísmico que» deben cumplir las instalaciones de la NTSyCS; Art. 2 Alcance General lo aplica a «sistemas de almacenamiento de energía que presten servicios de transmisión». Cubre el BESS cuando presta servicios de transmisión; el diseño sísmico/fundaciones quedan fuera del MVP → regla-puntero checklist.",
+        undefined,
+        "Art. 1 Objetivo General / Art. 2 Alcance General"
+      ),
+    ],
   }),
   rule({
     id: "RULE-CEN-001",
@@ -789,7 +821,15 @@ export const regulatoryRulesCatalog = [
     appParameter: "compliance.cenClassification",
     automation: "no",
     status: "manual_check",
-    evidence: [ev("CEN-Anexo2-NIMR-2024", "missing", "Requires human reading of classification/interconnection process.")],
+    evidence: [
+      ev(
+        "CEN-Anexo2-NIMR-2024",
+        "inferred",
+        "CEN Anexo 2 «Requerimientos de interconexión NI/MR/MNR» (E4-S03): §3 Alcance cubre «el proceso de interconexión de proyectos» «NI, MR o MNR, estableciendo así, las metodologías de trabajo». Las categorías NI (Nueva Infraestructura)/MR/MNR SON las clases de proyecto, pero el alcance documenta el PROCESO DE INTERCONEXIÓN, no el PROCEDIMIENTO de clasificación en sí (criterios upstream del Reglamento/Coordinador). Respaldo PARCIAL: documenta las clases, no el método de clasificar.",
+        undefined,
+        "§3 Alcance"
+      ),
+    ],
   }),
   rule({
     id: "RULE-CEN-002",
@@ -801,7 +841,15 @@ export const regulatoryRulesCatalog = [
     automation: "no",
     status: "manual_check",
     priority: "P2",
-    evidence: [ev("CEN-Anexo2-NIMR-2024", "missing", "Requires human reading before extracting checklist steps.")],
+    evidence: [
+      ev(
+        "CEN-Anexo2-NIMR-2024",
+        "documented",
+        "CEN Anexo 2 rige el proceso de interconexión NI/MR/MNR (E4-S03): §3 Alcance «el proceso de interconexión de proyectos» «NI, MR o MNR, estableciendo así, las metodologías de trabajo», criterios y requerimientos normativos para la «ejecución de las funciones y obligaciones del Coordinador». Regla-puntero: el procedimiento de interconexión como checklist.",
+        undefined,
+        "§3 Alcance"
+      ),
+    ],
   }),
   rule({
     id: "RULE-CEN-003",
@@ -812,7 +860,15 @@ export const regulatoryRulesCatalog = [
     appParameter: "compliance.pmgdRules",
     automation: "no",
     status: "manual_check",
-    evidence: [ev("CEN-Anexo1-PMGD-2024", "missing", "Requires human reading of PMGD process.")],
+    evidence: [
+      ev(
+        "CEN-Anexo1-PMGD-2024",
+        "documented",
+        "CEN Anexo 1 «Requisitos para Interconexión de PMGD» (E4-S03) rige la conexión de los «Pequeños Medios de Generación Distribuida: Instalaciones de generación que se interconectan en» redes de distribución, vía la «SOLICITUD DE INICIO DE PROCESO DE CONEXIÓN DE UN PROYECTO PMGD». Aplica SOLO a proyectos escala PMGD. Regla-puntero checklist.",
+        undefined,
+        "§1 / §5 Proceso de conexión PMGD"
+      ),
+    ],
     appliesToProfiles: ["chile-pmgd-predesign"],
   }),
 
@@ -888,7 +944,15 @@ export const regulatoryRulesCatalog = [
     description: "Territorial interpretation for BESS should be reviewed before presenting land-use conclusions.",
     appParameter: "compliance.minvuDdu522",
     priority: "P1",
-    evidence: [ev("MINVU-DDU-522-BESS", "missing", "Priority document; requires human reading.")],
+    evidence: [
+      ev(
+        "MINVU-DDU-522-BESS",
+        "documented",
+        "MINVU DDU 522 fija la interpretación territorial de los BESS (E4-S03): tiene por objeto impartir instrucciones sobre la «normativa aplicable a los sistemas» de almacenamiento de energía de tipo electroquímico, incluidos los «sistemas BESS Stand Alone o autónomos.». Regla-puntero: criterio territorial/uso de suelo como advertencia.",
+        undefined,
+        "Objeto / Proyectos de almacenamiento"
+      ),
+    ],
   }),
   rule({
     id: "RULE-MINVU-002",
@@ -899,7 +963,15 @@ export const regulatoryRulesCatalog = [
     appParameter: "compliance.domPermit",
     automation: "no",
     status: "manual_check",
-    evidence: [ev("DS-47-OGUC", "missing", "Requires human reading and municipal context.")],
+    evidence: [
+      ev(
+        "DS-47-OGUC",
+        "documented",
+        "La OGUC (DS 47/1992) rige el permiso municipal de obras (E4-S03): Art. 1.1.1 «La presente Ordenanza reglamenta la» Ley General de Urbanismo y Construcciones y regula el procedimiento administrativo, de urbanización y de construcción; el «correspondiente permiso de edificación.» se tramita ante el «Director de Obras Municipales». Regla-puntero: permiso DOM como checklist.",
+        undefined,
+        "Art. 1.1.1 / permiso de edificación"
+      ),
+    ],
   }),
 
   rule({

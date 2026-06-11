@@ -290,6 +290,68 @@ export const COPY = {
       spacingNotValidated:
         "Default container spacing of 3 m is an editable preliminary assumption and not a normative requirement. Validate with manufacturer installation manual, UL 9540A, NFPA 855, fire protection engineer, insurer and local AHJ.",
     },
+    // E4-S04 (T1) — bilingual source of truth for the NFPA 855 HMA warning
+    // emitted by the validation engine when total project energy exceeds
+    // 600 kWh. The engine carries the English string directly; the Spanish
+    // string is consumed by the compliance panel localizer (localizedIssue,
+    // case "hma_required_nfpa855").
+    validation: {
+      hmaRequired: {
+        ruleLabel: "Hazard Mitigation Analysis (NFPA 855)",
+        message:
+          "Project exceeds 600 kWh — a Hazard Mitigation Analysis (HMA) is mandatory per NFPA 855 before detailed engineering.",
+        recommendation:
+          "Plan a mandatory Hazard Mitigation Analysis (HMA) with a fire engineer — modeling fire, detection/suppression failure and ventilation — for AHJ review before detailed engineering.",
+      },
+    },
+    // E4-S04 (T2/T3/T4a) — basic-engineering disclaimers surfaced in the PDF
+    // report (consumed by buildReportData → ScopeSection). Six §8 scope
+    // disclaimers, the safety-separations footnote (NFPA/FM Global Plan B) and
+    // the dual evidence-maturity index.
+    reportIb: {
+      disclaimers: [
+        {
+          id: "DISC-IB-SCOPE",
+          title: "Basic engineering scope",
+          text: "This report consolidates the close-out of the BESS project's basic engineering at the level of design bases, preliminary sizing, preliminary layout, functional electrical integration and a preliminary safety strategy. It does not constitute detailed engineering, an IFC document or an as-built.",
+        },
+        {
+          id: "DISC-IB-NODETAIL",
+          title: "Not equivalent to detailed engineering",
+          text: "The information herein must be read in full and within the limits of the basic-engineering stage. Construction details, final calculations, final equipment specification, protection coordination, foundations, drainage and site testing belong to later stages.",
+        },
+        {
+          id: "DISC-IB-NOAPPROVAL",
+          title: "Not an SEC/AHJ/authority approval",
+          text: "This document does not constitute approval by SEC, SEA, the fire service, the AHJ or any other competent authority, nor does it replace the acts, permits, validations or sectoral reviews that may be required.",
+        },
+        {
+          id: "DISC-IB-NFPAUL",
+          title: "NFPA/UL as reference",
+          text: "References to NFPA, UL, FM and other international sources are used as technical criteria for preliminary design and evaluation. Their invocation in this document does not, by itself, amount to certification of the project or acceptance by any authority.",
+        },
+        {
+          id: "DISC-IB-OEM",
+          title: "OEM pending items",
+          text: "Where the exact model, regional variant, datasheet/manual revision, layout guide or OEM test reports are not finalized, the corresponding value is classified as an OEM pending item and must not be interpreted as a definitive value.",
+        },
+        {
+          id: "DISC-IB-FIRE",
+          title: "Preliminary fire safety",
+          text: "The fire assessment in this document is preliminary and is aimed at identifying risks, conservative criteria and missing documents. The final site strategy will require subsequent development with competent specialists, the BESS supplier, detailed engineering and review by the relevant authority/emergency services.",
+        },
+        {
+          id: "DISC-IB-SEP",
+          title: "Safety separations (preliminary reference)",
+          text: "Separation values are presented as a conservative preliminary reference. The cited NFPA 855 figures come from secondary evidence (without access to the current official text); final distances depend on the UL 9540A report for the exact equipment and on AHJ approval. Fallback Plan B: FM Global DS 5-33 §2.3.2.2 (L5), subject to official NFPA 855.",
+        },
+        {
+          id: "DISC-IB-MATURITY",
+          title: "Evidence-base maturity (dual index)",
+          text: "Global maturity: 18% (6/34 values with documented/derived evidence). Certifiable maturity: 23% (6/26 technical values — excludes 8 design decisions). The 8 design values are excluded from the certifiable denominator because they are project decisions with no possible normative backing. Acquiring NFPA 855 / UL 9540A is the path to raising certifiable fire maturity toward its ceiling.",
+        },
+      ],
+    },
   },
   es: {
     ...SHARED,
@@ -510,6 +572,59 @@ export const COPY = {
         `Se detectó colisión entre los equipos ${a} y ${b}.`,
       spacingNotValidated:
         "La separación por defecto de 3 m entre contenedores es un supuesto preliminar editable y no un requisito normativo. Validar con manual de instalación, UL 9540A, NFPA 855, ingeniería de incendio, aseguradora y AHJ local.",
+    },
+    validation: {
+      hmaRequired: {
+        ruleLabel: "Análisis de Mitigación de Peligros (NFPA 855)",
+        message:
+          "El proyecto supera los 600 kWh — se requiere un Análisis de Mitigación de Peligros (HMA) según NFPA 855 antes de la ingeniería de detalle.",
+        recommendation:
+          "Al superar los 600 kWh, planificar un Análisis de Mitigación de Peligros (HMA) obligatorio con un ingeniero de incendios — modelando incendio, fallo de detección/extinción y ventilación — para revisión de la autoridad competente (AHJ) antes de la ingeniería de detalle.",
+      },
+    },
+    reportIb: {
+      disclaimers: [
+        {
+          id: "DISC-IB-SCOPE",
+          title: "Alcance de ingeniería básica",
+          text: "Este documento consolida el cierre de la ingeniería básica del proyecto BESS a nivel de bases de diseño, predimensionamiento, layout preliminar, integración eléctrica funcional y estrategia preliminar de seguridad. No constituye ingeniería de detalle, documento IFC ni as-built.",
+        },
+        {
+          id: "DISC-IB-NODETAIL",
+          title: "No equivalencia a ingeniería de detalle",
+          text: "La información aquí contenida debe leerse íntegramente y dentro de los límites de la etapa de ingeniería básica. Los detalles constructivos, cálculos definitivos, especificación final de equipos, coordinación de protecciones, fundaciones, drenajes y pruebas de sitio corresponden a etapas posteriores.",
+        },
+        {
+          id: "DISC-IB-NOAPPROVAL",
+          title: "No aprobación SEC/AHJ/autoridad",
+          text: "El presente documento no constituye aprobación por SEC, SEA, bomberos, AHJ ni otra autoridad competente, ni reemplaza los actos, permisos, validaciones o revisiones sectoriales exigibles.",
+        },
+        {
+          id: "DISC-IB-NFPAUL",
+          title: "NFPA/UL como referencia",
+          text: "Las referencias NFPA, UL, FM y otras fuentes internacionales se emplean como criterios técnicos de diseño y evaluación preliminar. Su invocación en este documento no equivale, por sí sola, a certificación del proyecto ni a aceptación por autoridad.",
+        },
+        {
+          id: "DISC-IB-OEM",
+          title: "Pendientes OEM",
+          text: "Cuando el modelo exacto, la variante regional, la revisión del datasheet/manual, el layout guide o los reportes de ensayo OEM no se encuentran cerrados, el dato correspondiente se clasifica como pendiente OEM y no debe interpretarse como valor definitivo.",
+        },
+        {
+          id: "DISC-IB-FIRE",
+          title: "Seguridad contra incendio preliminar",
+          text: "La evaluación de incendio incluida en este documento es preliminar y está orientada a identificar riesgos, criterios conservadores y documentos faltantes. La estrategia final del sitio requerirá desarrollo posterior con especialistas competentes, proveedor BESS, ingeniería de detalle y revisión de la autoridad/servicios de emergencia que correspondan.",
+        },
+        {
+          id: "DISC-IB-SEP",
+          title: "Separaciones de seguridad (referencia preliminar)",
+          text: "Los valores de separación se presentan como referencia preliminar conservadora. Las cifras NFPA 855 citadas provienen de evidencia secundaria (sin acceso al texto oficial vigente); las distancias finales dependen del reporte UL 9540A del equipo exacto y de la aprobación del AHJ. Plan B de respaldo: FM Global DS 5-33 §2.3.2.2 (L5), sujeto a NFPA 855 oficial.",
+        },
+        {
+          id: "DISC-IB-MATURITY",
+          title: "Madurez de la base de evidencia (índice dual)",
+          text: "Madurez global: 18% (6/34 valores con evidencia documentada/derivada). Madurez certificable: 23% (6/26 valores técnicos — excluye 8 decisiones de diseño). Los 8 valores de diseño se excluyen del denominador certificable por corresponder a decisiones de proyecto sin respaldo normativo posible. Adquirir NFPA 855 / UL 9540A es la vía para elevar la madurez certificable de incendio hacia su techo.",
+        },
+      ],
     },
   },
 };
