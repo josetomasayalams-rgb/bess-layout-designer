@@ -78,8 +78,8 @@ export const diagnosticCatalog: Record<string, DiagnosticMetadata> = {
       en: "Insufficient working space blocks safe O&M tasks and violates basic electrical safety standards.",
     },
     diagnosticAction: {
-      es: "Asegurar un despeje frontal mínimo de 0.9 metros o presentar el respaldo específico del manual del fabricante.",
-      en: "Ensure a minimum front working clearance of 0.9 m or obtain specific vendor manual guidelines.",
+      es: "Asegurar un despeje frontal mínimo de 1,2 metros o presentar el respaldo específico del manual del fabricante.",
+      en: "Ensure a minimum front working clearance of 1.2 m or obtain specific vendor manual guidelines.",
     },
     riskLevel: "om_insurance",
   },

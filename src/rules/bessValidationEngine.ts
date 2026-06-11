@@ -353,7 +353,7 @@ export function validateBessLayout(args: {
               "Preliminary electrical working clearance criterion; manufacturer and electrical code review required.",
             message: `PCS ${pcs.id.slice(0, 6)} has ${formatLength(measured, { digits: 2 })} clearance to ${other.id.slice(0, 6)}. Preliminary required clearance is ${formatLength(required, { digits: 2 })}.`,
             recommendation:
-              "Provide at least 0.9 m clear working space or manufacturer/electrical engineering basis for the final arrangement.",
+              "Provide at least 1.2 m clear working space or manufacturer/electrical engineering basis for the final arrangement.",
           })
         );
       }

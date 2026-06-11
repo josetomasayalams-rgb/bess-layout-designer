@@ -95,7 +95,7 @@ export const regulatoryRulesCatalog = [
     severity: "warning",
     title: "Container-to-PCS station clearance from manufacturer source",
     description:
-      "Spacing between BESS containers and PCS/MV stations is evaluated geometrically, but the underlying clearance value remains a preliminary assumption: the SC5000UD-MV installation manual is pending (PEND-SC5000-MANUAL). The 0.9 m front working space applied by the validator is a conservative electrical working clearance, not a vendor-cited value.",
+      "Spacing between BESS containers and PCS/MV stations is evaluated geometrically, but the underlying clearance value remains a preliminary assumption: the SC5000UD-MV installation manual is pending (PEND-SC5000-MANUAL). The 1.2 m front working space applied by the validator is a conservative electrical working clearance, not a vendor-cited value.",
     appParameter: "EquipmentSpec.clearances.otherType_m",
     priority: "P1",
     status: "implemented",
@@ -103,7 +103,7 @@ export const regulatoryRulesCatalog = [
       ev(
         "SUNGROW-SC5000UD-MV-US",
         "inferred",
-        "PCS datasheet does not document a project-specific clearance. 0.9 m working space is a conservative electrical screening criterion until the official SC5000UD-MV installation manual is obtained."
+        "PCS datasheet does not document a project-specific clearance. 1.2 m working space is a conservative electrical screening criterion until the official SC5000UD-MV installation manual is obtained."
       ),
     ],
   }),
@@ -455,6 +455,27 @@ export const regulatoryRulesCatalog = [
       "bess-del-desierto-reference",
     ],
   }),
+  rule({
+    id: "RULE-ELEC-018",
+    category: "electrical",
+    severity: "warning",
+    title: "Equipment nominal frequency matches grid (50 Hz Chile)",
+    description:
+      "The selected PCS variant declares its nominal frequency on the datasheet; a 60 Hz unit is not compatible with the 50 Hz Chilean grid until the manufacturer confirms a 50 Hz variant. The catalog SC5000UD-MV-US-P3 declares 60 Hz.",
+    appParameter: "electrical.compatibility.frequency",
+    automation: "no",
+    status: "manual_check",
+    priority: "P2",
+    evidence: [
+      ev(
+        "SEC-RPTD-01-2021",
+        "documented",
+        "RPTD 01 §4 «Frecuencias» (E4-S02): «frecuencia nominal será de 50 ciclos por» segundo (Chile = 50 Hz). La variante PCS SC5000UD-MV-US-P3 (pcsCatalog frequencyHz = 60 Hz, datasheet -US) NO es compatible con 50 Hz hasta confirmación OEM de una unidad 50 Hz.",
+        undefined,
+        "§4 Frecuencias"
+      ),
+    ],
+  }),
   ...[
     ["RULE-ELEC-010", "Protection coordination study"],
     ["RULE-ELEC-011", "Short-circuit study"],
@@ -616,7 +637,7 @@ export const regulatoryRulesCatalog = [
       ev(
         "SEC-RIC-13",
         "documented",
-        "RIC 13 rige subestaciones y salas eléctricas (E3-S04): §2 (Alcance) se aplica a subestaciones y salas eléctricas con transformadores hasta «23.000» V; §6.4.7 «deberán existir espacios libres» de trabajo; §6.4.8 «un ancho de 1.000 mm» (muro a un lado) y «de 1.200 mm» (equipos a ambos lados). NOTA: 1,0/1,2 m corroboran la contradicción YA ESCALADA (D-a) del default ELECTRICAL_FRONT_WORKING_CLEARANCE_M = 0,9 m — valor NO modificado por esta sesión.",
+        "RIC 13 rige subestaciones y salas eléctricas (E3-S04): §2 (Alcance) se aplica a subestaciones y salas eléctricas con transformadores hasta «23.000» V; §6.4.7 «deberán existir espacios libres» de trabajo; §6.4.8 «un ancho de 1.000 mm» (muro a un lado) y «de 1.200 mm» (equipos a ambos lados). NOTA: 1,0/1,2 m respaldan el clearance frontal ELECTRICAL_FRONT_WORKING_CLEARANCE_M, certificado a 1,2 m por E3-S02 (RIC 02 Tabla N°2.1 Condición 2, D-a).",
         undefined,
         "§2 Alcance / §6.4.7 / §6.4.8"
       ),

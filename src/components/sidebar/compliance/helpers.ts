@@ -135,7 +135,7 @@ export function localizedIssue(issue: ValidationIssue, isEs: boolean) {
         ruleLabel: "Espacio de trabajo de equipo eléctrico",
         message: `PCS ${objectA} tiene ${measured} libres respecto de ${objectB}. El despeje preliminar requerido es ${required}.`,
         recommendation:
-          "Entregar al menos 0,9 m libres de trabajo o respaldo de fabricante/ingeniería eléctrica para la disposición final.",
+          "Entregar al menos 1,2 m libres de trabajo o respaldo de fabricante/ingeniería eléctrica para la disposición final.",
       };
     case "manufacturer_manual_required":
       return {
