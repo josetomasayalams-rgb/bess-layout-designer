@@ -481,7 +481,15 @@ export const regulatoryRulesCatalog = [
     description: "SEC RGR 06/2024 should be reviewed as the local BESS regulatory framework.",
     appParameter: "compliance.secRgr",
     priority: "P1",
-    evidence: [ev("SEC-RGR-06-2024", "missing", "Requires human reading before any implementable rule is promoted.")],
+    evidence: [
+      ev(
+        "SEC-RGR-06-2024",
+        "documented",
+        "RGR 06/2024 ES el marco normativo BESS chileno (E3-S04, lectura de cláusulas): §1 «Acotar los requerimientos que se deben observar para el diseño» de instalaciones de almacenamiento; §2 «requisitos generales de instalación y seguridad para los» sistemas de almacenamiento de energía a través de baterías (BESS).",
+        undefined,
+        "§1 Objetivo / §2 Alcance"
+      ),
+    ],
   }),
   rule({
     id: "RULE-SEC-002",
@@ -493,7 +501,15 @@ export const regulatoryRulesCatalog = [
     automation: "no",
     status: "manual_check",
     priority: "P2",
-    evidence: [ev("SEC-RIC-06", "missing", "Requires human reading of grounding clauses.")],
+    evidence: [
+      ev(
+        "SEC-RIC-06",
+        "documented",
+        "RIC 06 establece los requisitos de puesta a tierra (E3-S04): §1.1 requisitos de seguridad de los «sistemas de puesta a tierra, protección contra rayos» y enlaces equipotenciales; §5.4 toda instalación de consumo «tiene que disponer de un sistema de puesta a tierra».",
+        undefined,
+        "§1.1 Objetivos / §5.4"
+      ),
+    ],
   }),
   rule({
     id: "RULE-SEC-003",
@@ -504,7 +520,15 @@ export const regulatoryRulesCatalog = [
     appParameter: "compliance.secSubmission",
     automation: "no",
     status: "manual_check",
-    evidence: [ev("SEC-RIC-18", "missing", "Requires human reading of submission requirements.")],
+    evidence: [
+      ev(
+        "SEC-RIC-18",
+        "documented",
+        "RIC 18 rige la presentación de proyectos (E3-S04): §1 «establecer las disposiciones técnicas que deben cumplirse en» la elaboración y presentación de proyectos; §6.1.1 todo proyecto «deberá incluir a lo menos» memoria explicativa, planos, «Informe de verificación inicial.» e informe de imágenes.",
+        undefined,
+        "§1 Objetivos / §6.1.1"
+      ),
+    ],
   }),
   rule({
     id: "RULE-SEC-004",
@@ -515,7 +539,15 @@ export const regulatoryRulesCatalog = [
     appParameter: "compliance.commissioning",
     automation: "no",
     status: "manual_check",
-    evidence: [ev("SEC-RIC-19-V1.1", "missing", "Requires human reading of commissioning requirements.")],
+    evidence: [
+      ev(
+        "SEC-RIC-19-V1.1",
+        "documented",
+        "RIC 19 rige la puesta en servicio (E3-S04): §1 «procedimiento general para la puesta en servicio» de las instalaciones de consumo; §5.1 toda instalación nueva, ampliación o remodelación debe ser «probada y ensayada antes de su puesta en servicio» o energización.",
+        undefined,
+        "§1 Objetivos / §5.1"
+      ),
+    ],
   }),
   rule({
     id: "RULE-SEC-005",
@@ -525,7 +557,15 @@ export const regulatoryRulesCatalog = [
     description: "Fire protection requirements should be mapped before promoting any automated fire rule.",
     appParameter: "fireSafety.systemType",
     priority: "P1",
-    evidence: [ev("SEC-RPTD-08-2020", "missing", "Requires human reading of fire protection requirements.")],
+    evidence: [
+      ev(
+        "SEC-RPTD-08-2020",
+        "inferred",
+        "RPTD 08 §1 «establecer medidas de seguridad para la» protección contra incendios; su Alcance (§2) cubre los sistemas de almacenamiento de energía. Ej.: §5.1 transformadores >10 MVA «no menos de 6 m de cualquier edificación y de 9 m de otro» transformador; §6.4 detección según «requerimientos del código NFPA 72». Respaldo PARCIAL: cubre la protección de incendios eléctrica/transformadores, NO el riesgo de incendio específico del BESS (propagación térmica), pendiente de NFPA 855 / UL 9540A (E3-S06).",
+        undefined,
+        "§1 Objetivo / §2 Alcance / §5.1 / §6.4"
+      ),
+    ],
   }),
   rule({
     id: "RULE-SEC-006",
@@ -535,7 +575,15 @@ export const regulatoryRulesCatalog = [
     description: "Electrical safety distance requirements should be mapped for site boundary and corridor checks.",
     appParameter: "LayoutZone(safety_strip).distance_m",
     priority: "P2",
-    evidence: [ev("SEC-RPTD-07-2022", "missing", "Requires human reading of safety distance clauses.")],
+    evidence: [
+      ev(
+        "SEC-RPTD-07-2022",
+        "inferred",
+        "RPTD 07 §1 «definir la franja y las distancias de seguridad» de líneas; §2 «aplica a las líneas de transporte y de distribución»; §4.5/Tabla N°3 distancia de seguridad por tensión («Sobre 1 y hasta 36 2,00» m). Respaldo PARCIAL: la franja de seguridad rige LÍNEAS eléctricas (aplicable a colectores MT aéreos), no el retiro BESS-a-límite de sitio; el fence_setback (5 m) es otra magnitud y NO queda contradicho.",
+        undefined,
+        "§1 Objetivo / §2 Alcance / §4.5 Tabla N°3"
+      ),
+    ],
   }),
   rule({
     id: "RULE-SEC-007",
@@ -546,7 +594,15 @@ export const regulatoryRulesCatalog = [
     appParameter: "compliance.signage",
     automation: "no",
     status: "manual_check",
-    evidence: [ev("SEC-RPTD-09-2020", "missing", "Requires human reading of signage requirements.")],
+    evidence: [
+      ev(
+        "SEC-RPTD-09-2020",
+        "documented",
+        "RPTD 09 rige la señalización de seguridad (E3-S04): §1 define las exigencias de las señales de seguridad con la finalidad de «evitar riesgos eléctricos u otros peligros»; §5 fija las especificaciones de letreros y rótulos (incl. muros, cercos y rejas de recintos con equipos eléctricos).",
+        undefined,
+        "§1 Objetivo / §5 Especificaciones"
+      ),
+    ],
   }),
   rule({
     id: "RULE-SEC-008",
@@ -556,7 +612,15 @@ export const regulatoryRulesCatalog = [
     description: "MV yard and switchgear zones should be checked against applicable substation and room criteria.",
     appParameter: "mvBus.layoutRequirements",
     priority: "P2",
-    evidence: [ev("SEC-RIC-13", "missing", "Requires human reading of substation requirements.")],
+    evidence: [
+      ev(
+        "SEC-RIC-13",
+        "documented",
+        "RIC 13 rige subestaciones y salas eléctricas (E3-S04): §2 (Alcance) se aplica a subestaciones y salas eléctricas con transformadores hasta «23.000» V; §6.4.7 «deberán existir espacios libres» de trabajo; §6.4.8 «un ancho de 1.000 mm» (muro a un lado) y «de 1.200 mm» (equipos a ambos lados). NOTA: 1,0/1,2 m corroboran la contradicción YA ESCALADA (D-a) del default ELECTRICAL_FRONT_WORKING_CLEARANCE_M = 0,9 m — valor NO modificado por esta sesión.",
+        undefined,
+        "§2 Alcance / §6.4.7 / §6.4.8"
+      ),
+    ],
   }),
   rule({
     id: "RULE-SEC-009",
@@ -566,7 +630,15 @@ export const regulatoryRulesCatalog = [
     description: "Cable installation method and routing should be checked against Chilean conductor/canalization rules.",
     appParameter: "cableRoutes.installMethod",
     priority: "P2",
-    evidence: [ev("SEC-RIC-04-2020", "missing", "Requires human reading of conductor and canalization rules.")],
+    evidence: [
+      ev(
+        "SEC-RIC-04-2020",
+        "documented",
+        "RIC 04 rige conductores y canalizaciones (E3-S04): §1 requisitos de los «sistemas de canalización a utilizar en las instalaciones de consumo»; §7.1.1 enumera los «sistemas de canalización eléctrica aceptados en el ámbito» de aplicación; §7.1.4 «selección del tipo de canalización en cada instalación particular» según influencias externas. (El 1 m de §7.9.3.1.a es PROFUNDIDAD y el 0,50 m de §7.9.9.1 es separación a otros servicios — hallazgo Cubo A; no contradicen el ancho de zanja 1 m.)",
+        undefined,
+        "§1 Objetivos / §7.1.1 / §7.1.4"
+      ),
+    ],
   }),
   rule({
     id: "RULE-SEC-010",
@@ -576,7 +648,15 @@ export const regulatoryRulesCatalog = [
     description: "Medium-voltage collector route assumptions should be checked against RPTD line requirements.",
     appParameter: "cableRoutes.MTrules",
     priority: "P2",
-    evidence: [ev("SEC-RPTD-13-2020", "missing", "Requires human reading of MV/LV line requirements.")],
+    evidence: [
+      ev(
+        "SEC-RPTD-13-2020",
+        "documented",
+        "RPTD 13 rige líneas MT/BT (E3-S04): §1 requisitos de seguridad de las «líneas eléctricas aéreas, subterráneas y subacuáticas» de baja y media tensión; §7.2 separación horizontal entre conductores aéreos «cuando menos de 2 m para líneas eléctricas» con tensiones de hasta 23 kV.",
+        undefined,
+        "§1 Objetivo / §7.2 Paralelismos"
+      ),
+    ],
   }),
   rule({
     id: "RULE-SEC-011",
@@ -587,7 +667,15 @@ export const regulatoryRulesCatalog = [
     appParameter: "electrical.nominalVoltageFrequency",
     automation: "no",
     status: "manual_check",
-    evidence: [ev("SEC-RPTD-01-2021", "missing", "Requires human reading of nominal voltage and frequency references.")],
+    evidence: [
+      ev(
+        "SEC-RPTD-01-2021",
+        "documented",
+        "RPTD 01 fija tensiones y frecuencias nominales (E3-S04): §1 «establecer la frecuencia nominal» y los niveles de tensión; §4 «frecuencia nominal será de 50 ciclos por» segundo (Chile = 50 Hz); §5.2 Tablas N°1–4 listan las tensiones nominales BT/MT/AT/EAT.",
+        undefined,
+        "§1 Objetivo / §4 Frecuencias / §5.2"
+      ),
+    ],
   }),
   rule({
     id: "RULE-SEC-012",
@@ -598,7 +686,36 @@ export const regulatoryRulesCatalog = [
     appParameter: "compliance.installationClassification",
     automation: "no",
     status: "manual_check",
-    evidence: [ev("SEC-RPTD-02-2020", "missing", "Requires human reading of classification criteria.")],
+    evidence: [
+      ev(
+        "SEC-RPTD-02-2020",
+        "documented",
+        "RPTD 02 establece la clasificación de instalaciones (E3-S04): §1 «cómo se clasifican los sistemas» y las instalaciones; §4 clasifica por nivel de tensión, p. ej. «Media tensión, sistemas sobre 1 kV y hasta 23 kV.» (§5–§12 por tipo de central, subestación, línea y red).",
+        undefined,
+        "§1 Objetivo / §4 Clasificación"
+      ),
+    ],
+  }),
+  rule({
+    id: "RULE-SEC-013",
+    category: "regulatory_sec",
+    severity: "checklist",
+    title: "Power transformer fire-separation distances",
+    description:
+      "Power transformers carry minimum fire-separation distances to buildings and to other transformers (RPTD 08 §5). The app does not model transformer fire separation — only the TRANSFORMER_TO_BESS spacing exists — so this is documented as a manual review item, not an enforced geometric check.",
+    appParameter: "compliance.transformerFireSeparation",
+    automation: "no",
+    status: "manual_check",
+    priority: "P2",
+    evidence: [
+      ev(
+        "SEC-RPTD-08-2020",
+        "documented",
+        "RPTD 08 §5 «Medidas de seguridad en la instalación de transformadores de poder» (E4-S01): §5.1, nuevas subestaciones, transformadores de poder >10 MVA «no menos de 6 m de cualquier edificación y de 9 m de otro» «transformador del mismo tipo.»; de no cumplirse, §5.2/§5.3 exigen muro cortafuego F120. §5.4 (centrales de generación y subestaciones de transmisión, <7.600 L de aceite) fija la separación «medida desde cualquier edificación, de acuerdo a lo indicado en la Tabla N° 1.»: «75 kVA o menos 3,0» / «76 - 333 kVA 6,0» / «más de 333 kVA 9,0» m. NOTA: la graduación 3/6/9 m es POR kVA (Tabla N°1, distancia a edificación) y §5.1 rige el caso >10 MVA — NO es «3/6/9 por ≤2 / 2-10 / >10 MVA». Esta regla documenta trafo↔edificación y trafo↔trafo; NO es trafo↔BESS y NO modifica TRANSFORMER_TO_BESS_M (separación trafo↔BESS sigue como candidato de inventario para E4-S02).",
+        undefined,
+        "§5 / §5.1 / §5.4 Tabla N°1"
+      ),
+    ],
   }),
 
   rule({
