@@ -1037,6 +1037,176 @@ export const regulatoryRulesCatalog = [
     status: "manual_check",
     evidence: [ev("SUNGROW-LOTO-202210", "missing", "LOTO document exists; emergency response scope requires separate validation.")],
   }),
+  // RULE-FIRE-006..013 — requisitos de separación NFPA 855 / IFC 1206
+  // Evidencia: L5 secondary extraction (INT-NFPA855-UL9540A-Extraction-2026 §2).
+  // Los valores en la app son CONSERVADORES respecto a los defaults NFPA 855
+  // (3 m vs 10 ft ≈ 3.05 m para edificios/límites; 3 m vs 3 ft ≈ 0.91 m para BESS-BESS).
+  // Reducciones requieren reporte UL 9540A del OEM + aprobación AHJ.
+  rule({
+    id: "RULE-FIRE-006",
+    category: "regulatory_fire_safety",
+    severity: "warning",
+    title: "BESS-to-BESS default separation (different groups)",
+    description:
+      "NFPA 855 default separation between BESS units of different groups is 3 ft (914 mm). App uses 3 m conservative default. Reduction requires UL 9540A unit-level test showing no thermal propagation.",
+    appParameter: "FireSafetyZone.bessToBesSeparation",
+    automation: "yes",
+    status: "implemented",
+    priority: "P1",
+    evidence: [
+      ev(
+        "INT-NFPA855-UL9540A-Extraction-2026",
+        "inferred",
+        "EXTRACCION §2: «BESS a BESS (Distinto Grupo): 3 ft (914 mm). Excepción: puede reducirse si UL 9540A Unit Level demuestra que no hay propagación térmica.» App usa 3 m (conservador)."
+      ),
+    ],
+    appliesToProfiles: ["international-fire-reference", "chile-utility-predesign"],
+  }),
+  rule({
+    id: "RULE-FIRE-007",
+    category: "regulatory_fire_safety",
+    severity: "warning",
+    title: "BESS-to-buildings default separation",
+    description:
+      "NFPA 855 default separation from BESS to any building (outdoors) is 10 ft (3.048 m). App uses 3 m conservative default. Reduces to 3 ft with 2-hr fire-rated wall (no openings) or favorable UL 9540A.",
+    appParameter: "FireSafetyZone.bessToBuilding",
+    automation: "yes",
+    status: "implemented",
+    priority: "P1",
+    evidence: [
+      ev(
+        "INT-NFPA855-UL9540A-Extraction-2026",
+        "inferred",
+        "EXTRACCION §2: «BESS a Edificios (Outdoors): 10 ft (3.048 m). Reduce a 3 ft si muro exterior incombustible 2-hrs sin aberturas, o con ensayo UL 9540A favorable.»"
+      ),
+    ],
+    appliesToProfiles: ["international-fire-reference", "chile-utility-predesign"],
+  }),
+  rule({
+    id: "RULE-FIRE-008",
+    category: "regulatory_fire_safety",
+    severity: "warning",
+    title: "BESS-to-property line default separation",
+    description:
+      "NFPA 855 default separation from BESS to property line / public way is 10 ft (3.048 m). App uses 3 m conservative default. Reduces to 3 ft with 1-hr fire barrier extending 5 ft above/beyond BESS perimeter, or UL 9540A.",
+    appParameter: "FireSafetyZone.bessToPropertyLine",
+    automation: "yes",
+    status: "implemented",
+    priority: "P1",
+    evidence: [
+      ev(
+        "INT-NFPA855-UL9540A-Extraction-2026",
+        "inferred",
+        "EXTRACCION §2: «BESS a Límites Prediales / Vía Pública: 10 ft (3.048 m). Reduce a 3 ft con muro cortafuego 1-hr (5 ft sobre y 5 ft horizontal) o ensayo UL 9540A.»"
+      ),
+    ],
+    appliesToProfiles: ["international-fire-reference", "chile-utility-predesign"],
+  }),
+  rule({
+    id: "RULE-FIRE-009",
+    category: "regulatory_fire_safety",
+    severity: "warning",
+    title: "BESS-to-egress route default separation",
+    description:
+      "NFPA 855 default separation from BESS to egress routes is 10 ft (3.048 m). App uses 3 m conservative default. Reduction requires UL 9540A proof that heat flux on egress path ≤ 1.3 kW/m².",
+    appParameter: "FireSafetyZone.bessToEgress",
+    automation: "yes",
+    status: "implemented",
+    priority: "P1",
+    evidence: [
+      ev(
+        "INT-NFPA855-UL9540A-Extraction-2026",
+        "inferred",
+        "EXTRACCION §2: «BESS a Vías de Evacuación (Egress): 10 ft (3.048 m). Reduce si ensayo UL 9540A demuestra Heat Flux ≤ 1.3 kW/m² en la vía de escape.»"
+      ),
+    ],
+    appliesToProfiles: ["international-fire-reference", "chile-utility-predesign"],
+  }),
+  rule({
+    id: "RULE-FIRE-010",
+    category: "regulatory_fire_safety",
+    severity: "warning",
+    title: "BESS-to-combustible vegetation / materials",
+    description:
+      "NFPA 855 requires a combustible-free area of at least 10 ft (3 m) around BESS equipment.",
+    appParameter: "FireSafetyZone.bessToVegetation",
+    automation: "yes",
+    status: "implemented",
+    priority: "P2",
+    evidence: [
+      ev(
+        "INT-NFPA855-UL9540A-Extraction-2026",
+        "inferred",
+        "EXTRACCION §2: «BESS a Vegetación/Combustibles: 10 ft (3 m). Se requiere un área libre de arbustos y combustibles de al menos 10 ft alrededor del equipo.»"
+      ),
+    ],
+    appliesToProfiles: ["international-fire-reference", "chile-utility-predesign"],
+  }),
+  rule({
+    id: "RULE-FIRE-011",
+    category: "regulatory_fire_safety",
+    severity: "blocking",
+    title: "Hazard Mitigation Analysis (HMA) mandatory above 600 kWh",
+    description:
+      "NFPA 855 / IFC 1206 require a Hazard Mitigation Analysis (HMA) for any ESS installation exceeding 600 kWh. HMA must model fires, detection/suppression failures, and ventilation. HMA is a deliverable to AHJ — not an in-app calculation.",
+    appParameter: "FireSafetyZone.hmaRequired",
+    automation: "yes",
+    status: "implemented",
+    priority: "P1",
+    evidence: [
+      ev(
+        "INT-NFPA855-UL9540A-Extraction-2026",
+        "inferred",
+        "EXTRACCION §2: «Hazard Mitigation Analysis (HMA): Es un estudio obligatorio si el proyecto supera los 600 kWh de capacidad almacenada. Debe modelar incendios, fallos de detección/extinción y ventilación.» EXTRACCION §5 frase recomendada confirma carácter mandatorio."
+      ),
+      ev(
+        "INT-UL-NFPA855-OnePage-2024",
+        "inferred",
+        "UL NFPA 855 one-pager: «Hazard mitigation analysis (HMA)» listado explícitamente como submittal obligatorio al AHJ bajo NFPA 855."
+      ),
+    ],
+    appliesToProfiles: ["international-fire-reference", "chile-utility-predesign"],
+  }),
+  rule({
+    id: "RULE-FIRE-012",
+    category: "regulatory_fire_safety",
+    severity: "warning",
+    title: "Maximum energy per ESS group (50 kWh without UL 9540A)",
+    description:
+      "NFPA 855 limits ESS groups to 50 kWh without UL 9540A unit-level test evidence. App uses 50 kWh as MAX_ENERGY_PER_GROUP_KWH. If UL 9540A confirms no thermal propagation at module level, grouping restrictions may be relaxed by AHJ.",
+    appParameter: "FireSafetyZone.maxGroupKwh",
+    automation: "yes",
+    status: "implemented",
+    priority: "P1",
+    evidence: [
+      ev(
+        "INT-NFPA855-UL9540A-Extraction-2026",
+        "inferred",
+        "EXTRACCION §2: «Los BESS se agrupan en clústeres de máximo 50 kWh. Dentro del clúster no hay separación exigida por norma, pero el fabricante suele pedir holguras de mantenimiento.»"
+      ),
+    ],
+    appliesToProfiles: ["international-fire-reference", "chile-utility-predesign"],
+  }),
+  rule({
+    id: "RULE-FIRE-013",
+    category: "regulatory_fire_safety",
+    severity: "warning",
+    title: "Public perimeter fence minimum 5 ft from BESS",
+    description:
+      "NFPA 855 requires a locked perimeter fence at minimum 5 ft (1.524 m) from the outer edge of BESS equipment. App fence_setback default is 5 m (conservative).",
+    appParameter: "FireSafetyZone.perimeterFence",
+    automation: "no",
+    status: "manual_check",
+    priority: "P2",
+    evidence: [
+      ev(
+        "INT-NFPA855-UL9540A-Extraction-2026",
+        "inferred",
+        "EXTRACCION §2: «Público General: 5 ft (1.524 m). Se exige un cerco perimetral cerrado con llave a mínimo 5 ft del borde exterior del BESS.»"
+      ),
+    ],
+    appliesToProfiles: ["international-fire-reference", "chile-utility-predesign"],
+  }),
   rule({
     id: "RULE-REP-001",
     category: "engineering_detail",

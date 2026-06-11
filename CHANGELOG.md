@@ -20,6 +20,40 @@ detailed electrical, civil, fire-protection or permitting engineering
 
 ---
 
+## [v1.2 — Fire safety rules close-out] — 2026-06-10
+
+Closes the fire-safety gap in the regulatory catalog using the project extraction
+document (EXTRACCION_NFPA_UL_PAPERS_BESS.md, L5 secondary) as evidence.
+Evidence class: `inferred` (secondary source — full NFPA 855 standard not licensed).
+Maturity index: 18%/23% unchanged (inferred = yellow, not green); fire items move
+from `assumption` → `inferred` (from "design guess" to "secondary-backed default").
+
+### Added
+
+- **8 RULE-FIRE entries** (006–013) in `regulatoryRulesCatalog.ts`:
+  - RULE-FIRE-006: BESS-to-BESS 3 ft default (conservative 3 m in app)
+  - RULE-FIRE-007: BESS-to-buildings 10 ft (3 m)
+  - RULE-FIRE-008: BESS-to-property line 10 ft (3 m)
+  - RULE-FIRE-009: BESS-to-egress route 10 ft (3 m)
+  - RULE-FIRE-010: BESS-to-vegetation/combustibles 10 ft (3 m)
+  - RULE-FIRE-011: HMA mandatory >600 kWh (NFPA 855 / IFC 1206)
+  - RULE-FIRE-012: Max 50 kWh per ESS group without UL 9540A
+  - RULE-FIRE-013: Perimeter fence ≥ 5 ft from BESS
+  All evidence: `inferred` citing `INT-NFPA855-UL9540A-Extraction-2026`.
+- **`INT-NFPA855-UL9540A-Extraction-2026`** in `documentRegistry.ts`:
+  project extraction document (L5 secondary, NFPA 855 / IFC 1206 / UL 9540A).
+- **12 fire items in `maturity_inventory.json`**: `assumption` → `inferred`
+  (`known_state` + `state_source` citing EXTRACCION §2).
+
+### Notes
+
+- RULE-FIRE-011 has dual evidence: EXTRACCION §2 + UL one-pager (HMA submittal).
+- Regulatory catalog: 5 fire rules → 13 fire rules.
+- Full NFPA 855 primary standard still not licensed; `documented` (green) status
+  for fire items requires purchase. Declared in §25 of E5-S01 informe.
+
+---
+
 ## [v1.1 — Basic engineering close-out] — 2026-06-10
 
 Deliberate contract change to the PDF report surface area (golden master updated):

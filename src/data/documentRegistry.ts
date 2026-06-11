@@ -1596,6 +1596,23 @@ export const documentRegistry: readonly DocumentRegistryEntry[] = [
       "02_REFERENCIAS_INTERNACIONALES_Y_BUENAS_PRACTICAS/04_NORMAS_LICENCIADAS_Y_REFERENCIAS_PUBLICAS/IEEE_P2800_General_Information_Public.pdf",
     isPrimary: false,
   },
+  {
+    // Extracción de ingeniería básica: compila los requisitos de separación
+    // NFPA 855 / IFC 1206 / UL 9540A relevantes para layout BESS exterior.
+    // ADVERTENCIA: documento de trabajo secundario — NO es la norma primaria.
+    // Citar como evidencia L5 (inferred); no elevar a certified_data sin
+    // adquirir NFPA 855 completa.
+    id: "INT-NFPA855-UL9540A-Extraction-2026",
+    title:
+      "NFPA 855 / UL 9540A — Extracción de requisitos de separación para layout BESS exterior (documento de trabajo interno, 2026)",
+    source: "third_party_reference",
+    level: "L5_whitepaper_brochure",
+    path: "Faltante ingenieria basica/EXTRACCION_NFPA_UL_PAPERS_BESS.md",
+    pathActive:
+      "Faltante ingenieria basica/EXTRACCION_NFPA_UL_PAPERS_BESS.md",
+    publishedAt: "2026",
+    isPrimary: false,
+  },
 ];
 
 
