@@ -17,6 +17,10 @@
 /.next/
 /out/
 
+# Sites / Vinext build artifacts
+/dist/
+/.wrangler/
+
 # production
 /build
 
@@ -56,4 +60,3 @@ agentdb.rvf.lock
 dev.log
 .agents/
 .claude/skills/
-

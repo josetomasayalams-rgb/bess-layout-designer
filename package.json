@@ -52,8 +52,8 @@
     "nanoid": "^5.1.11",
     "next": "16.2.6",
     "pako": "^2.1.0",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
     "react-map-gl": "^8.1.1",
     "tailwind-animate": "^0.2.10",
     "tailwind-merge": "^3.6.0",
@@ -61,19 +61,30 @@
     "zustand": "^5.0.13"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.37.1",
+    "@openai/sites-vite-plugin": "^0.1.0",
     "@tailwindcss/postcss": "^4",
+    "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/file-saver": "^2.0.7",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vinext/types": "^1.0.0-beta.2",
+    "@vitejs/plugin-react": "^6.0.2",
+    "@vitejs/plugin-rsc": "^0.5.26",
     "@vitest/coverage-v8": "^4.1.7",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "jsdom": "^29.1.1",
+    "react-server-dom-webpack": "^19.2.6",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "vitest": "^4.1.6"
-  }
+    "vinext": "^1.0.0-beta.2",
+    "vite": "^8.0.13",
+    "vitest": "^4.1.6",
+    "wrangler": "^4.92.0"
+  },
+  "type": "module"
 }
