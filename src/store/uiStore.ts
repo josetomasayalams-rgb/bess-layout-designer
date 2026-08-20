@@ -174,6 +174,7 @@ type UiState = {
   setUnitSystem: (unitSystem: UnitSystemId) => void;
   toggleLocale: () => void;
   toggleLeftSidebar: () => void;
+  setLeftSidebarCollapsed: (collapsed: boolean) => void;
   toggleRightSidebar: () => void;
   setRightSidebarCollapsed: (collapsed: boolean) => void;
   setViewMode: (mode: MapViewMode) => void;
@@ -272,6 +273,7 @@ export const useUiStore = create<UiState>((set, get) => ({
   },
   toggleLeftSidebar: () =>
     set((state) => ({ leftSidebarCollapsed: !state.leftSidebarCollapsed })),
+  setLeftSidebarCollapsed: (collapsed) => set({ leftSidebarCollapsed: collapsed }),
   toggleRightSidebar: () =>
     set((state) => ({ rightSidebarCollapsed: !state.rightSidebarCollapsed })),
   setRightSidebarCollapsed: (collapsed) =>

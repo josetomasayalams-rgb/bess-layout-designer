@@ -44,6 +44,7 @@ export function AppShell() {
   const hydrateLayerVisibility = useUiStore((s) => s.hydrateLayerVisibility);
   const setLayerVisibility = useUiStore((s) => s.setLayerVisibility);
   const setViewMode = useUiStore((s) => s.setViewMode);
+  const setLeftSidebarCollapsed = useUiStore((s) => s.setLeftSidebarCollapsed);
   const locale = useUiStore((s) => s.locale);
   const leftCollapsed = useUiStore((s) => s.leftSidebarCollapsed);
   const rightCollapsed = useUiStore((s) => s.rightSidebarCollapsed);
@@ -67,6 +68,7 @@ export function AppShell() {
       setLayerVisibility("baseMap", false);
       setLayerVisibility("buffers", false);
       setViewMode("2d");
+      setLeftSidebarCollapsed(true);
     }
   }, [
     hydrateLocale,
@@ -75,6 +77,7 @@ export function AppShell() {
     loadPublishedDemoProject,
     setLayerVisibility,
     setViewMode,
+    setLeftSidebarCollapsed,
   ]);
 
   const gridCols =

@@ -18,6 +18,8 @@ describe("uiStore layer visibility", () => {
     useUiStore.setState({
       viewMode: "2d",
       layerVisibility: defaultLayerVisibility,
+      leftSidebarCollapsed: false,
+      rightSidebarCollapsed: true,
     });
   });
 
@@ -44,6 +46,12 @@ describe("uiStore layer visibility", () => {
     useUiStore.getState().hydrateLayerVisibility();
 
     expect(useUiStore.getState().layerVisibility.labels).toBe(false);
+  });
+
+  it("can explicitly collapse the left sidebar for the published demo", () => {
+    useUiStore.getState().setLeftSidebarCollapsed(true);
+
+    expect(useUiStore.getState().leftSidebarCollapsed).toBe(true);
   });
 });
 
@@ -91,6 +99,13 @@ describe("uiStore theme", () => {
 });
 
 describe("uiStore initial defaults", () => {
+  beforeEach(() => {
+    useUiStore.setState({
+      leftSidebarCollapsed: false,
+      rightSidebarCollapsed: true,
+    });
+  });
+
   it("collapses the right sidebar and keeps the left sidebar open on open", () => {
     expect(useUiStore.getState().rightSidebarCollapsed).toBe(true);
     expect(useUiStore.getState().leftSidebarCollapsed).toBe(false);
