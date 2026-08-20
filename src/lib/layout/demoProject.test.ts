@@ -33,6 +33,13 @@ describe("createDemoProject", () => {
     expect(demo.lastToolResult.diagnostics.gridColumns).toBe(5);
     expect(demo.lastToolResult.diagnostics.gridRows).toBe(8);
     expect(demo.lastToolResult.diagnostics.terrainFitApplied).toBe(true);
-    expect(demo.projectName).toContain("200 MW / 800 MWh");
+    expect(summary.total_energy_mwh_dc_bol).toBeCloseTo(880.64, 6);
+    expect(demo.polygon).toEqual([
+      { lng: -69.56941554, lat: -22.20541316 },
+      { lng: -69.56602, lat: -22.205425 },
+      { lng: -69.56602544, lat: -22.20678009 },
+      { lng: -69.569421, lat: -22.20676825 },
+    ]);
+    expect(demo.projectName).toContain("200 MW / 880,64 MWh");
   });
 });

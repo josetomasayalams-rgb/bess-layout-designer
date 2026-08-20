@@ -234,9 +234,9 @@ export function KPIBar({
 
   const energyValue =
     summary.total_energy_mwh_dc_bol > 0
-      ? formatNumber(summary.total_energy_mwh_dc_bol, 0)
+      ? formatNumber(summary.total_energy_mwh_dc_bol, 2)
       : designTargets?.usableEnergyCommercialMWh?.value
-        ? formatNumber(designTargets.usableEnergyCommercialMWh.value, 0)
+        ? formatNumber(designTargets.usableEnergyCommercialMWh.value, 2)
         : "—";
 
   const durationHours =

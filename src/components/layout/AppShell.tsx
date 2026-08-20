@@ -42,6 +42,8 @@ export function AppShell() {
   const hydrateLocale = useUiStore((s) => s.hydrateLocale);
   const hydrateTheme = useUiStore((s) => s.hydrateTheme);
   const hydrateLayerVisibility = useUiStore((s) => s.hydrateLayerVisibility);
+  const setLayerVisibility = useUiStore((s) => s.setLayerVisibility);
+  const setViewMode = useUiStore((s) => s.setViewMode);
   const locale = useUiStore((s) => s.locale);
   const leftCollapsed = useUiStore((s) => s.leftSidebarCollapsed);
   const rightCollapsed = useUiStore((s) => s.rightSidebarCollapsed);
@@ -62,12 +64,17 @@ export function AppShell() {
     ) {
       publishedDemoLoaded.current = true;
       loadPublishedDemoProject();
+      setLayerVisibility("baseMap", false);
+      setLayerVisibility("buffers", false);
+      setViewMode("2d");
     }
   }, [
     hydrateLocale,
     hydrateTheme,
     hydrateLayerVisibility,
     loadPublishedDemoProject,
+    setLayerVisibility,
+    setViewMode,
   ]);
 
   const gridCols =

@@ -24,6 +24,19 @@ const DEMO_ANCHOR: ProjectAnchor = {
   lat0: -33.4569,
 };
 
+/** Published showcase site supplied by the user (four vertices, WGS84). */
+const PUBLISHED_DEMO_ANCHOR: ProjectAnchor = {
+  lng0: -69.56941554,
+  lat0: -22.20541316,
+};
+
+const PUBLISHED_DEMO_POLYGON: LngLat[] = [
+  { lng: -69.56941554, lat: -22.20541316 },
+  { lng: -69.56602, lat: -22.205425 },
+  { lng: -69.56602544, lat: -22.20678009 },
+  { lng: -69.569421, lat: -22.20676825 },
+];
+
 const BATTERY_SPEC_ID = "sungrow-st2752ux-us";
 const PCS_SPEC_ID = "sungrow-sc5000ud-mv-us-p3";
 
@@ -84,13 +97,8 @@ export function createDemoProject(): DemoProject {
  * project demonstrates the 320-container / 40-PCS 5x8 terrain-fit workflow.
  */
 export function createPublishedDemoProject(): PublishedDemoProject {
-  const anchor = DEMO_ANCHOR;
-  const polygon = [
-    { x_m: -250, y_m: -110 },
-    { x_m: 250, y_m: -110 },
-    { x_m: 250, y_m: 110 },
-    { x_m: -250, y_m: 110 },
-  ].map((point) => toLngLat(point, anchor));
+  const anchor = PUBLISHED_DEMO_ANCHOR;
+  const polygon = PUBLISHED_DEMO_POLYGON;
   const rules = getRegulatoryProfile("chile-sec-rgr-06-2024").rules;
   const lastToolResult = generatePreliminaryLayout({
     batteryContainerSpecId: "sungrow-st2752ux-us",
@@ -119,7 +127,7 @@ export function createPublishedDemoProject(): PublishedDemoProject {
     anchor,
     polygon,
     placedEquipment: lastToolResult.placed,
-    projectName: "BESS del Desierto · 200 MW / 800 MWh · grilla 5×8",
+    projectName: "BESS del Desierto · 200 MW / 880,64 MWh · grilla 5×8",
     lastToolResult,
   };
 }
