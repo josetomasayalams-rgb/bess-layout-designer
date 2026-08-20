@@ -131,6 +131,7 @@ const EXPECTED_ACTIONS = [
   "setMode",
   "setProjectName",
   "loadDemoProject",
+  "loadPublishedDemoProject",
   "resetProject",
   "undo",
   "redo",

@@ -16,11 +16,33 @@ import type { TechnicalReportData } from "@/lib/report/buildReportData";
 import type { ProjectExclusion } from "@/types/technical";
 import type { EvaluatedRuleEntry } from "@/rules/regulatoryProfileEvaluator";
 
+/**
+ * Number formatter for the report. Uses Chilean grouping (1.234,5) consistently
+ * so every figure across cover, tables and prose reads the same way. `digits`
+ * fixes both min and max fraction digits. Non-finite / missing yields an em dash.
+ */
 export const fmtNum = (v: number | undefined, digits = 2): string =>
-  v === undefined || !Number.isFinite(v) ? "—" : v.toFixed(digits);
+  v === undefined || !Number.isFinite(v)
+    ? "—"
+    : new Intl.NumberFormat("es-CL", {
+        minimumFractionDigits: digits,
+        maximumFractionDigits: digits,
+        useGrouping: true,
+      }).format(v);
 
-export const fmtInt = (v: number | undefined): string =>
-  v === undefined ? "—" : String(Math.round(v));
+export const fmtInt = (v: number | undefined): string => fmtNum(v, 0);
+
+/** Percentage with an SI-spaced unit (e.g. "1,4 %"). */
+export const fmtPct = (v: number | undefined, digits = 0): string =>
+  v === undefined || !Number.isFinite(v) ? "—" : `${fmtNum(v, digits)} %`;
+
+/**
+ * Resolve a Spanish singular/plural at build time so the report never prints the
+ * lazy "alerta(s)" parenthetical. Returns just the noun phrase (caller supplies
+ * the count): `plural(1, "alerta crítica", "alertas críticas")` -> "alerta crítica".
+ */
+export const plural = (n: number, singular: string, pluralForm: string): string =>
+  n === 1 ? singular : pluralForm;
 
 export const formatIsoDate = (iso: string): string => {
   try {
@@ -233,7 +255,8 @@ export function resultSentence(data: TechnicalReportData): string {
     `Prediseño preliminar para un BESS de ${power} MW / ${energy} MWh ` +
     `(≈ ${dur} h de duración nominal estimada).`;
   if (criticals > 0) {
-    return `${base} Se identificaron ${criticals} alerta(s) crítica(s) que requieren revisión técnica antes de avanzar.`;
+    const verb = criticals === 1 ? "requiere" : "requieren";
+    return `${base} Se ${criticals === 1 ? "identificó" : "identificaron"} ${criticals} ${plural(criticals, "alerta crítica", "alertas críticas")} que ${verb} revisión técnica antes de avanzar.`;
   }
   return `${base} No se identificaron alertas críticas de consistencia en esta revisión preliminar.`;
 }
@@ -250,7 +273,7 @@ export function buildNextSteps(data: TechnicalReportData): string[] {
   const criticals = data.consistencyAlerts.filter((a) => a.severity === "critical");
   if (criticals.length > 0) {
     steps.push(
-      `Resolver ${criticals.length} alerta(s) crítica(s) de consistencia entre KPIs, inventario y arquitectura.`,
+      `Resolver ${criticals.length} ${plural(criticals.length, "alerta crítica", "alertas críticas")} de consistencia entre KPIs, inventario y arquitectura.`,
     );
   }
 
@@ -258,19 +281,19 @@ export function buildNextSteps(data: TechnicalReportData): string[] {
   if (ev) {
     if (ev.totals.blockingViolations > 0) {
       steps.push(
-        `Revisar ${ev.totals.blockingViolations} incumplimiento(s) bloqueante(s) del perfil normativo aplicado.`,
+        `Revisar ${ev.totals.blockingViolations} ${plural(ev.totals.blockingViolations, "incumplimiento bloqueante", "incumplimientos bloqueantes")} del perfil normativo aplicado.`,
       );
     }
     if (ev.totals.manualCheck > 0) {
       steps.push(
-        `Completar ${ev.totals.manualCheck} verificación(es) de revisión manual del perfil normativo.`,
+        `Completar ${ev.totals.manualCheck} ${plural(ev.totals.manualCheck, "verificación", "verificaciones")} de revisión manual del perfil normativo.`,
       );
     }
   }
 
   if (data.pendingData.length > 0) {
     steps.push(
-      `Confirmar ${data.pendingData.length} dato(s) pendiente(s) de validación con fabricante / EPC.`,
+      `Confirmar ${data.pendingData.length} ${plural(data.pendingData.length, "dato pendiente", "datos pendientes")} de validación con fabricante / EPC.`,
     );
   }
 

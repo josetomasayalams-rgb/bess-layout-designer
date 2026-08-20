@@ -24,7 +24,7 @@ describe("report theme drift guard", () => {
   it("no report module hardcodes the brand accent hex (must reference reportTheme)", () => {
     for (const f of reportSourceFiles()) {
       const content = readFileSync(join(here, f), "utf8");
-      expect(content.includes("#0284c7"), `${f} hardcodes the accent hex`).toBe(
+      expect(content.includes("#0071e3"), `${f} hardcodes the accent hex`).toBe(
         false
       );
     }
@@ -41,6 +41,6 @@ describe("report theme drift guard", () => {
 
   it("exposes the canonical accent only from reportTheme", () => {
     const theme = readFileSync(join(here, "reportTheme.ts"), "utf8");
-    expect(theme.includes("#0284c7")).toBe(true);
+    expect(theme.includes("#0071e3")).toBe(true);
   });
 });

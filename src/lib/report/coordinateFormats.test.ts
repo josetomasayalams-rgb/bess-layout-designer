@@ -37,6 +37,30 @@ describe("formatDMS — Bogotá (4.711, -74.072)", () => {
   });
 });
 
+describe("formatDMS — seconds rounding carry", () => {
+  // lat where seconds compute to ~59.999": must carry to the next minute
+  // instead of rendering an invalid 60.00".
+  const coord = { lat: 33 + 27 / 60 + 59.999 / 3600, lng: 10 };
+  it("never renders 60 seconds at the shown precision", () => {
+    const dms = formatDMS(coord);
+    expect(dms.lat).not.toMatch(/60\.00"/);
+    expect(dms.lat).not.toMatch(/'60'/);
+  });
+  it("carries the overflow into the minutes field", () => {
+    const dms = formatDMS(coord);
+    expect(dms.latParts.seconds).toBeLessThan(60);
+    expect(dms.latParts.minutes).toBe(28);
+    expect(dms.latParts.degrees).toBe(33);
+  });
+  it("carries minutes into degrees when seconds and minutes both overflow", () => {
+    // 33°59'59.999" → 34°00'00"
+    const dms = formatDMS({ lat: 33 + 59 / 60 + 59.999 / 3600, lng: 10 });
+    expect(dms.latParts.degrees).toBe(34);
+    expect(dms.latParts.minutes).toBe(0);
+    expect(dms.latParts.seconds).toBe(0);
+  });
+});
+
 describe("toUTM — Santiago (-33.4569, -70.6483)", () => {
   const utm = toUTM({ lat: -33.4569, lng: -70.6483 });
 

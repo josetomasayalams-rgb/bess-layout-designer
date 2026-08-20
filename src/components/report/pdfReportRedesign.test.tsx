@@ -25,7 +25,7 @@ import {
   maturityLevel,
   resultSentence,
 } from "./pdfFormatters";
-import { OUTCOME_LABEL, SEVERITY_LABEL_ES } from "./pdfSeverityMaps";
+import { OUTCOME_LABEL, SEVERITY_LABEL } from "./pdfSeverityMaps";
 
 function buildData() {
   const anchor: ProjectAnchor = { lng0: -70.2, lat0: -24.1 };
@@ -120,8 +120,8 @@ describe("Spanish severity / outcome labels", () => {
   });
 
   it("translates severity codes to Spanish", () => {
-    expect(SEVERITY_LABEL_ES.blocking).toBe("Bloqueante");
-    expect(SEVERITY_LABEL_ES.warning).toBe("Aviso");
+    expect(SEVERITY_LABEL.blocking).toBe("Bloqueante");
+    expect(SEVERITY_LABEL.warning).toBe("Aviso");
   });
 });
 

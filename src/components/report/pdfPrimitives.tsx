@@ -26,7 +26,7 @@
 import type React from "react";
 import { Page, Text, View } from "@react-pdf/renderer";
 import { REPORT_COLORS, reportStyles as s } from "./reportStyles";
-import { PageFooter, PageHeader, Watermark } from "./pdfChrome";
+import { PageFooter, PageHeader } from "./pdfChrome";
 import type { TechnicalReportData } from "@/lib/report/buildReportData";
 
 // ──────────────────────────────────────────────────────────────────
@@ -58,7 +58,6 @@ export function SectionPage({
   }
   return (
     <Page size="A4" style={s.page}>
-      <Watermark />
       <PageHeader data={data} />
       <View>
         <View style={s.sectionHeader}>
@@ -67,7 +66,7 @@ export function SectionPage({
         </View>
         {children}
       </View>
-      <PageFooter data={data} />
+      <PageFooter />
     </Page>
   );
 }
@@ -109,7 +108,7 @@ export function Table({
       {rows.map((r, i) => (
         <View
           key={`row-${i}`}
-          style={[s.tableRow, i % 2 === 1 ? s.tableRowAlt : {}]}
+          style={s.tableRow}
         >
           {cols.map((c, j) => (
             <Text
@@ -158,47 +157,42 @@ export function AlertCard({
   message: string;
   recommendation: string;
 }) {
+  // Severity is communicated through ONE channel — the left accent bar color,
+  // drawn from the monochrome tone scale — plus the badge text weight. The card
+  // body stays white and the other three borders stay a fixed hairline, so the
+  // page reads calm rather than as a stack of tinted boxes.
   const tone = {
-    critical: {
-      color: REPORT_COLORS.danger,
-      bg: "#fff1f2",
-      badgeBg: "#fee2e2",
-      badgeFg: REPORT_COLORS.danger,
-      label: "Crítico",
-    },
-    warning: {
-      color: REPORT_COLORS.warn,
-      bg: "#fffbeb",
-      badgeBg: "#fef3c7",
-      badgeFg: REPORT_COLORS.warn,
-      label: "Aviso",
-    },
-    info: {
-      color: REPORT_COLORS.accent,
-      bg: "#eff6ff",
-      badgeBg: "#e0f2fe",
-      badgeFg: "#075985",
-      label: "Informativo",
-    },
+    critical: { bar: REPORT_COLORS.danger, badgeFg: REPORT_COLORS.danger, label: "Crítico" },
+    warning: { bar: REPORT_COLORS.muted, badgeFg: REPORT_COLORS.muted, label: "Aviso" },
+    info: { bar: REPORT_COLORS.accent, badgeFg: REPORT_COLORS.accent, label: "Informativo" },
   }[severity];
 
   return (
-    <View style={[s.alertCard, { borderColor: tone.color, backgroundColor: tone.bg }]}>
-      <View style={[s.alertAccentBar, { backgroundColor: tone.color }]} />
+    <View style={s.alertCard}>
+      <View style={[s.alertAccentBar, { backgroundColor: tone.bar }]} />
       <View style={s.alertBody}>
         <View style={s.alertHeaderRow}>
-          <Text
-            style={[s.alertBadge, { backgroundColor: tone.badgeBg, color: tone.badgeFg }]}
-          >
-            {tone.label}
-          </Text>
+          <Text style={[s.alertBadge, { color: tone.badgeFg }]}>{tone.label}</Text>
           <Text style={s.alertTitle}>{title}</Text>
         </View>
         <Text style={s.alertMessage}>{message}</Text>
-        <Text style={s.alertRecommendation}>
-          Acción recomendada: {recommendation}
-        </Text>
+        <Text style={s.alertRecommendationLabel}>Acción recomendada</Text>
+        <Text style={s.alertRecommendation}>{recommendation}</Text>
       </View>
+    </View>
+  );
+}
+
+/**
+ * EmptyState — a calm, intentional placeholder for sections that have no data
+ * yet (no POI, no equipment, no regulatory evaluation). A thin left rule plus
+ * quiet text reads as "by design", not as a rendering gap.
+ */
+export function EmptyState({ text, hint }: { text: string; hint?: string }) {
+  return (
+    <View style={s.emptyState}>
+      <Text style={s.emptyStateText}>{text}</Text>
+      {hint ? <Text style={s.emptyStateHint}>{hint}</Text> : null}
     </View>
   );
 }

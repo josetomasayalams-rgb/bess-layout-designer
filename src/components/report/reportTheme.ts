@@ -8,33 +8,42 @@
  * derives inline styles. This is what stops the PDF and the preview from
  * drifting on palette/type/spacing.
  *
- * Phase 2 (this commit) is intentionally value-preserving: `color` and `font`
- * hold the EXACT values previously inlined in `reportStyles.ts`, so the
- * rendered PDF — and every snapshot — is byte-identical. Later phases re-point
- * `font` at the registered Inter families (Phase 4) and introduce the branded
- * palette (Phase 5) here, in one place.
+ * Design DNA (Apple): "less but better". A near-monochrome palette — near-black
+ * ink, three neutral greys, white — plus ONE restrained accent (Apple blue) and
+ * ONE disciplined red reserved for genuinely critical states. Severity and data
+ * classification are communicated with grey tints + the single accent + type
+ * weight, never a rainbow of hues. Whitespace and 0.5pt hairlines do the work
+ * that heavy boxes and zebra fills used to.
  */
 
-/** Core ink/paper palette (current "paper técnico clásico" values, unchanged). */
+/**
+ * Core palette — near-monochrome + one accent + one red.
+ * `warn`/`ok` are retained as role keys (many call sites read them) but are
+ * deliberately remapped onto the neutral system: caution reads as grey + weight,
+ * "pass/compliant" reads as plain ink + a glyph. The only surviving non-neutral
+ * status color is `danger`, reserved for blocking/critical.
+ */
 const color = {
-  ink: "#0f172a", // negro tinta (slate-900)
-  body: "#334155", // texto cuerpo (slate-700)
-  muted: "#64748b", // notas, captions (slate-500)
-  rule: "#cbd5e1", // líneas separadoras finas (slate-300)
+  ink: "#1d1d1f", // near-black — all primary text and values
+  body: "#3a3a3c", // body prose (hue-neutral graphite)
+  muted: "#57637a", // labels, captions (≥7pt); darkened for AA contrast
+  faint: "#94a3b8", // unavailable / pending placeholders only
+  rule: "#d2d2d7", // 0.5pt hairlines (separators, card borders)
+  ruleFaint: "#e2e8f0", // faintest hairlines (table rows, chrome rules)
   paper: "#ffffff",
-  paperAlt: "#f8fafc", // fondo de tablas alternadas (slate-50)
-  accent: "#0284c7", // azul de ingeniería (sky-600)
-  warn: "#b45309",
-  danger: "#991b1b",
-  ok: "#166534",
-  pendingTone: "#7c2d12",
+  paperAlt: "#f5f5f7", // rare subtle surface — never table zebra
+  accent: "#0071e3", // the single accent (Apple blue)
+  danger: "#d70015", // the only non-neutral status — critical / blocking only
+  // Demoted to neutral so legacy callers go monochrome without edits:
+  warn: "#57637a", // caution = weight + grey, not amber
+  ok: "#1d1d1f", // compliant = ink + checkmark, not green
 } as const;
 
 /**
- * Font role → family. The sans roles now point at the self-hosted Inter brand
- * face (registered in `registerReportFonts.ts`, each weight as its own family),
- * matching the app's Inter identity. Mono roles stay on standard Courier (Inter
- * ships no monospace). Role names are stable so every consumer is unaffected.
+ * Font role -> family. Sans roles point at the self-hosted Inter brand face
+ * (registered in `registerReportFonts.ts`, each weight its own family). Mono
+ * roles stay on Courier (Inter ships no monospace) and are reserved for true
+ * identifiers, coordinates and model codes — never general numerics.
  */
 const font = {
   body: "Inter",
@@ -48,63 +57,58 @@ const font = {
 } as const;
 
 /**
- * Semantic type scale (pt), derived from the sizes already used across the
- * report StyleSheet. Available for consumers to reference; wiring individual
- * styles to it is done incrementally without changing values.
+ * Type scale (pt) — one modular ladder, consumed by `reportStyles.ts`.
+ * Weights are limited to the registered 400 / 600 / 700 Inter families; there
+ * is no Medium (500) or tabular face, so "calm emphasis" uses 600.
  */
 const type = {
-  display: 32,
-  h1: 14,
-  h2: 11,
-  body: 9.5,
-  label: 7,
-  data: 10,
-  caption: 7.5,
+  cover: 34, // cover title only
+  coverSub: 15, // cover subtitle (upright, not italic)
+  title: 18, // section header title (single role)
+  subtitle: 12, // sub-section titles, qualifiers
+  kpi: 21, // hero KPI values (cover); 18 for secondary
+  kpiSecondary: 18,
+  body: 9.5, // base prose
+  data: 9, // table / definition cells
+  caption: 7.5, // notes, captions
+  label: 7, // uppercase small-caps labels (hard floor)
 } as const;
 
-/** Spacing rhythm (pt), aligned to the report's existing margins/gaps. */
+/** Spacing rhythm (pt) on a 4/8 grid. Consumed by `reportStyles.ts`. */
 const space = {
-  page: 48,
-  section: 14,
-  block: 8,
-  tight: 4,
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 24,
+  xxl: 32,
+  page: 56, // horizontal page margin
+  pageVertical: 64, // top / bottom page margin
 } as const;
 
-/** Corner radii (pt). */
+/** Corner radii (pt). Flat by default; small radius only for rare callouts. */
 const radius = {
   sm: 2,
   md: 4,
-  lg: 6,
   pill: 999,
 } as const;
 
 /**
- * Data-classification palette, carried verbatim from the app's semantic tokens
- * (globals.css: certified #3b82f6, preliminary #f59e0b, pending #f43f5e) but
- * darkened 1–2 steps for legible contrast on white paper. Each role is a
- * text / fill / border triplet so a value's basis is shown, not asserted.
- * `calculated` is the neutral "derived from other values" tone.
+ * Unified tone scale — ONE 4-role system that replaces the former parallel
+ * `classification` and `status` triplet blocks. No saturated fills: text color
+ * and a hairline border carry meaning, the accent and weight do the emphasis.
+ *
+ * Role mapping:
+ *   neutral  -> calculated / warning / info / out / manual / pending-data
+ *   accent   -> certified / active-info / emphasised pass
+ *   ink      -> pending-validation / compliant (paired with bold + a glyph)
+ *   critical -> blocking / critical (the only red; hairline border, no fill)
  */
-const classification = {
-  certified: { text: "#1d4ed8", fill: "#eff6ff", border: "#bfdbfe" },
-  preliminary: { text: "#b45309", fill: "#fffbeb", border: "#fde68a" },
-  pending: { text: "#be123c", fill: "#fff1f2", border: "#fecdd3" },
-  calculated: { text: "#475569", fill: "#f8fafc", border: "#e2e8f0" },
-} as const;
-
-/** Semantic status palette (print-tuned), mirroring the app's status tokens. */
-const status = {
-  compliant: { text: "#15803d", fill: "#f0fdf4", border: "#bbf7d0" },
-  warning: { text: "#b45309", fill: "#fffbeb", border: "#fde68a" },
-  critical: { text: "#be123c", fill: "#fff1f2", border: "#fecdd3" },
-  info: { text: "#075985", fill: "#f0f9ff", border: "#bae6fd" },
-} as const;
-
-/** Diagonal "preliminary" page watermark. */
-const watermark = {
-  text: "PRELIMINAR · BORRADOR CONCEPTUAL",
-  color: "#0f172a",
-  opacity: 0.05,
+const tone = {
+  neutral: { text: color.muted, border: color.rule, fill: "transparent" },
+  accent: { text: color.accent, border: color.rule, fill: "transparent" },
+  ink: { text: color.ink, border: color.rule, fill: "transparent" },
+  critical: { text: color.danger, border: color.danger, fill: "transparent" },
 } as const;
 
 export const reportTheme = {
@@ -113,9 +117,8 @@ export const reportTheme = {
   type,
   space,
   radius,
-  classification,
-  status,
-  watermark,
+  tone,
 } as const;
 
 export type ReportTheme = typeof reportTheme;
+export type ToneRole = keyof typeof tone;

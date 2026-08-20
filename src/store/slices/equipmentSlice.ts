@@ -277,11 +277,13 @@ export function createEquipmentSlice(
         polygon[0] ??
         (anchor ? { lng: anchor.lng0, lat: anchor.lat0 } : DEFAULT_CONCEPTUAL_LAYOUT_POINT);
       const resolvedAnchor = anchor ?? { lng0: startPoint.lng, lat0: startPoint.lat };
+      const hasTerrainPolygon = polygon.length >= 3;
       const result = generatePreliminaryLayout({
         ...input,
         anchor: resolvedAnchor,
         startPoint,
-        fitInsidePolygon: false,
+        polygon: hasTerrainPolygon ? polygon : undefined,
+        fitInsidePolygon: hasTerrainPolygon,
       });
 
       if (result.status === "error") {

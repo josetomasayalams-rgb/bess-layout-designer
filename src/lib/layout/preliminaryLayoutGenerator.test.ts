@@ -4,7 +4,7 @@ import {
   generatePreliminaryLayout,
   gridShapeOptions,
 } from "@/lib/layout/preliminaryLayoutGenerator";
-import { toLocal } from "@/lib/geometry/projection";
+import { toLocal, toLngLat } from "@/lib/geometry/projection";
 
 const rules = {
   bessToBess_m: 3,
@@ -12,6 +12,19 @@ const rules = {
   electricalFrontWorkingClearance_m: 0.9,
   transformerToBessRecommended_m: 3,
 };
+
+function rectangleMeters(
+  anchor: { lng0: number; lat0: number },
+  widthM: number,
+  heightM: number
+) {
+  return [
+    toLngLat({ x_m: -widthM / 2, y_m: -heightM / 2 }, anchor),
+    toLngLat({ x_m: widthM / 2, y_m: -heightM / 2 }, anchor),
+    toLngLat({ x_m: widthM / 2, y_m: heightM / 2 }, anchor),
+    toLngLat({ x_m: -widthM / 2, y_m: heightM / 2 }, anchor),
+  ];
+}
 
 describe("generatePreliminaryLayout", () => {
   it("generates a free conceptual layout from quantities", () => {
@@ -272,6 +285,67 @@ describe("generatePreliminaryLayout — centroid scoring", () => {
     expect(result.status).toBe("success");
     // All placed equipment should be within the polygon (regularization guarantee)
     expect(result.placed.length).toBe(9); // 8 BESS + 1 PCS
+  });
+
+  it("fits and centers the requested 5x8 grid for 320 containers and 40 PCS blocks", () => {
+    const polygon = rectangleMeters(anchor, 420, 180);
+    const result = generatePreliminaryLayout({
+      batteryContainerSpecId: "bess-sungrow-st2752ux-us",
+      pcsSpecId: "mvskid-sungrow-sc5000ud-mv-desierto",
+      batteryContainerCount: 320,
+      pcsCount: 40,
+      containersPerPcs: 8,
+      blockColumns: 5,
+      anchor,
+      startPoint: polygon[0],
+      polygon,
+      rules,
+      fitInsidePolygon: true,
+    });
+
+    expect(result.status).toBe("success");
+    expect(result.placed).toHaveLength(360);
+    expect(result.diagnostics).toMatchObject({
+      gridColumns: 5,
+      gridRows: 8,
+      terrainFitApplied: true,
+      arrangementAdjusted: false,
+    });
+
+    const localPolygon = polygon.map((point) => toLocal(point, anchor));
+    const localLayout = result.placed.map((item) => toLocal(item.anchor, anchor));
+    const polygonCenter = {
+      x_m: localPolygon.reduce((sum, point) => sum + point.x_m, 0) / localPolygon.length,
+      y_m: localPolygon.reduce((sum, point) => sum + point.y_m, 0) / localPolygon.length,
+    };
+    const layoutCenter = {
+      x_m: localLayout.reduce((sum, point) => sum + point.x_m, 0) / localLayout.length,
+      y_m: localLayout.reduce((sum, point) => sum + point.y_m, 0) / localLayout.length,
+    };
+
+    expect(Math.hypot(layoutCenter.x_m - polygonCenter.x_m, layoutCenter.y_m - polygonCenter.y_m)).toBeLessThan(20);
+  });
+
+  it("changes the grid shape when the requested shape cannot fit the terrain", () => {
+    const polygon = rectangleMeters(anchor, 800, 100);
+    const result = generatePreliminaryLayout({
+      batteryContainerSpecId: "bess-sungrow-st2752ux-us",
+      pcsSpecId: "mvskid-sungrow-sc5000ud-mv-desierto",
+      batteryContainerCount: 320,
+      pcsCount: 40,
+      containersPerPcs: 8,
+      blockColumns: 5,
+      anchor,
+      startPoint: polygon[0],
+      polygon,
+      rules,
+      fitInsidePolygon: true,
+    });
+
+    expect(result.status).toBe("success");
+    expect(result.diagnostics.arrangementAdjusted).toBe(true);
+    expect(result.diagnostics.gridColumns).not.toBe(5);
+    expect(result.diagnostics.gridRows).toBeDefined();
   });
 });
 

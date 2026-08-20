@@ -107,8 +107,8 @@ export function SizingContainerSection({
         </div>
         <p className="text-[10px] leading-snug text-slate-500">
           {isEs
-            ? "Define el número de contenedores y elige una forma de grilla; los PCS se agregan automáticamente."
-            : "Set the container count and pick a grid shape; PCS units are added automatically."}
+            ? "Define el número de contenedores y elige una forma de grilla; los PCS se agregan automáticamente. Con un terreno dibujado, Generar centra la grilla y ajusta su orientación o forma si no cabe."
+            : "Set the container count and pick a grid shape; PCS units are added automatically. With a drawn site, Generate centers the grid and adjusts its orientation or shape if it does not fit."}
         </p>
 
         <label className="block text-[11px] text-slate-500">
@@ -269,6 +269,16 @@ export function SizingContainerSection({
                 })}{" "}
                 · {formatNumber(lastToolResult.placed.length, 0, locale)}{" "}
                 {isEs ? "equipos" : "items"}
+              </div>
+            ) : null}
+            {lastToolResult.diagnostics.gridColumns &&
+            lastToolResult.diagnostics.gridRows ? (
+              <div className="mt-1 font-mono text-cyan-100/80">
+                {isEs ? "Grilla aplicada" : "Applied grid"}: {lastToolResult.diagnostics.gridColumns}×
+                {lastToolResult.diagnostics.gridRows}
+                {lastToolResult.diagnostics.orientationDeg
+                  ? ` · ${lastToolResult.diagnostics.orientationDeg}°`
+                  : null}
               </div>
             ) : null}
           </div>

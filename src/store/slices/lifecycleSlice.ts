@@ -10,7 +10,11 @@
  */
 
 import type { StoreApi } from "zustand";
-import { createDemoProject } from "@/lib/layout/demoProject";
+import {
+  createDemoProject,
+  createPublishedDemoProject,
+} from "@/lib/layout/demoProject";
+import { bessDelDesiertoPresetV12 } from "@/data/projectCaseStudies";
 import {
   emptyComparison,
   emptyLayoutEditState,
@@ -32,6 +36,7 @@ export type LifecycleSlice = {
   setMode: ProjectState["setMode"];
   setProjectName: ProjectState["setProjectName"];
   loadDemoProject: ProjectState["loadDemoProject"];
+  loadPublishedDemoProject: ProjectState["loadPublishedDemoProject"];
   resetProject: ProjectState["resetProject"];
   undo: ProjectState["undo"];
   redo: ProjectState["redo"];
@@ -78,6 +83,62 @@ export function createLifecycleSlice(
         layoutEdit: emptyLayoutEditState,
         terrainFitPreview: emptyTerrainFitPreviewState,
         comparison: emptyComparison,
+      }));
+    },
+
+    loadPublishedDemoProject: () => {
+      const demo = createPublishedDemoProject();
+      const preset = bessDelDesiertoPresetV12;
+      set((state) => ({
+        ...recordHistory(state),
+        anchor: demo.anchor,
+        polygon: demo.polygon,
+        repairZone: [],
+        placedEquipment: demo.placedEquipment,
+        cableRoutes: [],
+        accessRoads: [],
+        previewTerrain: null,
+        interactionMode: "select",
+        pendingPlacementSpecId: null,
+        selectedEquipmentId: null,
+        selectedCaseStudyId: "bess-del-desierto",
+        lastToolResult: demo.lastToolResult,
+        lastRepairResult: null,
+        layoutEdit: emptyLayoutEditState,
+        terrainFitPreview: emptyTerrainFitPreviewState,
+        comparison: emptyComparison,
+        projectName: demo.projectName,
+        designTargets: preset.designTargets,
+        blocks: preset.blocks,
+        conversionStations: preset.conversionStations,
+        mvFeeders: preset.mvFeeders,
+        mvBuses: preset.mvBuses,
+        poi: preset.poi,
+        mainTransformer: preset.mainTransformer,
+        auxiliaryServices: preset.auxiliaryServices,
+        ppc: preset.ppc,
+        operationalLimits: preset.operationalLimits,
+        lossEstimates: preset.lossEstimates,
+        inconsistencies: preset.inconsistencies,
+        assumptionsV2: preset.pendingDataV12.map((item) => ({
+          id: item.id,
+          description: item.topic,
+          unit: undefined,
+          risk:
+            item.priority === "critical"
+              ? "high"
+              : item.priority === "important"
+                ? "medium"
+                : "low",
+          mustVerifyBeforeIFC: item.priority !== "desirable",
+          evidence: [
+            {
+              documentId: "__none__",
+              confidence: "missing",
+              note: item.reason,
+            },
+          ],
+        })),
       }));
     },
 

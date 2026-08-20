@@ -67,6 +67,11 @@ export type PreliminaryLayoutResult = {
     boundarySetbackM: number;
     layoutAreaM2: number | null;
     candidateCount: number;
+    gridColumns?: number;
+    gridRows?: number;
+    orientationDeg?: number;
+    terrainFitApplied?: boolean;
+    arrangementAdjusted?: boolean;
     templateId?: string;
     classification?: SourceReliability;
     warnings?: string[];
@@ -88,6 +93,9 @@ type RelativeItem = {
 type RelativeLayout = {
   items: RelativeItem[];
   blockCount: number;
+  blockColumns: number;
+  blockRows: number;
+  orientationDeg: number;
   areaM2: number;
 };
 
@@ -180,22 +188,59 @@ function centroid(points: LocalPoint[]): LocalPoint {
   return { x_m: sum.x_m / points.length, y_m: sum.y_m / points.length };
 }
 
+/** Area-weighted polygon centroid in the local ENU coordinate system. */
+function polygonCentroid(points: LocalPoint[]): LocalPoint {
+  if (points.length < 3) return centroid(points);
+
+  let twiceArea = 0;
+  let x = 0;
+  let y = 0;
+  for (let index = 0; index < points.length; index++) {
+    const current = points[index];
+    const next = points[(index + 1) % points.length];
+    const cross = current.x_m * next.y_m - next.x_m * current.y_m;
+    twiceArea += cross;
+    x += (current.x_m + next.x_m) * cross;
+    y += (current.y_m + next.y_m) * cross;
+  }
+
+  if (Math.abs(twiceArea) < 1e-6) return centroid(points);
+  return {
+    x_m: x / (3 * twiceArea),
+    y_m: y / (3 * twiceArea),
+  };
+}
+
 /**
  * Score a candidate placement: lower is better.
  * Prioritizes proximity of layout centroid to polygon centroid,
- * with a small area tiebreaker.
+ * then terrain/layout aspect match and a small area tiebreaker.
  */
 function candidatePlacementScore(
   shiftedItems: RelativeItem[],
   polygonCentroid: LocalPoint,
-  areaM2: number
+  areaM2: number,
+  layoutBBox: ReturnType<typeof bboxOfRects>,
+  polygonBBox: ReturnType<typeof bboxOfPolygon>
 ): number {
   const layoutCentroid = centroid(shiftedItems.map((item) => item.center));
   const distToCenter = Math.hypot(
     layoutCentroid.x_m - polygonCentroid.x_m,
     layoutCentroid.y_m - polygonCentroid.y_m
   );
-  return distToCenter + areaM2 * 1e-5;
+  const layoutWidth = Math.max(1, layoutBBox.maxX - layoutBBox.minX);
+  const layoutHeight = Math.max(1, layoutBBox.maxY - layoutBBox.minY);
+  const polygonWidth = Math.max(1, polygonBBox.maxX - polygonBBox.minX);
+  const polygonHeight = Math.max(1, polygonBBox.maxY - polygonBBox.minY);
+  const aspectMismatch = Math.abs(
+    Math.log((layoutWidth / layoutHeight) / (polygonWidth / polygonHeight))
+  );
+  const terrainScale = Math.max(1, Math.min(polygonWidth, polygonHeight));
+
+  // Center first, then prefer the grid shape that uses the terrain's aspect
+  // ratio. This only influences fallback candidates; the requested shape is
+  // still honoured whenever it fits.
+  return distToCenter + aspectMismatch * terrainScale * 0.08 + areaM2 * 1e-5;
 }
 
 function validateCandidate(args: {
@@ -212,8 +257,49 @@ function validateCandidate(args: {
     }
   }
 
+  return true;
+}
+
+/**
+ * Equipment-to-equipment spacing is invariant under translation. Validate it
+ * once per grid/orientation rather than once per candidate position.
+ */
+function validateEquipmentSpacing(
+  items: RelativeItem[],
+  rules: PreliminaryLayoutRequest["rules"]
+): boolean {
+  const bounds = items.map((item) => {
+    const corners = rectCorners(item.rect);
+    return {
+      minX: Math.min(...corners.map((corner) => corner.x_m)),
+      maxX: Math.max(...corners.map((corner) => corner.x_m)),
+      minY: Math.min(...corners.map((corner) => corner.y_m)),
+      maxY: Math.max(...corners.map((corner) => corner.y_m)),
+    };
+  });
+
   for (let i = 0; i < items.length; i++) {
     for (let j = i + 1; j < items.length; j++) {
+      const requiredDistance =
+        items[i].type === "battery_container" &&
+        items[j].type === "battery_container"
+          ? rules.bessToBess_m
+          : rules.electricalFrontWorkingClearance_m;
+      const xGap = Math.max(
+        0,
+        bounds[i].minX - bounds[j].maxX,
+        bounds[j].minX - bounds[i].maxX
+      );
+      const yGap = Math.max(
+        0,
+        bounds[i].minY - bounds[j].maxY,
+        bounds[j].minY - bounds[i].maxY
+      );
+
+      // AABB broad-phase: if either axis is already farther apart than the
+      // required clearance, the exact rectangle distance cannot violate it.
+      if (xGap >= requiredDistance || yGap >= requiredDistance) continue;
+
       const distance = distanceBetweenRectangles(items[i].rect, items[j].rect);
       if (distance <= 0) return false;
       if (
@@ -442,6 +528,11 @@ function buildRelativeLayout(args: {
   return {
     items,
     blockCount,
+    blockColumns: Math.max(1, Math.min(args.blockColumns, blockCount)),
+    blockRows: Math.ceil(
+      blockCount / Math.max(1, Math.min(args.blockColumns, blockCount))
+    ),
+    orientationDeg: args.orientationDeg,
     areaM2: (bbox.maxX - bbox.minX) * (bbox.maxY - bbox.minY),
   };
 }
@@ -565,13 +656,18 @@ export function generatePreliminaryLayout(
         ...baseDiagnostics,
         candidateCount: 1,
         layoutAreaM2: freeLayout.areaM2,
+        gridColumns: freeLayout.blockColumns,
+        gridRows: freeLayout.blockRows,
+        orientationDeg: freeLayout.orientationDeg,
+        terrainFitApplied: false,
+        arrangementAdjusted: false,
       },
     };
   }
 
   const localPolygon = request.polygon.map((point) => toLocal(point, request.anchor));
   const polygonBBox = bboxOfPolygon(localPolygon);
-  const polygonCentroid = centroid(localPolygon);
+  const polygonCentroidLocal = polygonCentroid(localPolygon);
   const setbackM = request.rules.bessToPropertyLine_m;
 
   const searchPlacement = (
@@ -593,17 +689,18 @@ export function generatePreliminaryLayout(
         });
         if (!layout) continue;
         candidateCount += 1;
+        if (!validateEquipmentSpacing(layout.items, request.rules)) continue;
         const layoutBBox = bboxOfRects(layout.items.map((item) => item.rect));
         const minDx = polygonBBox.minX + setbackM - layoutBBox.minX;
         const maxDx = polygonBBox.maxX - setbackM - layoutBBox.maxX;
         const minDy = polygonBBox.minY + setbackM - layoutBBox.minY;
         const maxDy = polygonBBox.maxY - setbackM - layoutBBox.maxY;
 
-        // Compute centroid-targeting dx/dy: align layout bbox center to polygon centroid.
-        const layoutBBoxCenterX = (layoutBBox.minX + layoutBBox.maxX) / 2;
-        const layoutBBoxCenterY = (layoutBBox.minY + layoutBBox.maxY) / 2;
-        const centroidDx = polygonCentroid.x_m - layoutBBoxCenterX;
-        const centroidDy = polygonCentroid.y_m - layoutBBoxCenterY;
+        // Compute centroid-targeting dx/dy from the equipment centers, so the
+        // generated layout—not only its outer bounding box—is centered.
+        const layoutCenter = centroid(layout.items.map((item) => item.center));
+        const centroidDx = polygonCentroidLocal.x_m - layoutCenter.x_m;
+        const centroidDy = polygonCentroidLocal.y_m - layoutCenter.y_m;
 
         const clamp = (v: number, lo: number, hi: number) =>
           Math.max(lo, Math.min(hi, v));
@@ -641,7 +738,13 @@ export function generatePreliminaryLayout(
                 rules: request.rules,
               })
             ) {
-              const score = candidatePlacementScore(shifted, polygonCentroid, layout.areaM2);
+              const score = candidatePlacementScore(
+                shifted,
+                polygonCentroidLocal,
+                layout.areaM2,
+                layoutBBox,
+                polygonBBox
+              );
               if (score < foundScore) {
                 found = { ...layout, items: shifted };
                 foundScore = score;
@@ -656,11 +759,15 @@ export function generatePreliminaryLayout(
 
   // Honour the requested arrangement first; only fall back to a free search
   // over every grid shape if the requested one does not fit the terrain.
-  let arrangementAdjusted = false;
-  let best = searchPlacement([preferredColumns], [0]);
+  let best = searchPlacement([preferredColumns], [0, 90]);
+  let arrangementAdjusted =
+    best !== null &&
+    (best.blockColumns !== preferredColumns || best.orientationDeg !== 0);
   if (!best) {
     best = searchPlacement(candidateColumns, orientations);
-    arrangementAdjusted = best !== null;
+    arrangementAdjusted =
+      best !== null &&
+      (best.blockColumns !== preferredColumns || best.orientationDeg !== 0);
   }
 
   if (!best) {
@@ -679,13 +786,18 @@ export function generatePreliminaryLayout(
   return {
     status: "success",
     message: arrangementAdjusted
-      ? "Layout regularized inside the site polygon. The requested arrangement did not fit, so a feasible arrangement was used instead."
-      : "Layout regularized inside the site polygon using the requested arrangement and the active preliminary spacing and setback rules.",
+      ? "Layout generated and centered inside the site polygon. The requested grid or orientation did not fit, so the closest feasible arrangement was used."
+      : "Layout generated and centered inside the site polygon using the requested grid and active preliminary spacing and setback rules.",
     placed: toPlacedEquipment(best.items, request.anchor, 0, 0),
     diagnostics: {
       ...baseDiagnostics,
       candidateCount,
       layoutAreaM2: best.areaM2,
+      gridColumns: best.blockColumns,
+      gridRows: best.blockRows,
+      orientationDeg: best.orientationDeg,
+      terrainFitApplied: true,
+      arrangementAdjusted,
     },
   };
 }

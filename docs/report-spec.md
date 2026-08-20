@@ -33,7 +33,7 @@ El reporte PDF se compone con `@react-pdf/renderer` a partir de módulos planos 
 ├── registerReportFonts.ts              <-- Registra la fuente de marca Inter (WOFF self-hosted)
 ├── reportProvenance.ts                 <-- Clasificación de procedencia + centinela "No disponible"
 ├── Brandmark.tsx                       <-- Isotipo (disco + triángulo) como <Svg> recoloreable
-├── pdfChrome.tsx                       <-- Portada, encabezado/pie fijos y marca de agua diagonal
+├── pdfChrome.tsx                       <-- Portada y encabezado/pie fijos
 ├── pdfPrimitives.tsx                   <-- SectionPage (con modo embedded), Table, DefGrid, AlertCard
 ├── pdfProjectSections.tsx              <-- Resumen ejecutivo, sitio, parámetros, layout
 ├── pdfElectricalRegulatorySections.tsx <-- Arquitectura eléctrica + SLD, validaciones eléctricas, normativa
@@ -53,7 +53,7 @@ Secciones afines se agrupan en páginas combinadas vía `SectionPage embedded` (
 
 ### Identidad visual y vista previa
 - **Tipografía Inter** registrada vía `Font.register` (WOFF self-hosted en `public/fonts/`); acento `sky-600 #0284c7`; colores de clasificación heredados de los tokens de la app (`certified`/`preliminary`/`pending`), ajustados para papel. El reporte es **claro (papel)** por defensibilidad de impresión.
-- **Marca de agua diagonal "PRELIMINAR · BORRADOR CONCEPTUAL"** fija en cada página.
+- **Carácter preliminar declarado en texto legible**, no como marca de agua de fondo: la portada lleva el rótulo superior "PREDIMENSIONAMIENTO PRELIMINAR BESS · REPORTE TÉCNICO" y bandas de alcance ("Predimensionamiento preliminar", "No apto para construcción", "No reemplaza ingeniería de detalle"); el pie de cada página repite "Reporte preliminar" junto a versión, esquema y fecha. Se retiró la marca de agua diagonal de fondo porque se solapaba con el contenido y degradaba la legibilidad.
 - **Vista previa WYSIWYG:** `ReportPreview.tsx` renderiza el MISMO `ReportDocument` dentro de `<PDFViewer>` de react-pdf; no hay una segunda implementación HTML que pueda divergir del PDF exportado.
 - Procedencia/“No disponible”: `reportProvenance.ts` traduce `EvidenceConfidence`/`reportKpis.source` a una clasificación visible y un centinela único de dato no disponible.
 
@@ -85,10 +85,10 @@ Las advertencias e incidencias deben reportarse bajo una jerarquía visual estri
 
 ---
 
-## 6. Requisitos de Marcas de Agua y Disclaimers
+## 6. Requisitos de Disclaimers y Rotulación de Carácter Preliminar
 
-Para asegurar la defensibilidad de la salida técnica frente a su uso indebido, el PDF generado por la herramienta incorpora de forma obligatoria las siguientes marcas y advertencias visuales:
-* **Marca de Agua en el Fondo**: En cada página del reporte figura una marca de agua diagonal con la leyenda `"PRELIMINARY / BORRADOR CONCEPTUAL"`.
+Para asegurar la defensibilidad de la salida técnica frente a su uso indebido, el PDF generado por la herramienta incorpora de forma obligatoria las siguientes advertencias visuales:
+* **Rotulación del carácter preliminar (texto legible)**: el carácter preliminar se declara mediante texto legible en lugar de una marca de agua de fondo. La portada lleva el rótulo superior `"PREDIMENSIONAMIENTO PRELIMINAR BESS · REPORTE TÉCNICO"` y bandas de alcance (`"Predimensionamiento preliminar"`, `"No apto para construcción"`, `"No reemplaza ingeniería de detalle"`); el pie fijo de cada página repite `"Reporte preliminar"` junto a versión, esquema y fecha de generación. Se eliminó la marca de agua diagonal de fondo porque se superponía al contenido y degradaba la legibilidad del documento.
 * **Texto de Exención de Responsabilidad (Disclaimer)**: En la portada y en la sección de cierre figura el disclaimer legal obligatorio:
   * *"Este reporte es una evaluación preliminar de ingeniería. No reemplaza ingeniería de detalle, manuales de fabricante, coordinación de protecciones, estudios de cortocircuito, diseño de malla a tierra, ingeniería contra incendios, permisos ambientales, ingeniería civil, ni revisión final por SEC, CNE, CEN, SEA o cualquier autoridad competente."*
 

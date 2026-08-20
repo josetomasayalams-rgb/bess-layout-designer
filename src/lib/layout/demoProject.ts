@@ -2,11 +2,21 @@ import type { ProjectAnchor, LngLat } from "@/types/geometry";
 import type { PlacedEquipment } from "@/types/equipment";
 import { equipmentCatalog } from "@/data/equipmentCatalog";
 import { toLngLat } from "@/lib/geometry/projection";
+import { getRegulatoryProfile } from "@/rules/regulatoryProfileMetadata";
+import {
+  generatePreliminaryLayout,
+  type PreliminaryLayoutResult,
+} from "@/lib/layout/preliminaryLayoutGenerator";
 
 export type DemoProject = {
   anchor: ProjectAnchor;
   polygon: LngLat[];
   placedEquipment: PlacedEquipment[];
+};
+
+export type PublishedDemoProject = DemoProject & {
+  projectName: string;
+  lastToolResult: PreliminaryLayoutResult;
 };
 
 const DEMO_ANCHOR: ProjectAnchor = {
@@ -65,5 +75,51 @@ export function createDemoProject(): DemoProject {
     anchor: DEMO_ANCHOR,
     polygon,
     placedEquipment: [...batteries, ...pcs],
+  };
+}
+
+/**
+ * Shareable showcase state used by the hosted demo URL. It is deliberately
+ * generated from the same layout engine as the sizing tool so the published
+ * project demonstrates the 320-container / 40-PCS 5x8 terrain-fit workflow.
+ */
+export function createPublishedDemoProject(): PublishedDemoProject {
+  const anchor = DEMO_ANCHOR;
+  const polygon = [
+    { x_m: -250, y_m: -110 },
+    { x_m: 250, y_m: -110 },
+    { x_m: 250, y_m: 110 },
+    { x_m: -250, y_m: 110 },
+  ].map((point) => toLngLat(point, anchor));
+  const rules = getRegulatoryProfile("chile-sec-rgr-06-2024").rules;
+  const lastToolResult = generatePreliminaryLayout({
+    batteryContainerSpecId: "sungrow-st2752ux-us",
+    pcsSpecId: "sungrow-sc5000ud-mv-us-p3",
+    batteryContainerCount: 320,
+    pcsCount: 40,
+    containersPerPcs: 8,
+    blockColumns: 5,
+    anchor,
+    startPoint: polygon[0],
+    polygon,
+    rules: {
+      bessToBess_m: rules.bessToBess_m,
+      bessToPropertyLine_m: rules.bessToPropertyLine_m,
+      electricalFrontWorkingClearance_m: rules.electricalFrontWorkingClearance_m,
+      transformerToBessRecommended_m: rules.transformerToBessRecommended_m,
+    },
+    fitInsidePolygon: true,
+  });
+
+  if (lastToolResult.status === "error") {
+    throw new Error(lastToolResult.message);
+  }
+
+  return {
+    anchor,
+    polygon,
+    placedEquipment: lastToolResult.placed,
+    projectName: "BESS del Desierto · 200 MW / 800 MWh · grilla 5×8",
+    lastToolResult,
   };
 }

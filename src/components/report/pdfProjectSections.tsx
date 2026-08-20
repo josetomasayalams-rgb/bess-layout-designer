@@ -1,14 +1,13 @@
 import { Image, Line, Path, Polygon, Svg, Text, View } from "@react-pdf/renderer";
 import { REPORT_COLORS, REPORT_FONTS, reportStyles as s } from "./reportStyles";
 import type { TechnicalReportData } from "@/lib/report/buildReportData";
-import { svgPolygonPath } from "@/lib/report/buildSiteSvg";
+import { EQUIPMENT_PLAN_PALETTE, svgPolygonPath } from "@/lib/report/buildSiteSvg";
 import {
   buildNextSteps,
   fmtInt,
   fmtNum,
   kpiSourceLabel,
   maturityLevel,
-  resultSentence,
 } from "./pdfFormatters";
 import { AlertCard, DefGrid, SectionPage, Table } from "./pdfPrimitives";
 
@@ -43,32 +42,32 @@ export function ExecutiveSection({ data }: ReportSectionProps) {
     },
   ];
 
+  // Answer-first hero: the headline figure leads, a quiet qualifier follows.
+  const power = k.poiPowerMW === null ? "—" : fmtNum(k.poiPowerMW, 1);
+  const energy = k.commercialEnergyMWh === null ? "—" : fmtNum(k.commercialEnergyMWh, 1);
+  const dur = k.durationHours === null ? "—" : fmtNum(k.durationHours, 1);
+  const criticals = data.consistencyAlerts.filter((a) => a.severity === "critical").length;
+  const verdict =
+    criticals > 0
+      ? `${criticals} ${criticals === 1 ? "alerta crítica requiere" : "alertas críticas requieren"} revisión técnica antes de avanzar`
+      : "sin alertas críticas de consistencia en esta revisión";
+
   return (
     <SectionPage data={data} number="1" title="Resumen ejecutivo">
-      {/* Frase de resultado */}
+      {/* Resultado, respuesta primero */}
       <View style={s.heroBox}>
-        <Text style={s.heroResult}>{resultSentence(data)}</Text>
-      </View>
-
-      {/* Estado de madurez del prediseño */}
-      <View style={s.maturityRow}>
-        <Text style={s.maturityBadge}>{maturity.label}</Text>
-        <Text
-          style={{
-            fontFamily: REPORT_FONTS.bodyItalic,
-            fontSize: 8.5,
-            color: REPORT_COLORS.muted,
-            flex: 1,
-          }}
-        >
-          {maturity.description}
+        <Text style={s.heroResult}>
+          BESS de {power} MW / {energy} MWh · {dur} h de duración nominal
+        </Text>
+        <Text style={s.heroQualifier}>
+          {maturity.label}; {verdict}.
         </Text>
       </View>
 
-      {/* KPIs principales */}
+      {/* KPIs principales — tarjetas planas, guiadas por tipografía */}
       <View style={s.kpiRow}>
         {heroKpis.map((kpi) => (
-          <View key={kpi.label} style={[s.kpiCard, s.kpiCardAccent]}>
+          <View key={kpi.label} style={s.kpiCard}>
             <Text style={s.kpiCardLabel}>{kpi.label}</Text>
             <Text>
               <Text style={s.kpiCardValue}>{kpi.value}</Text>
@@ -78,7 +77,7 @@ export function ExecutiveSection({ data }: ReportSectionProps) {
         ))}
       </View>
       <Text style={s.note}>
-        Fuente de KPIs: {kpiSourceLabel(k.source)}. Inventario físico:{" "}
+        Fuente de KPIs: {kpiSourceLabel(k.source)} · Inventario físico:{" "}
         {fmtInt(k.containers)} contenedores · {fmtInt(k.stations)} estaciones PCS/MV ·{" "}
         {fmtInt(k.feeders)} feeders MT.
       </Text>
@@ -287,10 +286,20 @@ export function LayoutSection({ data, embedded }: ReportSectionProps) {
   const densityPerHa =
     data.siteMetrics.areaHa > 0 ? k.containers / data.siteMetrics.areaHa : 0;
 
+  // Legend reads the SAME palette the SVG renderer uses, so the key always
+  // matches the plan (no bespoke legend colors that drift from the map).
   const legend = [
-    { color: "#1f3a8a", label: "Contenedor BESS" },
-    { color: "#92400e", label: "Estación PCS/MV" },
-    { color: "#dbeafe", label: "Área del sitio" },
+    {
+      fill: EQUIPMENT_PLAN_PALETTE.battery_container.fill,
+      stroke: EQUIPMENT_PLAN_PALETTE.battery_container.stroke,
+      label: EQUIPMENT_PLAN_PALETTE.battery_container.label,
+    },
+    {
+      fill: EQUIPMENT_PLAN_PALETTE.pcs_mv_station.fill,
+      stroke: EQUIPMENT_PLAN_PALETTE.pcs_mv_station.stroke,
+      label: EQUIPMENT_PLAN_PALETTE.pcs_mv_station.label,
+    },
+    { fill: REPORT_COLORS.paperAlt, stroke: REPORT_COLORS.body, label: "Área del sitio" },
   ];
 
   return (
@@ -317,10 +326,10 @@ export function LayoutSection({ data, embedded }: ReportSectionProps) {
             {/* Site polygon */}
             <Path
               d={svgPolygonPath(svg.sitePoints)}
-              stroke={REPORT_COLORS.accent}
-              strokeWidth={3}
-              fill="#dbeafe"
-              fillOpacity={0.25}
+              stroke={REPORT_COLORS.body}
+              strokeWidth={1}
+              fill={REPORT_COLORS.paperAlt}
+              fillOpacity={0.6}
             />
             {/* Equipment */}
             {svg.equipment.map((e, idx) => (
@@ -329,8 +338,8 @@ export function LayoutSection({ data, embedded }: ReportSectionProps) {
                 points={e.points.map((p) => `${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(" ")}
                 fill={e.fill}
                 stroke={e.stroke}
-                strokeWidth={0.6}
-                fillOpacity={0.85}
+                strokeWidth={0.75}
+                fillOpacity={1}
               />
             ))}
             {/* Scale bar */}
@@ -346,8 +355,8 @@ export function LayoutSection({ data, embedded }: ReportSectionProps) {
               x={20}
               y={svg.viewBox.height - 12}
               style={{
-                fontFamily: REPORT_FONTS.mono,
-                fontSize: 10,
+                fontFamily: REPORT_FONTS.data,
+                fontSize: 9,
                 fill: REPORT_COLORS.ink,
               }}
             >
@@ -356,7 +365,7 @@ export function LayoutSection({ data, embedded }: ReportSectionProps) {
             {/* North arrow (simple) */}
             <Polygon
               points={`${svg.northArrow.x},${svg.northArrow.y - svg.northArrow.size} ${svg.northArrow.x - svg.northArrow.size * 0.5},${svg.northArrow.y + svg.northArrow.size * 0.5} ${svg.northArrow.x + svg.northArrow.size * 0.5},${svg.northArrow.y + svg.northArrow.size * 0.5}`}
-              fill={REPORT_COLORS.accent}
+              fill={REPORT_COLORS.ink}
             />
             <Text
               x={svg.northArrow.x}
@@ -391,11 +400,11 @@ export function LayoutSection({ data, embedded }: ReportSectionProps) {
               >
                 <View
                   style={{
-                    width: 9,
-                    height: 9,
-                    backgroundColor: item.color,
+                    width: 8,
+                    height: 8,
+                    backgroundColor: item.fill,
                     borderWidth: 0.5,
-                    borderColor: REPORT_COLORS.rule,
+                    borderColor: item.stroke,
                   }}
                 />
                 <Text style={{ fontSize: 7.5, color: REPORT_COLORS.muted }}>

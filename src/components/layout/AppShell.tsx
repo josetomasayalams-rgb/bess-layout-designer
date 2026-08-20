@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   PanelLeftClose,
   PanelLeftOpen,
@@ -17,6 +17,7 @@ import { FlowStepper } from "./FlowStepper";
 import { SectionRail, type AppSectionId } from "./SectionRail";
 import { SectionPanelHost } from "./SectionPanelHost";
 import { useUiStore } from "@/store/uiStore";
+import { useProjectStore } from "@/store/projectStore";
 import { cn } from "@/lib/utils";
 
 // Las 4 combinaciones se escriben literales para que el JIT de Tailwind las detecte.
@@ -37,6 +38,7 @@ const TAB_BUTTON =
 export function AppShell() {
   const [activeSection, setActiveSection] = useState<AppSectionId>("site");
   const [topCollapsed, setTopCollapsed] = useState(true);
+  const publishedDemoLoaded = useRef(false);
   const hydrateLocale = useUiStore((s) => s.hydrateLocale);
   const hydrateTheme = useUiStore((s) => s.hydrateTheme);
   const hydrateLayerVisibility = useUiStore((s) => s.hydrateLayerVisibility);
@@ -45,13 +47,28 @@ export function AppShell() {
   const rightCollapsed = useUiStore((s) => s.rightSidebarCollapsed);
   const toggleLeft = useUiStore((s) => s.toggleLeftSidebar);
   const toggleRight = useUiStore((s) => s.toggleRightSidebar);
+  const loadPublishedDemoProject = useProjectStore(
+    (s) => s.loadPublishedDemoProject
+  );
   const isEs = locale === "es";
 
   useEffect(() => {
     hydrateLocale();
     hydrateTheme();
     hydrateLayerVisibility();
-  }, [hydrateLocale, hydrateTheme, hydrateLayerVisibility]);
+    if (
+      !publishedDemoLoaded.current &&
+      new URLSearchParams(window.location.search).get("demo") === "bess-200mw"
+    ) {
+      publishedDemoLoaded.current = true;
+      loadPublishedDemoProject();
+    }
+  }, [
+    hydrateLocale,
+    hydrateTheme,
+    hydrateLayerVisibility,
+    loadPublishedDemoProject,
+  ]);
 
   const gridCols =
     GRID_COLS[

@@ -6,7 +6,7 @@ import { fmtInt, fmtNum, formatIsoDate } from "./pdfFormatters";
 import { AlertCard, DefGrid, SectionPage, Table } from "./pdfPrimitives";
 import {
   OUTCOME_LABEL,
-  SEVERITY_LABEL_ES,
+  SEVERITY_LABEL,
   SEVERITY_PILL,
   outcomePillStyle,
 } from "./pdfSeverityMaps";
@@ -46,6 +46,7 @@ function SingleLineDiagram({ data }: { data: TechnicalReportData }) {
   const color = REPORT_COLORS.ink;
   const accent = REPORT_COLORS.accent;
   const muted = REPORT_COLORS.muted;
+  const rule = REPORT_COLORS.rule;
 
   // Renderizar interruptor de potencia (breaker)
   const renderBreaker = (x: number, y: number) => (
@@ -73,30 +74,6 @@ function SingleLineDiagram({ data }: { data: TechnicalReportData }) {
   return (
     <View style={s.sldWrap}>
       <Svg viewBox="0 0 520 150" style={{ width: "100%", height: 150 }}>
-        {/* Fondo de papel milimetrado sutil */}
-        {Array.from({ length: 16 }).map((_, i) => (
-          <Line
-            key={`g-lh-${i}`}
-            x1={0}
-            y1={i * 10}
-            x2={520}
-            y2={i * 10}
-            stroke="#f1f5f9"
-            strokeWidth={0.5}
-          />
-        ))}
-        {Array.from({ length: 53 }).map((_, i) => (
-          <Line
-            key={`g-lv-${i}`}
-            x1={i * 10}
-            y1={0}
-            x2={i * 10}
-            y2={150}
-            stroke="#f1f5f9"
-            strokeWidth={0.5}
-          />
-        ))}
-
         {/* ---------------------------------------------------- */}
         {/* ETAPA 1: BESS CONTAINER (LADO CC) (x = 55, y = 65) */}
         {/* ---------------------------------------------------- */}
@@ -106,10 +83,10 @@ function SingleLineDiagram({ data }: { data: TechnicalReportData }) {
           y={35}
           width={60}
           height={60}
-          rx={4}
-          fill="#eff6ff"
-          stroke={accent}
-          strokeWidth={1}
+          rx={2}
+          fill="none"
+          stroke={rule}
+          strokeWidth={0.75}
           strokeDasharray={isIntegrated ? "3 3" : undefined}
         />
         {/* Símbolo de placas de baterías */}
@@ -122,8 +99,8 @@ function SingleLineDiagram({ data }: { data: TechnicalReportData }) {
         {/* Terminales positivo y negativo */}
         <Line x1={55} y1={44} x2={55} y2={50} stroke={color} strokeWidth={1} />
         <Line x1={55} y1={70} x2={55} y2={76} stroke={color} strokeWidth={1} />
-        <Text x={65} y={48} style={{ fontSize: 7, fontFamily: REPORT_FONTS.dataBold, fill: REPORT_COLORS.ok }}>+</Text>
-        <Text x={65} y={74} style={{ fontSize: 7, fontFamily: REPORT_FONTS.dataBold, fill: REPORT_COLORS.danger }}>-</Text>
+        <Text x={65} y={48} style={{ fontSize: 7, fontFamily: REPORT_FONTS.dataBold, fill: color }}>+</Text>
+        <Text x={65} y={74} style={{ fontSize: 7, fontFamily: REPORT_FONTS.dataBold, fill: color }}>-</Text>
 
         <Text
           x={55}
@@ -137,7 +114,7 @@ function SingleLineDiagram({ data }: { data: TechnicalReportData }) {
           x={55}
           y={122}
           textAnchor="middle"
-          style={{ fontFamily: REPORT_FONTS.monoBold, fontSize: 6.5, fill: accent }}
+          style={{ fontFamily: REPORT_FONTS.dataBold, fontSize: 6.5, fill: color }}
         >
           {`${k.containers} x ${batteryModel}`}
         </Text>
@@ -145,7 +122,7 @@ function SingleLineDiagram({ data }: { data: TechnicalReportData }) {
           x={55}
           y={132}
           textAnchor="middle"
-          style={{ fontFamily: REPORT_FONTS.mono, fontSize: 6.5, fill: muted }}
+          style={{ fontFamily: REPORT_FONTS.data, fontSize: 6.5, fill: muted }}
         >
           {`${fmtNum(k.grossEnergyMWh, 1)} MWh (CC)`}
         </Text>
@@ -163,10 +140,10 @@ function SingleLineDiagram({ data }: { data: TechnicalReportData }) {
             y={35}
             width={60}
             height={60}
-            rx={4}
-            fill="#eff6ff"
-            stroke={accent}
-            strokeWidth={1}
+            rx={2}
+            fill="none"
+            stroke={rule}
+            strokeWidth={0.75}
           />
         )}
         {/* Caja de inversor DC/AC diagonal */}
@@ -207,7 +184,7 @@ function SingleLineDiagram({ data }: { data: TechnicalReportData }) {
           x={155}
           y={122}
           textAnchor="middle"
-          style={{ fontFamily: REPORT_FONTS.monoBold, fontSize: 6.5, fill: accent }}
+          style={{ fontFamily: REPORT_FONTS.dataBold, fontSize: 6.5, fill: color }}
         >
           {isIntegrated ? "Inversor en Unidad" : `${k.stations} x ${pcsModel}`}
         </Text>
@@ -215,7 +192,7 @@ function SingleLineDiagram({ data }: { data: TechnicalReportData }) {
           x={155}
           y={132}
           textAnchor="middle"
-          style={{ fontFamily: REPORT_FONTS.mono, fontSize: 6.5, fill: muted }}
+          style={{ fontFamily: REPORT_FONTS.data, fontSize: 6.5, fill: muted }}
         >
           {isIntegrated ? "Salida CA Directa" : `${fmtNum(k.installedPowerMVA, 1)} MVA${e.stations[0]?.blockTransformer ? ` · ${e.stations[0].blockTransformer.lvVoltageKv.value}/${e.stations[0].blockTransformer.hvVoltageKv.value} kV` : " · BT/MT no def."}`}
         </Text>
@@ -278,7 +255,7 @@ function SingleLineDiagram({ data }: { data: TechnicalReportData }) {
           x={260}
           y={122}
           textAnchor="middle"
-          style={{ fontFamily: REPORT_FONTS.monoBold, fontSize: 6.5, fill: accent }}
+          style={{ fontFamily: REPORT_FONTS.dataBold, fontSize: 6.5, fill: color }}
         >
           {`${k.feeders} x Feeder(s) MT`}
         </Text>
@@ -286,7 +263,7 @@ function SingleLineDiagram({ data }: { data: TechnicalReportData }) {
           x={260}
           y={132}
           textAnchor="middle"
-          style={{ fontFamily: REPORT_FONTS.mono, fontSize: 6.5, fill: muted }}
+          style={{ fontFamily: REPORT_FONTS.data, fontSize: 6.5, fill: muted }}
         >
           {`Colector MT · ${mvVoltageLabel}`}
         </Text>
@@ -322,7 +299,7 @@ function SingleLineDiagram({ data }: { data: TechnicalReportData }) {
           x={365}
           y={122}
           textAnchor="middle"
-          style={{ fontFamily: REPORT_FONTS.monoBold, fontSize: 6.5, fill: accent }}
+          style={{ fontFamily: REPORT_FONTS.dataBold, fontSize: 6.5, fill: color }}
         >
           {mainTransformer
             ? `${fmtNum(mainTransformer.ratedPowerMVA.value, 0)} MVA`
@@ -332,7 +309,7 @@ function SingleLineDiagram({ data }: { data: TechnicalReportData }) {
           x={365}
           y={132}
           textAnchor="middle"
-          style={{ fontFamily: REPORT_FONTS.mono, fontSize: 6.5, fill: muted }}
+          style={{ fontFamily: REPORT_FONTS.data, fontSize: 6.5, fill: muted }}
         >
           {mainTransformer
             ? `${mainTransformer.windings.hvKv} / ${mainTransformer.windings.mv1Kv ?? mvVoltageKv ?? "—"} kV · ${mainTransformer.vectorGroup || "—"}`
@@ -380,7 +357,7 @@ function SingleLineDiagram({ data }: { data: TechnicalReportData }) {
           x={470}
           y={122}
           textAnchor="middle"
-          style={{ fontFamily: REPORT_FONTS.monoBold, fontSize: 6.5, fill: accent }}
+          style={{ fontFamily: REPORT_FONTS.dataBold, fontSize: 6.5, fill: color }}
         >
           {poi ? poi.busName : "POI no definido"}
         </Text>
@@ -388,7 +365,7 @@ function SingleLineDiagram({ data }: { data: TechnicalReportData }) {
           x={470}
           y={132}
           textAnchor="middle"
-          style={{ fontFamily: REPORT_FONTS.mono, fontSize: 6.5, fill: muted }}
+          style={{ fontFamily: REPORT_FONTS.data, fontSize: 6.5, fill: muted }}
         >
           {poi ? `${poi.voltageKv} kV` + (poi.declaredCapacityMVA ? ` · ${fmtNum(poi.declaredCapacityMVA.value, 0)} MVA` : "") : "Validar EPC"}
         </Text>
@@ -466,7 +443,7 @@ export function ElectricalSection({ data, embedded }: ReportSectionProps) {
               { header: "Fabricante / Modelo", width: "32%" },
               { header: "MVA", width: "12%", align: "right" },
               { header: "Feeder", width: "18%", mono: true },
-              { header: "Containers", width: "20%", align: "right" },
+              { header: "Contenedores", width: "20%", align: "right" },
             ]}
             rows={e.stationRows.slice(0, 60).map((r) => [
               r.id,
@@ -614,7 +591,7 @@ export function PreliminaryElectricalChecksSection({ data, embedded }: ReportSec
         flujo de potencia, cortocircuito, coordinación de protecciones,
         armónicos, estabilidad RMS/EMT, arc-flash, calidad de potencia en el
         PCC ni coordinación de aislamiento — todos quedan listados como
-        exclusiones en §8.
+        exclusiones en la sección «Alcance, exclusiones y próximos estudios».
       </Text>
 
       {checks.length === 0 ? (
@@ -642,10 +619,10 @@ export function PreliminaryElectricalChecksSection({ data, embedded }: ReportSec
           <View style={s.table} wrap>
             <View style={[s.tableRow, s.tableHeaderRow]}>
               <Text style={[s.tableHeaderCell, { width: "14%" }]}>ID</Text>
-              <Text style={[s.tableHeaderCell, { width: "32%" }]}>Check</Text>
-              <Text style={[s.tableHeaderCell, { width: "10%" }]}>Sev.</Text>
+              <Text style={[s.tableHeaderCell, { width: "32%" }]}>Verificación</Text>
+              <Text style={[s.tableHeaderCell, { width: "10%" }]}>Severidad</Text>
               <Text style={[s.tableHeaderCell, { width: "10%" }]}>Nivel</Text>
-              <Text style={[s.tableHeaderCell, { width: "10%" }]}>Outcome</Text>
+              <Text style={[s.tableHeaderCell, { width: "10%" }]}>Resultado</Text>
               <Text style={[s.tableHeaderCell, { width: "24%" }]}>Fuente</Text>
             </View>
             {checks.map((entry, i) => {
@@ -668,7 +645,7 @@ export function PreliminaryElectricalChecksSection({ data, embedded }: ReportSec
                   </Text>
                   <View style={[s.tableCell, { width: "10%" }]}>
                     <Text style={[s.pill, outcomePillStyle(sevPill)]}>
-                      {SEVERITY_LABEL_ES[entry.effectiveSeverity] ??
+                      {SEVERITY_LABEL[entry.effectiveSeverity] ??
                         entry.effectiveSeverity}
                     </Text>
                   </View>
@@ -701,12 +678,12 @@ export function PreliminaryElectricalChecksSection({ data, embedded }: ReportSec
                   <Text key={`cap-${c.ruleId}`} style={s.note}>
                     {c.ruleId}: declarada{" "}
                     <Text style={{ fontFamily: REPORT_FONTS.bodyBold }}>
-                      {SEVERITY_LABEL_ES[c.severityCappedBy?.from ?? ""] ??
+                      {SEVERITY_LABEL[c.severityCappedBy?.from ?? ""] ??
                         c.severityCappedBy?.from}
                     </Text>{" "}
                     · acotada a{" "}
                     <Text style={{ fontFamily: REPORT_FONTS.bodyBold }}>
-                      {SEVERITY_LABEL_ES[c.effectiveSeverity] ?? c.effectiveSeverity}
+                      {SEVERITY_LABEL[c.effectiveSeverity] ?? c.effectiveSeverity}
                     </Text>{" "}
                     ({c.severityCappedBy?.by === "document_level"
                       ? "nivel documental"
@@ -723,8 +700,6 @@ export function PreliminaryElectricalChecksSection({ data, embedded }: ReportSec
             Una regla nunca puede ser más estricta que su mejor evidencia.
             {"\n\n"}
             Algunas reglas pueden aparecer como advertencias o listas de verificación debido al alcance preliminar del diseño o a la falta de evidencia certificada. Su severidad final debe confirmarse durante la ingeniería de detalle.
-            {"\n\n"}
-            Some rules may appear as warnings or checklist items due to the preliminary design scope or missing certified evidence. Their final severity must be confirmed during detailed engineering.
           </Text>
         </>
       )}
@@ -734,29 +709,25 @@ export function PreliminaryElectricalChecksSection({ data, embedded }: ReportSec
 
 export function RegulatorySection({ data, embedded }: ReportSectionProps) {
   const ev = data.regulatoryEvaluation;
-  const isEs = data.metadata.locale === "es";
 
   return (
     <SectionPage
       data={data}
       number="6"
-      title={isEs ? "Validación normativa resumida" : "Regulatory validation summary"}
+      title="Validación normativa resumida"
       embedded={embedded}
     >
       {!ev ? (
         <Text style={s.note}>
-          {isEs
-            ? "No se ha activado un perfil regulatorio. Active uno desde el panel de cumplimiento para incluir la evaluación en este reporte."
-            : "No regulatory profile has been activated. Activate one from the compliance panel to include the evaluation in this report."}
+          No se ha activado un perfil regulatorio. Active uno desde el panel de
+          cumplimiento para incluir la evaluación en este reporte.
         </Text>
       ) : (
         <>
           <Text style={s.paragraph}>
-            {isEs ? "Perfil activo: " : "Active profile: "}
+            Perfil activo:{" "}
             <Text style={{ fontFamily: REPORT_FONTS.bodyBold }}>{ev.profileName}</Text>{" "}
-            {isEs
-              ? `(${ev.rules.length} reglas evaluadas el ${formatIsoDate(ev.evaluatedAt)}).`
-              : `(${ev.rules.length} rules evaluated on ${formatIsoDate(ev.evaluatedAt)}).`}
+            {`(${ev.rules.length} reglas evaluadas el ${formatIsoDate(ev.evaluatedAt)}).`}
           </Text>
 
           {/* Executive Summary Narrative */}
@@ -767,18 +738,15 @@ export function RegulatorySection({ data, embedded }: ReportSectionProps) {
               (f) => f.riskLevel === "important" || f.riskLevel === "om_insurance"
             );
 
-            let summaryText = isEs
-              ? "Sin inconformidades automáticas críticas. El layout preliminar cumple con las validaciones de contención y distanciamiento evaluadas."
-              : "No critical automated nonconformities. The preliminary layout complies with the evaluated containment and spacing constraints.";
+            let summaryText =
+              "Sin inconformidades automáticas críticas. El layout preliminar cumple con las validaciones de contención y distanciamiento evaluadas.";
 
             if (hasCritical) {
-              summaryText = isEs
-                ? "Inconformidades críticas detectadas. El layout físico presenta solapamientos o invasiones de límites que impiden el predimensionamiento viable."
-                : "Critical nonconformities detected. The physical layout contains overlaps or boundary crossings that block a viable predesign.";
+              summaryText =
+                "Inconformidades críticas detectadas. El layout físico presenta solapamientos o invasiones de límites que impiden el predimensionamiento viable.";
             } else if (hasImportant) {
-              summaryText = isEs
-                ? "Advertencias de prefactibilidad activas. El terreno está contenido correctamente, pero existen criterios de distanciamiento de seguridad o fabricante que requieren revisión."
-                : "Prefeasibility warnings active. Physical containment is correct, but safety or manufacturer clearances require review.";
+              summaryText =
+                "Advertencias de prefactibilidad activas. El terreno está contenido correctamente, pero existen criterios de distanciamiento de seguridad o fabricante que requieren revisión.";
             }
 
             return (
@@ -803,75 +771,51 @@ export function RegulatorySection({ data, embedded }: ReportSectionProps) {
           <View style={s.statusChipRow}>
             {[
               {
-                label: isEs ? "Sin inconformidades" : "No nonconformities",
+                label: "Sin inconformidades",
                 count: ev.totals.pass,
-                bg: "#dcfce7",
-                fg: REPORT_COLORS.ok,
-                border: "#bbf7d0",
+                fg: REPORT_COLORS.ink,
               },
               {
-                label: isEs ? "Inconformidades" : "Nonconformities",
+                label: "Inconformidades",
                 count: ev.totals.violation,
-                bg: "#fee2e2",
                 fg: REPORT_COLORS.danger,
-                border: "#fecaca",
               },
               {
-                label: isEs ? "Revisión manual" : "Manual check",
+                label: "Revisión manual",
                 count: ev.totals.manualCheck,
-                bg: "#e0f2fe",
-                fg: "#075985",
-                border: "#bae6fd",
+                fg: REPORT_COLORS.muted,
               },
               {
-                label: isEs ? "Pendiente" : "Pending",
+                label: "Pendiente",
                 count: ev.totals.pending,
-                bg: "#fef3c7",
-                fg: REPORT_COLORS.warn,
-                border: "#fde68a",
+                fg: REPORT_COLORS.muted,
               },
               {
-                label: isEs ? "No evaluable" : "Not evaluable",
+                label: "No evaluable",
                 count: ev.totals.notEvaluable,
-                bg: "#e2e8f0",
                 fg: REPORT_COLORS.muted,
-                border: "#cbd5e1",
               },
               {
-                label: isEs ? "Fuera de alcance" : "Out of scope",
+                label: "Fuera de alcance",
                 count: ev.totals.outOfScope,
-                bg: "#e2e8f0",
                 fg: REPORT_COLORS.muted,
-                border: "#cbd5e1",
               },
             ].map((chip) => (
-              <View
-                key={chip.label}
-                style={[s.statusChip, { backgroundColor: chip.bg, borderColor: chip.border }]}
-              >
+              <View key={chip.label} style={s.statusChip}>
                 <Text style={[s.statusChipCount, { color: chip.fg }]}>
                   {fmtInt(chip.count)}
                 </Text>
-                <Text
-                  style={[
-                    s.statusChipLabel,
-                    { color: chip.fg, fontSize: chip.label.length > 12 ? 5.5 : 6.5 },
-                  ]}
-                >
+                <Text style={[s.statusChipLabel, { color: chip.fg }]}>
                   {chip.label}
                 </Text>
               </View>
             ))}
           </View>
           <Text style={s.note}>
-            {isEs
-              ? `De las inconformidades detectadas, ${fmtInt(ev.totals.blockingViolations)} son bloqueantes y ${fmtInt(ev.totals.warningViolations)} son avisos.`
-              : `Of the detected nonconformities, ${fmtInt(ev.totals.blockingViolations)} are blocking and ${fmtInt(ev.totals.warningViolations)} are warnings.`}
+            {`De las inconformidades detectadas, ${fmtInt(ev.totals.blockingViolations)} son bloqueantes y ${fmtInt(ev.totals.warningViolations)} son avisos.`}
           </Text>
 
-          <Text style={s.subTitle}>
-            {isEs ? "Hallazgos de riesgo y acciones correctivas" : "Risk findings and corrective actions"}
-          </Text>
+          <Text style={s.subTitle}>Hallazgos de riesgo y acciones correctivas</Text>
 
           {(() => {
             const failures = ev.rules.filter((r) => r.outcome === "violation");
@@ -879,9 +823,8 @@ export function RegulatorySection({ data, embedded }: ReportSectionProps) {
             if (failures.length === 0) {
               return (
                 <Text style={s.note}>
-                  {isEs
-                    ? "No se detectaron inconformidades automáticas ni desviaciones de riesgo en esta evaluación preliminar."
-                    : "No automatic nonconformities or risk deviations were detected in this preliminary assessment."}
+                  No se detectaron inconformidades automáticas ni desviaciones de
+                  riesgo en esta evaluación preliminar.
                 </Text>
               );
             }
@@ -903,65 +846,48 @@ export function RegulatorySection({ data, embedded }: ReportSectionProps) {
             const riskLevelsMap = {
               critical: {
                 es: "Riesgo Crítico",
-                en: "Critical Risk",
                 color: REPORT_COLORS.danger,
-                bg: "#fee2e2",
                 fg: REPORT_COLORS.danger,
               },
               important: {
                 es: "Riesgo Importante",
-                en: "Important Risk",
-                color: REPORT_COLORS.warn,
-                bg: "#fef3c7",
-                fg: REPORT_COLORS.warn,
+                color: REPORT_COLORS.muted,
+                fg: REPORT_COLORS.muted,
               },
               om_insurance: {
                 es: "Asegurabilidad y O&M",
-                en: "Insurance & O&M",
-                color: "#8b5cf6",
-                bg: "#f3e8ff",
-                fg: "#6d28d9",
+                color: REPORT_COLORS.muted,
+                fg: REPORT_COLORS.muted,
               },
               engineering_pending: {
                 es: "Pendiente Ingeniería",
-                en: "Engineering Pending",
                 color: REPORT_COLORS.muted,
-                bg: "#f1f5f9",
                 fg: REPORT_COLORS.muted,
               },
               info: {
                 es: "Informativo",
-                en: "Info",
                 color: REPORT_COLORS.muted,
-                bg: "#f8fafc",
                 fg: REPORT_COLORS.muted,
               },
             };
 
             return sortedFailures.slice(0, 6).map((entry) => {
               const rMeta = riskLevelsMap[entry.riskLevel ?? "info"] ?? riskLevelsMap.info;
-              const title = isEs
-                ? (entry.simpleTitle?.es ?? entry.title)
-                : (entry.simpleTitle?.en ?? entry.title);
-              const diagText = isEs
-                ? (entry.diagnostic?.es ?? entry.description)
-                : (entry.diagnostic?.en ?? entry.description);
-              const action = isEs ? entry.diagnosticAction?.es : entry.diagnosticAction?.en;
-              const badgeLabel = isEs ? rMeta.es : rMeta.en;
+              const title = entry.simpleTitle?.es ?? entry.title;
+              const diagText = entry.diagnostic?.es ?? entry.description;
+              const action = entry.diagnosticAction?.es;
+              const badgeLabel = rMeta.es;
 
               return (
-                <View
-                  key={entry.ruleId}
-                  style={[s.alertCard, { borderColor: rMeta.color, backgroundColor: rMeta.bg }]}
-                >
+                <View key={entry.ruleId} style={s.alertCard}>
                   <View style={[s.alertAccentBar, { backgroundColor: rMeta.color }]} />
                   <View style={s.alertBody}>
                     <View style={s.alertHeaderRow}>
-                      <View style={[s.alertBadge, { backgroundColor: rMeta.bg }]}>
+                      <View style={s.alertBadge}>
                         <Text
                           style={{
                             color: rMeta.fg,
-                            fontSize: 5.5,
+                            fontSize: 7,
                             fontFamily: REPORT_FONTS.dataBold,
                           }}
                         >
@@ -985,7 +911,7 @@ export function RegulatorySection({ data, embedded }: ReportSectionProps) {
                     {action ? (
                       <Text style={s.alertRecommendation}>
                         <Text style={{ fontFamily: REPORT_FONTS.bodyBold }}>
-                          {isEs ? "Acción recomendada: " : "Recommended mitigation: "}
+                          Acción recomendada:{" "}
                         </Text>
                         {action}
                       </Text>
@@ -997,9 +923,8 @@ export function RegulatorySection({ data, embedded }: ReportSectionProps) {
           })()}
 
           <Text style={s.note}>
-            {isEs
-              ? "La tabla completa de todas las reglas evaluadas se detalla en el Anexo A1 de este documento."
-              : "The complete table of all evaluated rules is detailed in Annex A1 of this document."}
+            La tabla completa de todas las reglas evaluadas se detalla en el Anexo
+            A1 de este documento.
           </Text>
         </>
       )}

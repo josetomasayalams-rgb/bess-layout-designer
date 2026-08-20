@@ -53,13 +53,26 @@ export type SiteSvgModel = {
 
 const PADDING_M = 30;
 
-const COLOR_BY_TYPE: Record<string, { fill: string; stroke: string }> = {
-  battery_container: { fill: "#e0f7fa", stroke: "#00acc1" }, // Cyan para BESS
-  pcs_mv_station: { fill: "#fff3e0", stroke: "#fb8c00" }, // Amber/Orange para PCS/MV
-  mv_transformer: { fill: "#f1f5f9", stroke: "#475569" },
-  substation_area: { fill: "#e2e8f0", stroke: "#64748b" },
-  default: { fill: "#f8fafc", stroke: "#94a3b8" },
+/**
+ * Equipment site-plan palette (Apple-DNA): the BESS containers carry the single
+ * accent (blue); every other equipment class uses a graphite tonal ramp so the
+ * plan reads monochrome-plus-accent. Exported as the SINGLE source consumed by
+ * BOTH the SVG renderer (`COLOR_BY_TYPE`) and the legend in
+ * `pdfProjectSections.tsx`, so the map and its key can never disagree.
+ */
+export const EQUIPMENT_PLAN_PALETTE: Record<
+  string,
+  { fill: string; stroke: string; label: string }
+> = {
+  battery_container: { fill: "#d6e8f5", stroke: "#0071e3", label: "Contenedor BESS" },
+  pcs_mv_station: { fill: "#e2e8f0", stroke: "#3a3a3c", label: "Estación PCS/MV" },
+  mv_transformer: { fill: "#eef2f6", stroke: "#57637a", label: "Transformador MT" },
+  substation_area: { fill: "#f1f5f9", stroke: "#57637a", label: "Subestación" },
+  default: { fill: "#f5f5f7", stroke: "#94a3b8", label: "Otro equipo" },
 };
+
+const COLOR_BY_TYPE: Record<string, { fill: string; stroke: string }> =
+  EQUIPMENT_PLAN_PALETTE;
 
 function chooseScaleBar(widthM: number): number {
   // Elige una longitud "redonda" para la barra de escala (~10% del ancho).

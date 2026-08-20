@@ -271,8 +271,6 @@ export function EngineeringAnnexSection({ data, embedded }: ReportSectionProps) 
           ])}
         />
       )}
-
-      <Text style={s.note}>{data.metadata.disclaimer}</Text>
     </SectionPage>
   );
 }

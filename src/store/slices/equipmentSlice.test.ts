@@ -11,10 +11,16 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { useProjectStore } from "@/store/projectStore";
 import { equipmentCatalog } from "@/data/equipmentCatalog";
-import { toLocal } from "@/lib/geometry/projection";
+import { toLocal, toLngLat } from "@/lib/geometry/projection";
 import { resetProjectStore } from "./_testHelpers";
 
 const SPEC_ID = equipmentCatalog[0].id;
+const LAYOUT_RULES = {
+  bessToBess_m: 3,
+  bessToPropertyLine_m: 3,
+  electricalFrontWorkingClearance_m: 0.9,
+  transformerToBessRecommended_m: 3,
+};
 
 beforeEach(resetProjectStore);
 
@@ -38,6 +44,37 @@ describe("equipmentSlice — setPlacementSpec", () => {
     const s = useProjectStore.getState();
     expect(s.pendingPlacementSpecId).toBeNull();
     expect(s.interactionMode).toBe("select");
+  });
+});
+
+describe("equipmentSlice — insertPreliminaryToolLayout", () => {
+  it("uses an existing terrain polygon when Generate inserts the layout", () => {
+    const anchor = { lng0: -70, lat0: -23 };
+    useProjectStore.setState({
+      anchor,
+      polygon: [
+        toLngLat({ x_m: -210, y_m: -90 }, anchor),
+        toLngLat({ x_m: 210, y_m: -90 }, anchor),
+        toLngLat({ x_m: 210, y_m: 90 }, anchor),
+        toLngLat({ x_m: -210, y_m: 90 }, anchor),
+      ],
+    });
+
+    useProjectStore.getState().insertPreliminaryToolLayout({
+      batteryContainerSpecId: "bess-sungrow-st2752ux-us",
+      pcsSpecId: "mvskid-sungrow-sc5000ud-mv-desierto",
+      batteryContainerCount: 320,
+      pcsCount: 40,
+      containersPerPcs: 8,
+      blockColumns: 5,
+      rules: LAYOUT_RULES,
+    });
+
+    const state = useProjectStore.getState();
+    expect(state.lastToolResult?.status).toBe("success");
+    expect(state.lastToolResult?.diagnostics.terrainFitApplied).toBe(true);
+    expect(state.lastToolResult?.diagnostics.gridColumns).toBe(5);
+    expect(state.placedEquipment).toHaveLength(360);
   });
 });
 

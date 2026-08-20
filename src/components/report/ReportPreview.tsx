@@ -70,6 +70,7 @@ export function ReportPreview({
 
     async function loadData() {
       setLoading(true);
+      setReportData(null);
       try {
         const project = useProjectStore.getState();
         const regulatory = useRegulatoryStore.getState();

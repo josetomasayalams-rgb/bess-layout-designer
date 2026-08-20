@@ -113,8 +113,7 @@ describe("pdfChrome — PageHeader / PageFooter", () => {
   });
 
   it("PageFooter renders without throwing", () => {
-    const data = buildMinimalReportData();
-    const el = PageFooter({ data }) as ReactEl;
+    const el = PageFooter() as ReactEl;
     expect(el).toBeDefined();
   });
 });

@@ -373,6 +373,7 @@ export type ProjectState = {
   /** Sets the free-text project-name metadata field. */
   setProjectName: (name: string) => void;
   loadDemoProject: () => void;
+  loadPublishedDemoProject: () => void;
   resetProject: () => void;
   undo: () => void;
   redo: () => void;

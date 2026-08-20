@@ -29,8 +29,8 @@ export function Brandmark({
 }: BrandmarkProps) {
   return (
     <Svg viewBox="0 0 100 100" style={{ width: size, height: size }}>
-      <Circle cx="50" cy="50" r="50" fill={discColor} />
-      <Path d="M50 30 L76 70 L24 70 Z" fill={markColor} />
+      <Circle cx="50" cy="50" r="49" fill={discColor} />
+      <Path d="M50 20 L76 65 L24 65 Z" fill={markColor} />
     </Svg>
   );
 }

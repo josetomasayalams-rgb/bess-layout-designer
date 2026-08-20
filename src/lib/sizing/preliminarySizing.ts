@@ -124,7 +124,7 @@ export function calculatePreliminarySizing(
 
   if (installedApparentPowerMva > 0) {
     warnings.push(
-      "Installed power is expressed as MVA. Treat comparison to MW as approximate until power factor and active power limits are confirmed."
+      "La potencia instalada se expresa en MVA. La comparación con MW es aproximada hasta confirmar el factor de potencia y los límites de potencia activa."
     );
   }
   if (totalNominalEnergyMWhDc > declaredProjectEnergyMWh) {

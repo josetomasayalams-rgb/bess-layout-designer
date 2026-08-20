@@ -7,7 +7,7 @@
  * latin-subset Inter WOFF files (SIL OFL) live under `public/fonts/` and are
  * served from the app origin at `/fonts/...`.
  *
- * Each weight is registered as its OWN family so the existing role→family
+ * Each weight is registered as its OWN family so the existing role->family
  * mapping in `reportTheme.font` / `reportStyles` keeps working without adding a
  * `fontWeight` to every style. Mono roles intentionally stay on the standard
  * Courier family (Inter ships no monospace).

@@ -302,7 +302,7 @@ export function computeArchitectureSizing(
 
   if (installedPowerMVA > 0) {
     warnings.push(
-      "Installed power is reported in MVA. Treat comparison to MW as approximate until power factor and active power limits are confirmed."
+      "La potencia instalada se reporta en MVA. La comparación con MW es aproximada hasta confirmar el factor de potencia y los límites de potencia activa."
     );
   }
 

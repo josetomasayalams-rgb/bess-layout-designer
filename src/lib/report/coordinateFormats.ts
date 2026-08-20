@@ -38,13 +38,30 @@ export type DMSValue = {
   hemisphere: "N" | "S" | "E" | "W";
 };
 
-function toDMS(value: number, kind: "lat" | "lng"): DMSValue {
+/**
+ * Decompose a coordinate into D/M/S, carrying any overflow at the requested
+ * display `decimals` so the result never renders an invalid 60' or 60". Without
+ * this, a value whose seconds round up to 60 at the shown precision (e.g.
+ * 59.996" → "60.00") would print `33°27'60.00"` instead of `33°28'00.00"`.
+ */
+function toDMS(value: number, kind: "lat" | "lng", decimals = 2): DMSValue {
   const positive = value >= 0;
   const abs = Math.abs(value);
-  const degrees = Math.floor(abs);
+  let degrees = Math.floor(abs);
   const minutesFloat = (abs - degrees) * 60;
-  const minutes = Math.floor(minutesFloat);
-  const seconds = (minutesFloat - minutes) * 60;
+  let minutes = Math.floor(minutesFloat);
+  let seconds = (minutesFloat - minutes) * 60;
+  // Carry threshold = the largest value that still rounds below 60 at the shown
+  // precision. Anything at/above it would display as "60", so roll it up.
+  const carryThreshold = 60 - 0.5 * Math.pow(10, -decimals);
+  if (seconds >= carryThreshold) {
+    seconds = 0;
+    minutes += 1;
+  }
+  if (minutes >= 60) {
+    minutes = 0;
+    degrees += 1;
+  }
   const hemisphere =
     kind === "lat" ? (positive ? "N" : "S") : positive ? "E" : "W";
   return { degrees, minutes, seconds, hemisphere };
@@ -56,8 +73,8 @@ export function formatDMS(coord: LngLat, decimals = 2): {
   latParts: DMSValue;
   lngParts: DMSValue;
 } {
-  const latParts = toDMS(coord.lat, "lat");
-  const lngParts = toDMS(coord.lng, "lng");
+  const latParts = toDMS(coord.lat, "lat", decimals);
+  const lngParts = toDMS(coord.lng, "lng", decimals);
   return {
     lat: `${latParts.degrees}°${String(latParts.minutes).padStart(2, "0")}'${latParts.seconds.toFixed(decimals).padStart(decimals + 3, "0")}"${latParts.hemisphere}`,
     lng: `${lngParts.degrees}°${String(lngParts.minutes).padStart(2, "0")}'${lngParts.seconds.toFixed(decimals).padStart(decimals + 3, "0")}"${lngParts.hemisphere}`,
